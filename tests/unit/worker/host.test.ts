@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_APP_SETTINGS } from '@contracts/appSettings';
 import { PROTOCOL_VERSION } from '@contracts/protocol';
-import { ENGINE_VERSION } from '@engine/version';
+import { CONTENT_VERSION, ENGINE_VERSION } from '@engine/version';
 import { DB_SCHEMA_VERSION, type WeLifeDatabase } from '@persistence/db';
 import { createEngineHost } from '@worker/host';
 import { createTestDatabase } from '../../helpers/db';
@@ -25,6 +25,7 @@ describe('engine host', () => {
       ok: true,
       result: {
         engineVersion: ENGINE_VERSION,
+        contentVersion: CONTENT_VERSION,
         protocolVersion: PROTOCOL_VERSION,
         dbSchemaVersion: DB_SCHEMA_VERSION,
         databaseName: db?.name,

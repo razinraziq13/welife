@@ -7,71 +7,124 @@
 │ src/app        React 19 · React Router · Zustand · Tailwind │
 │   bridge/      EngineClient: typed request/response over     │
 │                postMessage, one id per call                  │
+│   (may import engine *pure* modules for types, catalogs,     │
+│    content text; never persistence or the worker)            │
 └───────────────────────────┬────────────────────────────────┘
                             │ validated messages (src/contracts)
 ┌───────────────────────────▼──────── Web Worker ────────────┐
-│ src/worker     host: validates requests (Zod), dispatches   │
-│ src/engine     pure TypeScript simulation (no DOM, no I/O)  │
-│ src/persistence Dexie/IndexedDB schema and repositories     │
+│ src/worker      host: validates requests (Zod), runs them    │
+│                 strictly in order, keeps the open session    │
+│ src/engine      pure TypeScript simulation (no DOM, no I/O)  │
+│ src/persistence Dexie/IndexedDB: saves, branches, snapshots, │
+│                 heads, command log, export/import            │
 └─────────────────────────────────────────────────────────────┘
-src/contracts  shared Zod schemas and protocol types (depends only on zod)
+src/contracts  protocol + shared shapes (zod + engine types only)
 ```
 
 ### Rules (enforced automatically)
 
 | Rule                                                                                               | Enforced by                                                                          |
 | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Engine has no React, DOM, IndexedDB or UI imports                                                  | `.dependency-cruiser.cjs` (`engine-is-pure`) and `tsconfig.engine.json` (no DOM lib) |
+| Engine has no React, DOM, IndexedDB, UI, worker or contracts imports                               | `.dependency-cruiser.cjs` (`engine-is-pure`) and `tsconfig.engine.json` (no DOM lib) |
 | Engine and contracts never use `Math.random`, `Date`, `performance.now`, timers or browser globals | ESLint determinism rules in `eslint.config.js`                                       |
 | UI never imports persistence, the worker or Dexie; all writes are validated requests               | `ui-uses-commands-not-storage` rule                                                  |
-| Contracts depend only on Zod                                                                       | `contracts-are-leaf` rule                                                            |
+| Contracts depend only on zod and engine types/schemas                                              | `contracts-are-leaf` rule                                                            |
 | No circular imports                                                                                | `no-circular` rule                                                                   |
 
-A deliberate violation (an engine file importing React, reading `window` and calling
-`Math.random`) was confirmed to fail all three checks during Milestone 0.
+## Simulation core (`src/engine`)
+
+| Module               | Responsibility                                                                                                                                                                    |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `state/schema.ts`    | The whole `World` as one Zod-validated, JSON-serialisable object. All numbers are integers; stats/needs/skills are fixed-point tenths.                                            |
+| `core/rng.ts`        | `sfc32` generator seeded by `cyrb128`; one stream per subsystem (`creation`, `genetics`, `events`, `npc`, `mortality`) stored in the world.                                       |
+| `core/commands.ts`   | `execute(state, command)`: pure, validated, idempotent commands (`advance`, `choose`, `act`, `markRead`, `setDifficulty`, `setEasyMigration`); `replay()` re-runs a command list. |
+| `core/tick.ts`       | Monthly turn in the spec's order; returns a _pending_ turn when a decision is needed; `completePendingMonth` finishes it.                                                         |
+| `core/invariants.ts` | Consistency checks run after every command and month.                                                                                                                             |
+| `core/diff.ts`       | Structural diff/patch used for monthly delta snapshots (append-only arrays become `append` ops).                                                                                  |
+| `characters/*`       | World creation (scenarios, families, names, genetics), monthly updates, mortality, stats with causes.                                                                             |
+| `activities/*`       | Unlimited activities with time/energy costs and diminishing returns.                                                                                                              |
+| `events/*`           | Declarative event schema, predicate evaluation, effects, monthly selection and decisions.                                                                                         |
+| `world/*`            | Country profiles (baseline) and locations.                                                                                                                                        |
+| `content/*`          | Built-in content, validated at load.                                                                                                                                              |
+| `view.ts`            | Read-only projection (`GameView`) sent to the UI.                                                                                                                                 |
+
+`SimState = { world, pending }`: `world` is the committed month; `pending` holds the
+next month while a decision waits. A month is committed exactly once: when Advance finishes
+without a decision, or when the decision is made.
+
+### Determinism
+
+Same seed + same commands + same engine/content version ⇒ identical world (tested over
+1,000 months, and by rewinding and replaying). The rules that make this hold: integer
+arithmetic only, seeded RNG streams, sorted iteration over records, no wall-clock time.
+
+## Persistence (`src/persistence`, IndexedDB schema v2)
+
+| Table       | Contents                                                                                                                                                          |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `saves`     | One row per save slot: name, current branch, summary for the list, dashboard layout, versions, checksum.                                                          |
+| `branches`  | Timelines. Rewinding creates a new branch pointing at the snapshot it was rewound from.                                                                           |
+| `snapshots` | One per committed month: a **full** gzip keyframe every 12 months, otherwise a gzip **delta** from the previous month; each has a SHA-256 hash of the full world. |
+| `heads`     | Latest state per branch (`{ world, pending }`, gzip + hash), including actions taken mid-month.                                                                   |
+| `commands`  | Applied command log per branch (key `[branchId+commandId]`): idempotent retries and replay.                                                                       |
+
+**Atomic commit:** every applied command writes head, command log, and (for a new month) the
+snapshot, branch head and save summary in one IndexedDB transaction. Compression and
+hashing happen _before_ the transaction (awaiting other promises inside one would end it early).
+A simulated crash mid-commit leaves storage unchanged (tested).
+
+**Concurrency:** the commit checks that the stored head hash still matches the one the session
+loaded; another window's change is reported as `CONFLICT` and the session reloads.
+
+**Integrity:** heads and snapshots are verified against their hashes when loaded. A damaged head
+can be rebuilt from the branch's last complete month (`saves.repair`).
+
+**Export/import:** a JSON bundle (format `welife-save`, version 1) with all branches,
+snapshots, heads and commands, and a SHA-256 checksum. Imports are validated completely
+(structure, references, every snapshot hash) before anything is written; ids are remapped.
+
+**Migrations:** `migrations.ts` upgrades stored worlds/bundles one version at a time; newer
+versions are refused with a clear message. Dexie schema changes add new `version(n)` blocks.
 
 ## Request flow
 
-1. A screen calls a store action (e.g. `updateSettings({ theme: 'dark' })`).
-2. The store calls `getEngine().call('settings.update', patch)`; the client assigns a unique
-   request id and posts the message to the worker.
-3. The worker host validates the message against `RpcRequestSchema`. Invalid requests are
-   answered with `INVALID_REQUEST` and field paths (e.g. `params.textScale`); nothing is stored.
-4. The handler runs inside a Dexie transaction and returns the stored result.
-5. The client matches the response by id and resolves the caller; the store updates state.
+1. A screen calls a store action (e.g. `useGameStore().advance()`).
+2. The store sends `game.command` with a fresh command id (and, for Advance, the tick it was
+   issued for, so double clicks are ignored).
+3. The worker host validates the request, returns the stored outcome if the command was already
+   applied, otherwise runs `execute`, commits atomically and returns the new `GameView`.
+4. Requests are processed one at a time in arrival order.
 
 If the worker crashes, every pending and future call rejects with `UNAVAILABLE`, and the
 Home screen offers **Retry**, which starts a fresh worker.
 
-## Persistence
+## UI (`src/app`)
 
-- Database `welife`, schema version 1: `meta`, `settings`.
-- New schema versions are added as new `this.version(n)` blocks; old blocks are never edited.
-- Stored rows are validated on read; a corrupt row falls back to defaults and is repaired on
-  the next valid write.
-
-From Milestone 1 the worker also owns the world state, the command log, snapshots and branches.
+- Routes: `/` (lives), `/new` (wizard), `/settings`, `/play/:saveId/{life,career,finance,social,more,character,timeline,notifications,rules}`.
+- `play/PlayLayout.tsx`: header, Advance Month, event dialog, banners; five tabs (sidebar on
+  desktop, bottom bar on phones).
+- Strings produced by the engine are keys resolved in `i18n/en.ts`; event text lives in each
+  event definition (`text.en`).
+- Avatars are layered SVG (`components/avatar`): proportions by life stage, greying hair, age lines.
 
 ## Appearance
 
 App preferences (theme, contrast, text size, motion, shortcuts) are stored in IndexedDB.
 A copy is mirrored to `localStorage` only so the inline script in `index.html` can apply the
-right theme before first paint. The resolved values are set as `data-theme`, `data-contrast`,
-`data-motion` and the root font size on `<html>`; design tokens are CSS variables in
-`src/app/styles.css`.
+right theme before first paint.
 
 ## Offline and installation
 
 `vite-plugin-pwa` (Workbox `generateSW`) precaches the app shell, the engine worker chunk and
 icons. Navigation falls back to the cached `index.html`, so deep links work offline. Updates
-are never applied silently: a "new version ready" prompt asks before reloading.
-If service-worker registration fails, Home says offline mode is unavailable instead of waiting.
+are never applied silently. If service-worker registration fails, Home says so.
 
 ## Testing
 
-| Layer                                          | Tool                                                            | Location                 |
-| ---------------------------------------------- | --------------------------------------------------------------- | ------------------------ |
-| Unit (pure rules, schemas, repositories)       | Vitest + fake-indexeddb                                         | `tests/unit`             |
-| Integration (UI client ↔ real worker host)     | Vitest, in-process worker with structured cloning               | `tests/integration`      |
-| End-to-end (production build + service worker) | Playwright: desktop Chromium/WebKit/Firefox, Pixel 7, iPhone 15 | `tests/e2e`              |
-| Accessibility                                  | axe-core (WCAG 2.2 A/AA tags) in e2e, light and dark            | `tests/e2e/boot.spec.ts` |
+| Layer                                                          | Tool                                                                     | Location                                |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------- |
+| Unit (engine rules, schemas, property tests, avatar rendering) | Vitest, fast-check, react-dom/server                                     | `tests/unit`                            |
+| Integration (UI client ↔ real worker host ↔ IndexedDB)         | Vitest + fake-indexeddb                                                  | `tests/integration`                     |
+| End-to-end (production build + service worker)                 | Playwright: desktop Chromium/WebKit (+Firefox in CI), Pixel 7, iPhone 15 | `tests/e2e`                             |
+| Accessibility                                                  | axe-core (WCAG 2.2 A/AA) on every screen, light and dark                 | `tests/e2e`                             |
+| Performance                                                    | Monthly turn p95 (engine)                                                | `tests/unit/engine/performance.test.ts` |

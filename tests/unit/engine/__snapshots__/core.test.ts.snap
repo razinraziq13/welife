@@ -1,0 +1,10 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`seeded RNG > matches a recorded regression sequence (guards cross-engine determinism) 1`] = `
+[
+  488,
+  278,
+  953,
+  611567,
+]
+`;

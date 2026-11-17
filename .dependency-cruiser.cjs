@@ -1,9 +1,9 @@
 /**
  * Module boundary rules for WeLife (see docs/ARCHITECTURE.md).
  *
- *   contracts  <-  engine  <-  worker (host)  ->  persistence
- *       ^            ^
- *       └──── app ───┘        (app talks to the worker only via messages)
+ *   engine  <-  contracts  <-  app      (app talks to the worker only via messages)
+ *     ^            ^
+ *     └── worker (host) ──>  persistence  ->  engine, contracts (types)
  *
  * @type {import('dependency-cruiser').IConfiguration}
  */
@@ -19,10 +19,11 @@ module.exports = {
     {
       name: 'contracts-are-leaf',
       severity: 'error',
-      comment: 'Contracts are shared by every layer and may only depend on zod.',
+      comment:
+        'Contracts are shared by the UI and the worker. They may use engine types/schemas and zod, never UI, worker or storage code.',
       from: { path: '^src/contracts' },
       to: {
-        pathNot: ['^src/contracts', 'node_modules/zod'],
+        pathNot: ['^src/contracts', '^src/engine', 'node_modules/zod'],
       },
     },
     {
@@ -32,7 +33,7 @@ module.exports = {
         'The simulation engine must stay framework- and storage-independent (spec §2): no React, no IndexedDB, no UI or worker code.',
       from: { path: '^src/engine' },
       to: {
-        pathNot: ['^src/engine', '^src/contracts', 'node_modules/zod'],
+        pathNot: ['^src/engine', 'node_modules/zod'],
       },
     },
     {

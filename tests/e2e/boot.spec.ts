@@ -8,7 +8,7 @@ test('boots, connects to the engine worker and reports device status', async ({ 
   await expect(page.getByRole('heading', { level: 1, name: 'WeLife' })).toBeVisible();
   await expect(page).toHaveTitle('WeLife');
   await expect(page.getByTestId('engine-status')).toContainText('Connected');
-  await expect(page.getByTestId('engine-status')).toContainText('storage schema v1');
+  await expect(page.getByTestId('engine-status')).toContainText('storage schema v2');
   await expect(page.getByTestId('storage-usage')).toContainText('Using');
 });
 

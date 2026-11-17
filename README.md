@@ -3,7 +3,7 @@
 **One Life. Endless Generations.** An offline-first, multigenerational life simulator built as
 an installable Progressive Web App for desktop, Android and iOS.
 
-> Status: **Milestone 0 (foundation)** complete. See [DEVELOPMENT_PROGRESS.md](DEVELOPMENT_PROGRESS.md).
+> Status: **Milestones 0-2** complete (foundation, deterministic core, New Life and character). See [DEVELOPMENT_PROGRESS.md](DEVELOPMENT_PROGRESS.md).
 
 ## Requirements
 

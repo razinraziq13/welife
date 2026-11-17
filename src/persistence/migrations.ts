@@ -1,0 +1,41 @@
+import { WORLD_SCHEMA_VERSION } from '@engine/state/schema';
+
+/**
+ * Forward migrations for stored worlds and export bundles (spec §5 "migrate older versions").
+ * Each entry upgrades from version N to N+1. There are none yet (schema v1); the framework
+ * and its tests exist so later milestones only add steps.
+ */
+
+type Migration = (input: Record<string, unknown>) => Record<string, unknown>;
+
+const WORLD_MIGRATIONS: Record<number, Migration> = {};
+
+export class MigrationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'MigrationError';
+  }
+}
+
+export function migrateWorld(
+  raw: unknown,
+  migrations: Record<number, Migration> = WORLD_MIGRATIONS,
+): unknown {
+  if (typeof raw !== 'object' || raw === null) return raw;
+  let current = raw as Record<string, unknown>;
+  let version = typeof current.schemaVersion === 'number' ? current.schemaVersion : NaN;
+  if (!Number.isInteger(version)) throw new MigrationError('Saved world has no schema version.');
+  if (version > WORLD_SCHEMA_VERSION) {
+    throw new MigrationError(
+      'This save was made by a newer version of WeLife. Update the app to open it.',
+    );
+  }
+  while (version < WORLD_SCHEMA_VERSION) {
+    const step = migrations[version];
+    if (!step) throw new MigrationError(`No migration from world schema ${String(version)}.`);
+    current = step(current);
+    version += 1;
+    current.schemaVersion = version;
+  }
+  return current;
+}

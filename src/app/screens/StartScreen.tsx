@@ -1,219 +1,263 @@
-import { useState, type ReactNode } from 'react';
-import { Link } from 'react-router';
-import {
-  CheckCircle2,
-  CircleAlert,
-  Cpu,
-  Download,
-  HardDrive,
-  Loader2,
-  Settings as SettingsIcon,
-  ShieldCheck,
-  WifiOff,
-} from 'lucide-react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { Copy, Download, FileUp, GitBranch, Pencil, Play, Plus, Trash2 } from 'lucide-react';
+import type { SaveListItem } from '@contracts/saves';
 import { Logo } from '@app/components/Logo';
 import { PageHeader } from '@app/components/PageHeader';
+import { Avatar } from '@app/components/avatar/Avatar';
 import { Button, buttonVariants } from '@app/components/ui/button';
 import { Card } from '@app/components/ui/card';
-import { useStorageInfo, type PersistOutcome } from '@app/hooks/useStorageInfo';
+import { ConfirmDialog, PromptDialog } from '@app/components/ui/confirm-dialog';
+import { describeError } from '@app/bridge/errors';
+import { countryName, formatMonth } from '@app/i18n/format';
+import { t } from '@app/i18n/en';
 import { formatBytes } from '@app/lib/format';
 import { useAppStore } from '@app/stores/appStore';
-import { isIosSafari, usePwaStore } from '@app/stores/pwaStore';
+import { useSavesStore } from '@app/stores/savesStore';
+import { DeviceStatusCard } from './start/DeviceStatusCard';
 
-function StatusRow({
-  icon,
-  label,
-  children,
+function SaveCard({
+  save,
+  onRename,
+  onDelete,
 }: {
-  icon: ReactNode;
-  label: string;
-  children: ReactNode;
+  save: SaveListItem;
+  onRename: () => void;
+  onDelete: () => void;
 }) {
-  // <dl> may only contain <div> groups of <dt>/<dd>, so the icon lives inside the <dt>.
+  const { duplicate, exportSave } = useSavesStore();
+  const [message, setMessage] = useState<string | null>(null);
+  const s = save.summary;
+  const run = (label: string, action: () => Promise<void>) => {
+    setMessage(null);
+    void action()
+      .then(() => {
+        setMessage(label);
+      })
+      .catch((error: unknown) => {
+        setMessage(describeError(error));
+      });
+  };
   return (
-    <div className="py-3">
-      <dt className="flex items-center gap-3 text-sm font-semibold text-fg">
-        <span className="text-muted">{icon}</span>
-        {label}
-      </dt>
-      <dd className="mt-1 pl-8 text-sm text-muted">{children}</dd>
-    </div>
-  );
-}
-
-function EngineStatus() {
-  const { connection, status, connectionError, retryConnection } = useAppStore();
-  if (connection === 'connecting') {
-    return (
-      <span className="inline-flex items-center gap-1.5">
-        <Loader2 aria-hidden="true" className="size-4 animate-spin" /> Connecting…
-      </span>
-    );
-  }
-  if (connection === 'error') {
-    return (
-      <span className="flex flex-wrap items-center gap-2">
-        <span className="text-danger">Not connected: {connectionError}</span>
-        <Button size="sm" variant="secondary" onClick={() => void retryConnection()}>
-          Retry
+    <li
+      className="rounded-2xl border border-border bg-surface p-4 shadow-sm"
+      data-testid="save-card"
+    >
+      <div className="flex items-start gap-3">
+        <Avatar
+          appearance={s.appearance}
+          stage={s.stage}
+          ageYears={s.ageYears}
+          className="size-14"
+        />
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-base font-semibold text-fg">{save.displayName}</h3>
+          <p className="text-sm text-muted">
+            {s.characterName} ·{' '}
+            {s.lifeStatus === 'alive'
+              ? `age ${String(s.ageYears)}`
+              : `died at ${String(s.ageYears)}`}{' '}
+            · {countryName(s.countryCode)}
+          </p>
+          <p className="text-sm text-muted">
+            {formatMonth(s.clock)} · {t(`difficulty.${save.difficulty}`)} ·{' '}
+            <span className="inline-flex items-center gap-1">
+              <GitBranch aria-hidden="true" className="size-3.5" />
+              {save.currentBranchName}
+              {save.branchCount > 1 && ` (${String(save.branchCount)} timelines)`}
+            </span>{' '}
+            · {formatBytes(save.bytes)}
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Link
+          to={`/play/${save.id}/life`}
+          className={buttonVariants({ size: 'sm' })}
+          aria-label={`Continue ${save.displayName}`}
+        >
+          <Play aria-hidden="true" className="size-4" /> Continue
+        </Link>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={onRename}
+          aria-label={`Rename ${save.displayName}`}
+        >
+          <Pencil aria-hidden="true" className="size-4" /> Rename
         </Button>
-      </span>
-    );
-  }
-  return (
-    <span data-testid="engine-status">
-      Connected · engine v{status?.engineVersion} · storage schema v{status?.dbSchemaVersion}
-    </span>
-  );
-}
-
-const PERSIST_MESSAGES: Record<PersistOutcome, string> = {
-  granted: 'Your browser will keep WeLife data unless you clear it yourself.',
-  denied:
-    'Your browser declined for now. Installing WeLife or using it regularly often allows this later.',
-  unsupported: 'This browser does not support protecting stored data.',
-};
-
-function StorageStatus() {
-  const { info, requestPersistence } = useStorageInfo();
-  const [outcome, setOutcome] = useState<PersistOutcome | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  if (info === null) return <span>Checking…</span>;
-  if (!info.supported) return <span>This browser does not report storage usage.</span>;
-
-  return (
-    <span className="flex flex-col gap-2">
-      <span data-testid="storage-usage">
-        Using {formatBytes(info.usage ?? 0)}
-        {info.quota !== null && ` of ${formatBytes(info.quota)} available`}.
-      </span>
-      {info.persisted === true ? (
-        <span className="inline-flex items-center gap-1.5 text-success">
-          <ShieldCheck aria-hidden="true" className="size-4" /> Protected from automatic cleanup.
-        </span>
-      ) : (
-        <span className="flex flex-wrap items-center gap-2">
-          <span>The browser may clear data when the device is low on space.</span>
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={busy}
-            onClick={() => {
-              setBusy(true);
-              void requestPersistence()
-                .then(setOutcome)
-                .finally(() => {
-                  setBusy(false);
-                });
-            }}
-          >
-            Protect my data
-          </Button>
-        </span>
+        <Button
+          size="sm"
+          variant="secondary"
+          aria-label={`Duplicate ${save.displayName}`}
+          onClick={() => {
+            run('Copy created.', () => duplicate(save.id));
+          }}
+        >
+          <Copy aria-hidden="true" className="size-4" /> Duplicate
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          aria-label={`Export ${save.displayName}`}
+          onClick={() => {
+            run('Save file downloaded.', () => exportSave(save.id));
+          }}
+        >
+          <Download aria-hidden="true" className="size-4" /> Export
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={onDelete}
+          aria-label={`Delete ${save.displayName}`}
+        >
+          <Trash2 aria-hidden="true" className="size-4" /> Delete
+        </Button>
+      </div>
+      {message && (
+        <p role="status" className="mt-2 text-sm text-muted">
+          {message}
+        </p>
       )}
-      {outcome !== null && outcome !== 'granted' && (
-        <span role="status">{PERSIST_MESSAGES[outcome]}</span>
-      )}
-    </span>
+    </li>
   );
-}
-
-function OfflineStatus() {
-  const offlineReady = usePwaStore((s) => s.offlineReady);
-  const offlineError = usePwaStore((s) => s.offlineError);
-  if (!('serviceWorker' in navigator)) {
-    return <span>This browser cannot run WeLife offline.</span>;
-  }
-  if (offlineError !== null) {
-    return (
-      <span data-testid="offline-status">
-        Offline mode could not be set up in this browser, so WeLife needs a connection to load. Your
-        saved data is not affected.
-      </span>
-    );
-  }
-  return offlineReady ? (
-    <span data-testid="offline-status" className="inline-flex items-center gap-1.5 text-success">
-      <CheckCircle2 aria-hidden="true" className="size-4" /> Ready to play without a connection.
-    </span>
-  ) : (
-    <span data-testid="offline-status">Preparing offline mode…</span>
-  );
-}
-
-function InstallStatus() {
-  const { installPrompt, installed, setInstallPrompt, markInstalled } = usePwaStore();
-  if (installed) return <span>Installed on this device.</span>;
-  if (installPrompt !== null) {
-    return (
-      <Button
-        size="sm"
-        onClick={() => {
-          void installPrompt.prompt().then(async () => {
-            const choice = await installPrompt.userChoice;
-            if (choice.outcome === 'accepted') markInstalled();
-            else setInstallPrompt(null);
-          });
-        }}
-      >
-        <Download aria-hidden="true" className="size-4" /> Install WeLife
-      </Button>
-    );
-  }
-  if (isIosSafari()) {
-    return <span>In Safari, tap Share, then “Add to Home Screen”.</span>;
-  }
-  return <span>Use your browser’s menu to install WeLife as an app.</span>;
 }
 
 export function StartScreen() {
+  const navigate = useNavigate();
+  const connection = useAppStore((s) => s.connection);
+  const { saves, phase, error, refresh, rename, remove, importFile } = useSavesStore();
+  const [renaming, setRenaming] = useState<SaveListItem | null>(null);
+  const [deleting, setDeleting] = useState<SaveListItem | null>(null);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const importId = useId();
+
+  useEffect(() => {
+    if (connection === 'ready') void refresh();
+  }, [connection, refresh]);
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <Logo className="size-16 shrink-0" />
-        <PageHeader
-          title="WeLife"
-          documentTitle={null}
-          description="One Life. Endless Generations."
-        />
+        <div className="flex-1">
+          <PageHeader
+            title="WeLife"
+            documentTitle={null}
+            description="One Life. Endless Generations."
+          />
+        </div>
       </div>
 
-      <div
-        role="note"
-        className="flex gap-3 rounded-2xl border border-accent/40 bg-accent-soft p-4 text-sm text-fg"
+      <section aria-labelledby="lives-heading" className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="lives-heading" className="text-xl font-semibold text-fg">
+            Your lives
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/new" className={buttonVariants()}>
+              <Plus aria-hidden="true" className="size-4" /> New life
+            </Link>
+            <Button
+              variant="secondary"
+              disabled={connection !== 'ready'}
+              onClick={() => fileInput.current?.click()}
+            >
+              <FileUp aria-hidden="true" className="size-4" /> Import a save
+            </Button>
+            <input
+              id={importId}
+              ref={fileInput}
+              type="file"
+              accept=".json,application/json"
+              className="sr-only"
+              tabIndex={-1}
+              aria-label="Choose a WeLife save file to import"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = '';
+                if (!file) return;
+                setImportMessage('Checking the save file…');
+                void importFile(file)
+                  .then((saveId) => {
+                    setImportMessage('Save imported.');
+                    void navigate(`/play/${saveId}/life`);
+                  })
+                  .catch((err: unknown) => {
+                    setImportMessage(`Import failed: ${describeError(err)}`);
+                  });
+              }}
+            />
+          </div>
+        </div>
+        {importMessage && (
+          <p role="status" className="text-sm text-muted">
+            {importMessage}
+          </p>
+        )}
+        {phase === 'error' && (
+          <p role="alert" className="text-sm text-danger">
+            Could not load your saves: {error}
+          </p>
+        )}
+        {phase === 'ready' && saves.length === 0 && (
+          <Card>
+            <p className="text-fg">No lives yet. Start a new life to begin your story.</p>
+          </Card>
+        )}
+        {saves.length > 0 && (
+          <ul className="grid gap-3 md:grid-cols-2">
+            {saves.map((save) => (
+              <SaveCard
+                key={save.id}
+                save={save}
+                onRename={() => {
+                  setRenaming(save);
+                }}
+                onDelete={() => {
+                  setDeleting(save);
+                }}
+              />
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <DeviceStatusCard />
+
+      <PromptDialog
+        open={renaming !== null}
+        onOpenChange={(open) => {
+          if (!open) setRenaming(null);
+        }}
+        title="Rename save"
+        label="Save name"
+        initialValue={renaming?.displayName ?? ''}
+        maxLength={80}
+        confirmLabel="Rename"
+        onConfirm={async (value) => {
+          if (renaming) await rename(renaming.id, value);
+        }}
+      />
+      <ConfirmDialog
+        open={deleting !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleting(null);
+        }}
+        title="Delete this save?"
+        confirmLabel="Delete permanently"
+        tone="danger"
+        onConfirm={async () => {
+          if (deleting) await remove(deleting.id);
+        }}
       >
-        <CircleAlert aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-accent-strong" />
         <p>
-          <strong>Development build: Milestone 0.</strong> The foundations are in place: offline
-          install, on-device storage and the simulation engine. Creating and saving lives comes in
-          the next milestones.
+          “{deleting?.displayName}” and all of its timelines will be deleted from this device. This
+          cannot be undone. Export it first if you might want it back.
         </p>
-      </div>
-
-      <Card title="This device" description="Everything WeLife needs runs and is stored locally.">
-        <dl className="divide-y divide-border">
-          <StatusRow icon={<Cpu aria-hidden="true" className="size-5" />} label="Game engine">
-            <EngineStatus />
-          </StatusRow>
-          <StatusRow icon={<HardDrive aria-hidden="true" className="size-5" />} label="Storage">
-            <StorageStatus />
-          </StatusRow>
-          <StatusRow icon={<WifiOff aria-hidden="true" className="size-5" />} label="Offline play">
-            <OfflineStatus />
-          </StatusRow>
-          <StatusRow icon={<Download aria-hidden="true" className="size-5" />} label="Install">
-            <InstallStatus />
-          </StatusRow>
-        </dl>
-      </Card>
-
-      <div>
-        <Link to="/settings" className={buttonVariants({ variant: 'secondary' })}>
-          <SettingsIcon aria-hidden="true" className="size-4" />
-          Settings and accessibility
-        </Link>
-      </div>
+      </ConfirmDialog>
     </div>
   );
 }

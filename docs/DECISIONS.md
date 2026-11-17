@@ -42,8 +42,25 @@ This file records decisions that fill gaps in, or clarify, the specification.
 | T4  | Hand-written shadcn-style components | The shadcn CLI is interactive and network-bound; the same pattern (cva + tailwind-merge, owned source) is used directly.                                              |
 | T5  | Firefox e2e opt-in locally           | On this Windows machine the unsigned Playwright Firefox build is blocked from launching (OS security policy). Firefox runs in CI; locally set `WELIFE_E2E_FIREFOX=1`. |
 
+## Milestone 1-2 engineering decisions
+
+| #   | Topic                                    | Decision and reason                                                                                                                                                                                                                                                      |
+| --- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| E1  | Branch for M1+M2                         | Built together on `milestone-1-2` because both were requested at once.                                                                                                                                                                                                   |
+| E2  | Contracts may use engine types           | The protocol needs `NewLifeInput`, `Command` and `GameView`. The engine itself still imports nothing outside itself and zod.                                                                                                                                             |
+| E3  | Command log keyed per branch             | `[branchId+commandId]`: a retry on the same timeline is idempotent, while replaying the same commands on a rewound branch is allowed (that is how replay equivalence is tested).                                                                                         |
+| E4  | Optimistic concurrency between windows   | Commits check the stored head hash; another window's change produces `CONFLICT` and a reload instead of a silent overwrite.                                                                                                                                              |
+| E5  | Royal availability (D5 applied)          | Offered where large or traditional royal families make a fictional member realistic: AE, ID, MY, SA, TH, ZA. Not in GB or JP, where the royal/imperial family is a small group of identifiable people; GB offers Noble instead. Not in AU/CA/NZ (shared monarch abroad). |
+| E6  | Noble availability                       | GB (peerage), FR/DE/IT (social nobility, no legal status), ID (Javanese aristocracy), IN (former princely families).                                                                                                                                                     |
+| E7  | Casual still has a time budget (doubled) | Without any budget, diminishing returns alone would still let repeated clicks add up to a large monthly gain.                                                                                                                                                            |
+| E8  | Notifications are transient              | The newest 300 are kept (pruned in batches at 400) so memory stays bounded; the biography is the permanent record.                                                                                                                                                       |
+
 ## Proposed tuning values (not yet user-approved)
 
 - Full snapshot every 12 months, compressed monthly deltas in between.
 - 20 close NPCs (detailed) and 100 relevant NPCs (simplified) by default.
 - Diminishing returns coefficient 0.35 (from the spec example).
+- Monthly free hours by age (30 baby → 80 adult → 100 retired); Casual ×2, Challenging ×0.8.
+- Monthly family care for children's needs (rest/company/fun), fading to zero at 18.
+- Mortality curve (annual risk per 100,000 by age band), adjusted 4% per year of life expectancy below 80, by health, and ×0.7 on Casual.
+- Event chances, cooldowns and effect sizes in `src/engine/content/events/core.ts`.

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_APP_SETTINGS } from '@contracts/appSettings';
+import { PROTOCOL_VERSION } from '@contracts/protocol';
 import { EngineClient, EngineError } from '@app/bridge/engineClient';
 import type { WeLifeDatabase } from '@persistence/db';
 import { createEngineHost } from '@worker/host';
@@ -25,7 +26,7 @@ describe('UI ↔ engine worker round trip', () => {
       client.call('system.status'),
       client.call('settings.get'),
     ]);
-    expect(status.protocolVersion).toBe(1);
+    expect(status.protocolVersion).toBe(PROTOCOL_VERSION);
     expect(settings).toEqual(DEFAULT_APP_SETTINGS);
   });
 
