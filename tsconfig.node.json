@@ -1,0 +1,19 @@
+{
+  // Tooling config files and all tests (unit tests run in Node; e2e in Playwright).
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "allowImportingTsExtensions": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["node"]
+  },
+  "include": [
+    "vite.config.ts",
+    "vitest.config.ts",
+    "playwright.config.ts",
+    "pwa-assets.config.ts",
+    "aliases.ts",
+    "tests"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  // Shared message/settings contracts: pure TypeScript, no DOM or worker globals.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.contracts.tsbuildinfo",
+    "lib": ["ES2023"],
+    "types": []
+  },
+  "include": ["src/contracts"]
+}

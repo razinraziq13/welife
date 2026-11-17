@@ -1,0 +1,153 @@
+@import 'tailwindcss';
+
+/* Dark variant follows the resolved theme on <html data-theme>, not just the OS. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@theme inline {
+  --color-bg: var(--wl-bg);
+  --color-surface: var(--wl-surface);
+  --color-surface-2: var(--wl-surface-2);
+  --color-fg: var(--wl-fg);
+  --color-fg-soft: var(--wl-fg-soft);
+  --color-muted: var(--wl-muted);
+  --color-border: var(--wl-border);
+  --color-ring: var(--wl-ring);
+  --color-primary: var(--wl-primary);
+  --color-primary-hover: var(--wl-primary-hover);
+  --color-primary-fg: var(--wl-primary-fg);
+  --color-primary-soft: var(--wl-primary-soft);
+  --color-accent: var(--wl-accent);
+  --color-accent-soft: var(--wl-accent-soft);
+  --color-accent-strong: var(--wl-accent-strong);
+  --color-success: var(--wl-success);
+  --color-danger: var(--wl-danger);
+  --color-danger-fg: var(--wl-danger-fg);
+  --font-sans:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Consolas, monospace;
+  --spacing-13: 3.25rem;
+}
+
+/* ---------- Light (default) ---------- */
+:root {
+  color-scheme: light;
+  --wl-bg: #f6f5f1;
+  --wl-surface: #ffffff;
+  --wl-surface-2: #eeece6;
+  --wl-fg: #1b1d1c;
+  --wl-fg-soft: #ffffff;
+  --wl-muted: #5b5d58;
+  --wl-border: #dcd9d0;
+  --wl-ring: #0e6e5c;
+  --wl-primary: #0e6e5c;
+  --wl-primary-hover: #0b5a4b;
+  --wl-primary-fg: #ffffff;
+  --wl-primary-soft: #dcefe9;
+  --wl-accent: #d99a1e;
+  --wl-accent-soft: #fbf1dc;
+  --wl-accent-strong: #8a5a00;
+  --wl-success: #1c7340;
+  --wl-danger: #b42318;
+  --wl-danger-fg: #ffffff;
+}
+
+/* Fallback before JS resolves the theme: follow the OS. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --wl-bg: #111614;
+    --wl-surface: #1a201e;
+    --wl-surface-2: #242b28;
+    --wl-fg: #ecebe6;
+    --wl-fg-soft: #1a201e;
+    --wl-muted: #a7aca7;
+    --wl-border: #343c38;
+    --wl-ring: #4fd1b0;
+    --wl-primary: #4fd1b0;
+    --wl-primary-hover: #74dcc1;
+    --wl-primary-fg: #08201a;
+    --wl-primary-soft: #173a31;
+    --wl-accent: #f5b942;
+    --wl-accent-soft: #3a2f17;
+    --wl-accent-strong: #f5c86a;
+    --wl-success: #63d297;
+    --wl-danger: #ff8a7f;
+    --wl-danger-fg: #2a0905;
+  }
+}
+
+/* ---------- Dark ---------- */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --wl-bg: #111614;
+  --wl-surface: #1a201e;
+  --wl-surface-2: #242b28;
+  --wl-fg: #ecebe6;
+  --wl-fg-soft: #1a201e;
+  --wl-muted: #a7aca7;
+  --wl-border: #343c38;
+  --wl-ring: #4fd1b0;
+  --wl-primary: #4fd1b0;
+  --wl-primary-hover: #74dcc1;
+  --wl-primary-fg: #08201a;
+  --wl-primary-soft: #173a31;
+  --wl-accent: #f5b942;
+  --wl-accent-soft: #3a2f17;
+  --wl-accent-strong: #f5c86a;
+  --wl-success: #63d297;
+  --wl-danger: #ff8a7f;
+  --wl-danger-fg: #2a0905;
+}
+
+/* ---------- High contrast ---------- */
+:root[data-contrast='high'] {
+  --wl-fg: #000000;
+  --wl-muted: #262626;
+  --wl-border: #1b1d1c;
+  --wl-surface-2: #e4e2db;
+  --wl-primary: #064f41;
+  --wl-primary-hover: #043b31;
+  --wl-ring: #000000;
+}
+
+:root[data-theme='dark'][data-contrast='high'] {
+  --wl-bg: #000000;
+  --wl-surface: #0b0d0c;
+  --wl-surface-2: #1c211f;
+  --wl-fg: #ffffff;
+  --wl-muted: #e2e2e2;
+  --wl-border: #d9d9d9;
+  --wl-primary: #7ff0d2;
+  --wl-primary-hover: #a6f5e0;
+  --wl-ring: #ffffff;
+}
+
+/* ---------- Reduced motion (setting or OS) ---------- */
+:root[data-motion='reduce'] *,
+:root[data-motion='reduce'] *::before,
+:root[data-motion='reduce'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--wl-bg);
+    color: var(--wl-fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--wl-ring);
+    outline-offset: 2px;
+  }
+}

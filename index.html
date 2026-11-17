@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="One Life. Endless Generations. An offline life simulator." />
+    <meta name="theme-color" content="#f6f5f1" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="WeLife" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
+    <title>WeLife</title>
+    <script>
+      // Pre-paint appearance from the local mirror to avoid a flash of the wrong theme.
+      // Source of truth is IndexedDB (via the engine worker); see src/app/theme/appearance.ts.
+      (function () {
+        try {
+          var s = JSON.parse(localStorage.getItem('welife.appearance') || 'null') || {};
+          var d = document.documentElement;
+          var mm = function (q) {
+            return !!(window.matchMedia && window.matchMedia(q).matches);
+          };
+          d.dataset.theme =
+            s.theme === 'light' || s.theme === 'dark'
+              ? s.theme
+              : mm('(prefers-color-scheme: dark)')
+                ? 'dark'
+                : 'light';
+          d.dataset.contrast = s.contrast === 'high' ? 'high' : 'standard';
+          d.dataset.motion =
+            s.motion === 'reduce' || (s.motion !== 'full' && mm('(prefers-reduced-motion: reduce)'))
+              ? 'reduce'
+              : 'full';
+          if ([90, 110, 125, 150].indexOf(s.textScale) >= 0) d.style.fontSize = s.textScale + '%';
+        } catch (e) {
+          /* Storage unavailable: CSS falls back to the OS colour scheme. */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>WeLife needs JavaScript enabled to run.</noscript>
+    <script type="module" src="/src/app/main.tsx"></script>
+  </body>
+</html>
