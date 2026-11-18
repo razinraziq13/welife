@@ -9,7 +9,7 @@ interface ConfirmDialogProps {
   children: ReactNode;
   confirmLabel: string;
   tone?: 'primary' | 'danger';
-  onConfirm: () => Promise<void> | void;
+  onConfirm: () => unknown;
 }
 
 /** Confirmation for consequential actions (delete, rewind). */

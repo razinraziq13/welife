@@ -10,7 +10,6 @@ import {
   AppearanceSchema,
   DIFFICULTIES,
   GENDERS,
-  HABIT_KEYS,
   NEED_KEYS,
   RNG_STREAMS,
   SCENARIO_IDS,
@@ -21,7 +20,6 @@ import {
   type Character,
   type ConcreteScenarioId,
   type Gender,
-  type Habits,
   type Household,
   type Identity,
   type Needs,
@@ -34,6 +32,9 @@ import {
   type YearMonth,
 } from '../state/schema';
 import { inheritAppearance, inheritTraits, randomAppearance, randomTraits } from './genetics';
+import { addCharacter as addCharacterRecord, adultSkills, npcStats, zeroRecord } from './factory';
+import { initializeSystems } from '../core/setup';
+import { linkPair, randomInterests } from '../social/relationships';
 import {
   FAMILY_TRADES,
   availableConcreteScenarios,
@@ -91,33 +92,6 @@ const REPUTATION_BY_WEALTH: Record<WealthTier, number> = {
   royal: 750,
 };
 
-function zeroRecord<K extends string>(keys: readonly K[], value: number): Record<K, number> {
-  const out = {} as Record<K, number>;
-  for (const key of keys) out[key] = value;
-  return out;
-}
-
-function adultSkills(rng: Rng): Skills {
-  const skills = zeroRecord(SKILL_KEYS, 0);
-  for (const key of SKILL_KEYS) skills[key] = rng.range(100, 550);
-  return skills;
-}
-
-function npcStats(rng: Rng, reputation: number): Stats {
-  return {
-    health: rng.range(600, 900),
-    happiness: rng.range(450, 750),
-    intelligence: rng.range(350, 700),
-    energy: rng.range(550, 800),
-    stress: rng.range(200, 500),
-    socialSkill: rng.range(350, 700),
-    discipline: rng.range(350, 700),
-    reputation: Math.min(1000, reputation + rng.range(-50, 50)),
-    confidence: rng.range(350, 700),
-    creativity: rng.range(300, 700),
-  };
-}
-
 interface NewCharacterInput {
   identity: Identity;
   birth: YearMonth;
@@ -130,31 +104,23 @@ interface NewCharacterInput {
   traits: Traits;
   appearance: Appearance;
   needs?: Needs;
-  habits?: Habits;
 }
 
 function addCharacter(world: World, input: NewCharacterInput): Character {
-  const character: Character = {
-    id: nextId(world, 'chr'),
+  return addCharacterRecord(world, {
     identity: input.identity,
     birth: input.birth,
-    death: null,
-    deathCause: null,
-    locationId: input.location.id,
+    location: input.location,
     countryCode: input.country.code,
     householdId: input.householdId,
     tier: input.tier,
     stats: input.stats,
-    needs: input.needs ?? zeroRecord(NEED_KEYS, 750),
     skills: input.skills,
     traits: input.traits,
-    habits: input.habits ?? zeroRecord(HABIT_KEYS, 0),
     appearance: input.appearance,
-    flags: {},
-    statLog: [],
-  };
-  world.characters[character.id] = character;
-  return character;
+    interests: randomInterests(world),
+    ...(input.needs ? { needs: input.needs } : {}),
+  });
 }
 
 function addRelationshipPair(
@@ -165,23 +131,7 @@ function addRelationshipPair(
   typeOfA: Relationship['type'],
   closeness: number,
 ): void {
-  for (const [from, to, type] of [
-    [a, b, typeOfB],
-    [b, a, typeOfA],
-  ] as const) {
-    const id = nextId(world, 'rel');
-    world.relationships[id] = {
-      id,
-      aId: from.id,
-      bId: to.id,
-      type,
-      closeness,
-      trust: closeness,
-      respect: 60,
-      conflict: 5,
-      lastContactTick: world.tick,
-    };
-  }
+  linkPair(world, a, b, typeOfB, typeOfA, { closeness, respect: 60 });
 }
 
 function titleFor(
@@ -236,6 +186,7 @@ export function createWorld(worldId: string, rawInput: unknown): World {
     households: {},
     familyLinks: {},
     relationships: {},
+    memories: {},
     events: {
       instances: {},
       lastFiredTick: {},
@@ -244,6 +195,13 @@ export function createWorld(worldId: string, rawInput: unknown): World {
       pendingInstanceId: null,
     },
     activity: { tick: 0, counts: {}, hoursUsed: 0 },
+    employment: {},
+    jobs: { postings: {}, applications: {}, refreshedTick: 0 },
+    ledger: { accounts: {}, journal: {}, history: {} },
+    insurance: {},
+    economy: {},
+    calendar: { plans: [], items: [] },
+    expecting: [],
     notifications: [],
     biography: [],
     recentCommandIds: [],
@@ -481,6 +439,7 @@ export function createWorld(worldId: string, rawInput: unknown): World {
     originCountryCode: origin?.code ?? null,
     flags,
     familyTrade,
+    finance: null,
   };
 
   // Family links and relationships.
@@ -521,6 +480,7 @@ export function createWorld(worldId: string, rawInput: unknown): World {
   });
   addNotification(world, 'life', 'ntf.welcome', { name: identity.firstName }, 'life');
 
+  initializeSystems(world);
   assertInvariants(world);
   return world;
 }

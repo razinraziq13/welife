@@ -64,3 +64,29 @@ This file records decisions that fill gaps in, or clarify, the specification.
 - Monthly family care for children's needs (rest/company/fun), fading to zero at 18.
 - Mortality curve (annual risk per 100,000 by age band), adjusted 4% per year of life expectancy below 80, by health, and ×0.7 on Casual.
 - Event chances, cooldowns and effect sizes in `src/engine/content/events/core.ts`.
+
+## Milestone 3-4 engineering decisions
+
+| #   | Topic                                           | Decision and reason                                                                                                                                                                                                          |
+| --- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| E9  | Branch for M3+M4                                | Built together on `milestone-3-4` (from `milestone-1-2`) because both were requested at once.                                                                                                                                |
+| E10 | World schema v2 and upgrade                     | Old saves upgrade deterministically (`engine/state/upgrade.ts`); snapshots are rebuilt in their stored format, hash-checked, then upgraded; a new engine version always starts a fresh keyframe so deltas never mix formats. |
+| E11 | Tracked households                              | Only the player's household and the parents' household have ledger accounts; other NPCs keep jobs and salaries without accounts (keeps the world small enough for 150 NPCs).                                                 |
+| E12 | Journal retention                               | Individual transactions stay in the live world for 3 months and summaries are monthly for 2 years then yearly; every monthly snapshot still contains that month's transactions.                                              |
+| E13 | Read-only RPCs                                  | `game.person` and `game.family` are fetched on demand, so each turn's response stays small.                                                                                                                                  |
+| E14 | Adult-only romance                              | Dating, engagement, marriage and family planning need both people to be 18+; teenagers get friendships and crushes only (spec: consent and age gating, non-explicit).                                                        |
+| E15 | Memory-based events reach people who moved away | People archived after moving away can still be the subject of an event about something they remember.                                                                                                                        |
+| E16 | Hand-drawn cash-flow chart, no Recharts         | A small CSS bar chart with a table alternative avoids a large charting dependency for now; Recharts can be added in M5 if richer charts are needed.                                                                          |
+| E17 | e2e builds adult saves in Node                  | `tests/e2e/adultSave.ts` plays an adult life with the real engine and exports it; Playwright uses `tsconfig.node.json` for path aliases.                                                                                     |
+
+## Proposed tuning values added in Milestones 3-4 (not yet user-approved)
+
+- Population: 8 neighbour households, 10 classmates per primary cohort (8 later), at most 150 active and 30 close NPCs; NPC choices weighted against "nothing" (1,200 monthly, 100 yearly).
+- Memory decay per year: fast 25, slow 8, permanent 0 salience; 24 memories per person.
+- Relationship drift targets: 70 living together, 65 partners, 45-55 family, 35-60 friends, 10-35 others, adjusted by memories and conflict.
+- School: grade target formula, effort (relaxed/steady/focused: 60/100/140% gains, -60/0/+70 grade), pass mark 30 (35 for further study), report cards twice a year; admission = 70% results + 30% programme skills + awards + noise vs selectivity; scholarships at +150/+220 over the threshold (need-based at +60).
+- Clubs: 6-12 hours and 0-3% of the median wage a month; competition placings at 680/780/900.
+- Jobs: pay as a percentage of the median wage per occupation, level multipliers 100/130/170/230/320%, experience 0/12/36/60/96 months per level, layoffs about 2.4% a year scaled by unemployment and performance, raises of inflation plus performance.
+- Money: lifestyle spending 70/100/150/260% of a base of 40% (adult) and 15% (child) of the median wage times local costs; rent 18/32/50% of the median wage by home size; childcare 5-35% by circumstances; family support 8% per child below 160% of the median wage; opening savings 1-1,000 months of the median wage by wealth.
+- Loans: personal = policy rate + 6% (+4% or +10% for weak credit); student = policy rate + 1%, 120 months, starting 6 months after study; repayments may take at most 40% (Casual 50%, Challenging 33%) of take-home pay.
+- Economy: monthly random walk of the cycle, inflation and unemployment around each country's baseline; fund return 0.45% a month plus cycle and noise.

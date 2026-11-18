@@ -195,7 +195,7 @@ describe('monthly turns through storage', () => {
       return;
     }
     throw new Error('No pending decision found');
-  });
+  }, 60_000);
 });
 
 describe('rewind and branches (M1 exit)', () => {

@@ -154,6 +154,8 @@ for (const tab of [
   'timeline',
   'notifications',
   'rules',
+  'calendar',
+  'family',
 ]) {
   test(`${tab} screen is accessible (WCAG A/AA)`, async ({ page }) => {
     const saveId = await createLife(page, { seed: `e2e-a11y-${tab}` });

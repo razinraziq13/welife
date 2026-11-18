@@ -21,7 +21,17 @@ const TARGET_ROUTE: Record<Notification['target'], string> = {
   social: 'social',
   timeline: 'timeline',
   event: 'life',
+  career: 'career',
+  finance: 'finance',
+  calendar: 'calendar',
+  person: 'social',
+  family: 'family',
 };
+
+function routeFor(n: Notification): string {
+  if (n.target === 'person' && n.targetId) return `people/${n.targetId}`;
+  return TARGET_ROUTE[n.target];
+}
 
 /** Notification centre (spec §3.17): categories, read/unread, and links to what changed. */
 export function NotificationsScreen() {
@@ -79,7 +89,7 @@ export function NotificationsScreen() {
                   )}
                   onClick={() => {
                     void (n.read ? Promise.resolve() : markRead([n.id])).then(() =>
-                      navigate(`/play/${session.saveId}/${TARGET_ROUTE[n.target]}`),
+                      navigate(`/play/${session.saveId}/${routeFor(n)}`),
                     );
                   }}
                 >

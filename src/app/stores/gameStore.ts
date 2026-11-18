@@ -5,8 +5,10 @@ import type { Difficulty } from '@engine/state/schema';
 import type { DashboardLayout, GameSessionView } from '@contracts/saves';
 import { getEngine } from '@app/bridge/engine';
 import { describeError, errorCode } from '@app/bridge/errors';
+import { outcomeText } from '@app/i18n/format';
+import type { FamilyTreeView, PersonDetailView } from '@engine/view';
 
-type CommandBody = Command extends infer C
+export type CommandBody = Command extends infer C
   ? C extends { id: string }
     ? Omit<C, 'id'>
     : never
@@ -36,6 +38,23 @@ interface GameState {
   rewind: (snapshotId: string) => Promise<void>;
   checkout: (branchId: string) => Promise<void>;
   clearMessage: () => void;
+  /** Read-only detail for one person (Social). */
+  person: (personId: string) => Promise<PersonDetailView | null>;
+  /** The family tree (Social). */
+  family: () => Promise<FamilyTreeView | null>;
+}
+
+/** Human-readable message for an applied action (shown in the status area). */
+function appliedMessage(outcome: CommandOutcome, view: GameSessionView['view']): string | null {
+  if (outcome.status !== 'applied') return null;
+  if (outcome.kind === 'done') return outcomeText(outcome.key, outcome.params);
+  if (outcome.kind === 'interacted') {
+    const name =
+      view.social.people.find((p) => p.id === outcome.interaction.personId)?.identity.firstName ??
+      '';
+    return outcomeText(outcome.interaction.key, { name });
+  }
+  return null;
 }
 
 function newCommandId(): string {
@@ -83,6 +102,10 @@ export const useGameStore = create<GameState>()((set, get) => ({
       const result = await getEngine().call('game.command', { saveId, command });
       set({ session: result.session, busy: false });
       if (result.outcome.status === 'rejected') set({ message: result.outcome.message });
+      else {
+        const message = appliedMessage(result.outcome, result.session.view);
+        if (message) set({ message });
+      }
       return result.outcome;
     } catch (error) {
       set({ busy: false, message: describeError(error) });
@@ -167,5 +190,27 @@ export const useGameStore = create<GameState>()((set, get) => ({
 
   clearMessage() {
     set({ message: null });
+  },
+
+  async person(personId) {
+    const { saveId } = get();
+    if (!saveId) return null;
+    try {
+      return await getEngine().call('game.person', { saveId, personId });
+    } catch (error) {
+      set({ message: describeError(error) });
+      return null;
+    }
+  },
+
+  async family() {
+    const { saveId } = get();
+    if (!saveId) return null;
+    try {
+      return await getEngine().call('game.family', { saveId });
+    } catch (error) {
+      set({ message: describeError(error) });
+      return null;
+    }
   },
 }));

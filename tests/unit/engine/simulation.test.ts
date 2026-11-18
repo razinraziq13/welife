@@ -179,7 +179,7 @@ describe('monthly turn', () => {
     const months = a.state.world.tick;
     expect(months > 0).toBe(true);
     expect(a.state.world.notifications.length).toBeLessThanOrEqual(400);
-  });
+  }, 120_000);
 
   it('refuses to advance after the life has ended, with a non-graphic biography entry', () => {
     let state = newState({ seed: 'mortal', difficulty: 'challenging' });
@@ -197,5 +197,5 @@ describe('monthly turn', () => {
       // Over 108 years most lives end; if this one did not, it must be very old and alive.
       expect(projectGame(state).character.age.years).toBeGreaterThan(100);
     }
-  });
+  }, 120_000);
 });

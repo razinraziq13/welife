@@ -1,5 +1,6 @@
 import { validateEventSet, type EventDefinition } from '../events/schema';
 import { CORE_EVENTS } from './events/core';
+import { LIFE_EVENTS } from './events/life';
 
 /**
  * Built-in content registry. Content is validated when the module loads; invalid built-in
@@ -7,9 +8,9 @@ import { CORE_EVENTS } from './events/core';
  */
 
 /** Version of the built-in content. Bump when event rules or numbers change. */
-export const CONTENT_VERSION = 'core-2026.11.1';
+export const CONTENT_VERSION = 'core-2026.11.2';
 
-const validated = validateEventSet(CORE_EVENTS);
+const validated = validateEventSet([...CORE_EVENTS, ...LIFE_EVENTS]);
 if (validated.issues.length > 0) {
   throw new Error(
     `Invalid built-in event content:\n${validated.issues.map((i) => `${i.path}: ${i.message}`).join('\n')}`,

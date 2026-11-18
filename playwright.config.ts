@@ -10,6 +10,8 @@ const includeFirefox = isCI || process.env.WELIFE_E2E_FIREFOX === '1';
 
 export default defineConfig({
   testDir: 'tests/e2e',
+  // Path aliases (@engine, @persistence...) so tests can build fixtures with the real engine.
+  tsconfig: './tsconfig.node.json',
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,

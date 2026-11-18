@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { CommandSchema, type Command } from '@engine/core/commands';
 import { NewLifeInputSchema, type NewLifeInput } from '@engine/characters/create';
+import type { FamilyTreeView, PersonDetailView } from '@engine/view';
 import { AppSettingsPatchSchema, type AppSettings, type AppSettingsPatch } from './appSettings';
 import {
   DashboardLayoutSchema,
@@ -18,7 +19,7 @@ import {
  * request handled by the worker, which owns the world state and IndexedDB (spec §2).
  */
 
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 
 export interface SystemStatus {
   engineVersion: string;
@@ -51,6 +52,8 @@ export interface RpcMethods {
   'game.open': { params: SaveRef; result: GameSessionView };
   'game.command': { params: SaveRef & { command: Command }; result: CommandResult };
   'game.setLayout': { params: SaveRef & { layout: DashboardLayout }; result: DashboardLayout };
+  'game.person': { params: SaveRef & { personId: string }; result: PersonDetailView | null };
+  'game.family': { params: SaveRef; result: FamilyTreeView };
   'timeline.get': { params: SaveRef; result: TimelineData };
   'timeline.rewind': { params: SaveRef & { snapshotId: string }; result: GameSessionView };
   'timeline.checkout': { params: SaveRef & { branchId: string }; result: GameSessionView };
@@ -89,6 +92,11 @@ export const RpcRequestSchema = z.discriminatedUnion('method', [
   request('game.open', z.object({ saveId: SaveId }).strict()),
   request('game.command', z.object({ saveId: SaveId, command: CommandSchema }).strict()),
   request('game.setLayout', z.object({ saveId: SaveId, layout: DashboardLayoutSchema }).strict()),
+  request(
+    'game.person',
+    z.object({ saveId: SaveId, personId: z.string().min(1).max(80) }).strict(),
+  ),
+  request('game.family', z.object({ saveId: SaveId }).strict()),
   request('timeline.get', z.object({ saveId: SaveId }).strict()),
   request(
     'timeline.rewind',

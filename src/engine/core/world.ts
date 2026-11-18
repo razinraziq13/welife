@@ -65,6 +65,7 @@ export function addNotification(
   messageKey: string,
   params: Notification['params'],
   target: Notification['target'],
+  targetId: string | null = null,
 ): void {
   world.notifications.push({
     id: nextId(world, 'ntf'),
@@ -74,7 +75,17 @@ export function addNotification(
     params,
     read: false,
     target,
+    targetId,
   });
+}
+
+/** Whole years of age now. */
+export function ageYears(world: World, character: Character): number {
+  return ageOf(character.birth, character.death ?? world.clock).years;
+}
+
+export function isPlayer(world: World, character: Character): boolean {
+  return character.id === world.activeCharacterId;
 }
 
 export const RECENT_COMMAND_LIMIT = 512;

@@ -10,7 +10,7 @@
 ## Working rules
 
 - **Review gate after every milestone.** Stop and wait for the user's approval before starting the next one.
-- One branch per milestone (`milestone-N`; M1 and M2 share `milestone-1-2`). Commit only when the user asks.
+- One branch per milestone (`milestone-N`; M1 and M2 share `milestone-1-2`, M3 and M4 share `milestone-3-4`). Commit only when the user asks.
 - Never mark something done if it is mocked, disconnected or untested. Report real command output.
 - No placeholder screens or fake buttons. Add a route only when its screen works. A disabled control must explain why.
 - The engine (`src/engine`) is pure and deterministic. Never use `Math.random`, `Date`, timers or browser globals there; ESLint, tsconfig and dependency-cruiser enforce this.

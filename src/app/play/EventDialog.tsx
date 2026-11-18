@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { findEvent } from '@engine/content';
 import { Button } from '@app/components/ui/button';
 import { Dialog } from '@app/components/ui/dialog';
-import { formatMonth } from '@app/i18n/format';
+import { fillText, formatMonth } from '@app/i18n/format';
 import { useGameStore } from '@app/stores/gameStore';
 
 /**
@@ -33,7 +33,7 @@ export function EventDialog() {
           className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-accent/50 bg-accent-soft p-3 text-sm"
         >
           <span>
-            <strong>A decision is waiting:</strong> {text.title}
+            <strong>A decision is waiting:</strong> {fillText(text.title, pending.params)}
           </span>
           <Button
             size="sm"
@@ -45,11 +45,11 @@ export function EventDialog() {
           </Button>
         </div>
       )}
-      <Dialog open={open} onOpenChange={setOpen} title={text.title}>
+      <Dialog open={open} onOpenChange={setOpen} title={fillText(text.title, pending.params)}>
         <p className="text-xs font-medium uppercase tracking-wide text-muted">
           {formatMonth(pending.clock)}
         </p>
-        <p className="mt-2 text-fg">{text.body}</p>
+        <p className="mt-2 text-fg">{fillText(text.body, pending.params)}</p>
         <div className="mt-4 flex flex-col gap-2" role="group" aria-label="Choices">
           {pending.choices.map((choice) => (
             <Button
@@ -61,7 +61,7 @@ export function EventDialog() {
                 void choose(pending.instanceId, choice.id);
               }}
             >
-              {text.choices[choice.id] ?? choice.id}
+              {fillText(text.choices[choice.id] ?? choice.id, pending.params)}
               {!choice.available && (
                 <span className="ml-auto text-xs text-muted">Not available to you</span>
               )}

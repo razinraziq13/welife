@@ -14,6 +14,10 @@ export const DASHBOARD_WIDGETS = [
   'needs',
   'family',
   'country',
+  'money',
+  'studies',
+  'calendar',
+  'people',
 ] as const;
 export type DashboardWidget = (typeof DASHBOARD_WIDGETS)[number];
 

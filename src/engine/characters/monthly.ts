@@ -1,5 +1,9 @@
 import { ageOf } from '../core/clock';
-import { clamp, sortedKeys } from '../core/data';
+import { clamp, sortedKeys, sortedValues } from '../core/data';
+import { endEmployment } from '../career/jobs';
+import { payLifeInsurance } from '../economy/finance';
+import { onDeath } from '../social/family';
+import { kinship } from '../social/relationships';
 import { addBiography, addNotification, isAlive, withRng } from '../core/world';
 import { getCountry } from '../world/countries';
 import { displayName } from './names';
@@ -140,7 +144,7 @@ function updateNpc(world: World, c: Character): void {
 export function updateCharactersMonthly(world: World): void {
   for (const id of sortedKeys(world.characters)) {
     const c = world.characters[id];
-    if (!c || !isAlive(c)) continue;
+    if (!c || !isAlive(c) || c.tier === 'archived') continue;
     if (id === world.activeCharacterId) updatePlayer(world, c);
     else updateNpc(world, c);
   }
@@ -157,7 +161,7 @@ export function processMortality(world: World): string[] {
   const deaths: string[] = [];
   for (const id of sortedKeys(world.characters)) {
     const c = world.characters[id];
-    if (!c || !isAlive(c)) continue;
+    if (!c || !isAlive(c) || (c.tier === 'archived' && id !== world.activeCharacterId)) continue;
     const age = ageOf(c.birth, world.clock);
     const ppm = monthlyMortalityPpm({
       ageYears: age.years,
@@ -170,6 +174,10 @@ export function processMortality(world: World): string[] {
     c.death = { ...world.clock };
     c.deathCause = deathCause(world, c, age.years);
     deaths.push(id);
+  }
+  for (const id of deaths) {
+    const c = world.characters[id];
+    if (c) settleDeath(world, c);
   }
   const player = world.characters[world.activeCharacterId];
   for (const id of deaths) {
@@ -188,6 +196,12 @@ export function processMortality(world: World): string[] {
       (r) => r.aId === player.id && r.bId === id,
     );
     if (!relation) continue;
+    const kin = kinship(world, player.id, id);
+    const close =
+      kin !== null ||
+      relation.type === 'partner' ||
+      (relation.type === 'friend' && relation.closeness >= 50);
+    if (!close) continue;
     addBiography(world, player.id, 'family', 'bio.familyDeath', {
       name: displayName(c.identity, false),
       relation: relation.type,
@@ -200,25 +214,72 @@ export function processMortality(world: World): string[] {
       { name: displayName(c.identity, false), relation: relation.type },
       'social',
     );
-    const grief = relation.type === 'parent' ? 200 : 150;
+    const grief =
+      relation.type === 'parent' || relation.type === 'partner' || relation.type === 'child'
+        ? 200
+        : kin
+          ? 150
+          : 100;
     changeStat(world, player, 'happiness', -grief, `loss:${relation.type}`);
     changeStat(world, player, 'stress', grief, `loss:${relation.type}`);
   }
   return deaths;
 }
 
-/** Family relationships drift slowly; time together keeps them close (spec §4 Relationships). */
+/** Ends jobs and partnerships, pays life insurance and passes on running the household. */
+function settleDeath(world: World, c: Character): void {
+  if (c.employmentId) endEmployment(world, c, 'died');
+  if (c.id === world.activeCharacterId) payLifeInsurance(world, c);
+  onDeath(world, c);
+  const home = world.households[c.householdId];
+  if (home?.finance?.headId === c.id) {
+    const next = home.memberIds
+      .map((m) => world.characters[m])
+      .filter((m): m is Character => m?.death === null)
+      .sort((x, y) => x.birth.year * 12 + x.birth.month - (y.birth.year * 12 + y.birth.month))[0];
+    if (next) home.finance.headId = next.id;
+  }
+}
+
+/**
+ * Relationships drift towards a level set by living together, the kind of relationship,
+ * recent contact and what each person remembers about the other (spec §4 memories).
+ */
 export function driftRelationships(world: World): void {
-  for (const id of sortedKeys(world.relationships)) {
-    const rel = world.relationships[id];
-    if (!rel) continue;
+  if (world.tick % 6 !== 0) {
+    for (const rel of sortedValues(world.relationships)) {
+      if (rel.conflict > 0 && world.tick % 3 === 0) rel.conflict -= 1;
+    }
+    return;
+  }
+  const sentiment = new Map<string, number>();
+  for (const m of sortedValues(world.memories)) {
+    for (const subject of m.subjectIds) {
+      const key = `${m.ownerId}|${subject}`;
+      sentiment.set(key, (sentiment.get(key) ?? 0) + Math.trunc((m.valence * m.salience) / 100));
+    }
+  }
+  for (const rel of sortedValues(world.relationships)) {
     const a = world.characters[rel.aId];
     const b = world.characters[rel.bId];
     if (!a || !b || !isAlive(a) || !isAlive(b)) continue;
+    if (a.tier === 'archived' && b.tier === 'archived') continue;
+    const recent = world.tick - rel.lastContactTick <= 6;
     const sameHome = a.householdId === b.householdId;
-    const target = sameHome ? 70 : 50;
-    if (world.tick % 6 === 0 && rel.closeness !== target)
-      rel.closeness += rel.closeness < target ? 1 : -1;
-    if (rel.conflict > 0 && world.tick % 3 === 0) rel.conflict -= 1;
+    let target: number;
+    if (sameHome) target = 70;
+    else if (rel.type === 'partner') target = 65;
+    else if (kinship(world, a.id, b.id) !== null) target = recent ? 55 : 45;
+    else if (rel.type === 'friend') target = recent ? 60 : 35;
+    else target = recent ? 35 : 10;
+    target = clamp(
+      target +
+        Math.trunc((sentiment.get(`${a.id}|${b.id}`) ?? 0) / 4) -
+        Math.trunc(rel.conflict / 4),
+      0,
+      100,
+    );
+    if (rel.closeness !== target) rel.closeness += rel.closeness < target ? 1 : -1;
+    if (rel.conflict > 0) rel.conflict -= 1;
   }
 }

@@ -76,3 +76,58 @@ function choicesFor(definitionId: string): string[] {
 export function hashState(state: SimState): string {
   return canonicalJson(state);
 }
+
+let counter = 0;
+/** A unique command id for tests. */
+export function cid(prefix = 'c'): string {
+  counter += 1;
+  return `${prefix}-${String(counter)}`;
+}
+
+type Body = Command extends infer C ? (C extends { id: string } ? Omit<C, 'id'> : never) : never;
+
+/** Runs one command and returns the outcome and new state. */
+export function run(state: SimState, body: Body): { state: SimState; outcome: CommandOutcome } {
+  return execute(state, { ...body, id: cid(body.type) });
+}
+
+/** Answers a pending decision with the first available choice (or a preferred one). */
+export function settle(
+  state: SimState,
+  prefer?: (definitionId: string) => string | null,
+): SimState {
+  let current = state;
+  while (current.pending) {
+    const instanceId = current.pending.events.pendingInstanceId ?? '';
+    const instance = current.pending.events.instances[instanceId];
+    const def = instance ? getEvent(instance.definitionId) : undefined;
+    const choiceId = (def && prefer?.(def.id)) ?? def?.choices[0]?.id ?? '';
+    current = execute(current, { type: 'choose', id: cid('choose'), instanceId, choiceId }).state;
+  }
+  return current;
+}
+
+/** Advances `months` months, settling any decisions. */
+export function advanceMonths(
+  state: SimState,
+  months: number,
+  prefer?: (definitionId: string) => string | null,
+): SimState {
+  let current = state;
+  for (let i = 0; i < months; i++) {
+    if (current.world.lifeStatus !== 'alive') break;
+    current = execute(current, {
+      type: 'advance',
+      id: cid('adv'),
+      expectedTick: current.world.tick,
+    }).state;
+    current = settle(current, prefer);
+  }
+  return current;
+}
+
+export function playerOf(state: SimState) {
+  const player = state.world.characters[state.world.activeCharacterId];
+  if (!player) throw new Error('no player');
+  return player;
+}

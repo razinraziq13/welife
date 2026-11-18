@@ -1,0 +1,915 @@
+{
+  "engineVersion": "0.2.0",
+  "world": {
+    "activeCharacterId": "chr_5",
+    "activity": { "counts": {}, "hoursUsed": 0, "tick": 30 },
+    "biography": [
+      {
+        "category": "life",
+        "characterId": "chr_5",
+        "id": "bio_g",
+        "key": "bio.born",
+        "params": { "country": "United Kingdom", "location": "Edinburgh" },
+        "tick": 0
+      },
+      {
+        "category": "family",
+        "characterId": "chr_5",
+        "id": "bio_h",
+        "key": "bio.scenario.middle",
+        "params": { "origin": "", "trade": "" },
+        "tick": 0
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_j",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 0
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_k",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 1
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_l",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 2
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_m",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 3
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_n",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 4
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_o",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 5
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_p",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 6
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_q",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 7
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_r",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 8
+      },
+      {
+        "category": "event",
+        "characterId": "chr_5",
+        "id": "bio_t",
+        "key": "bio.event",
+        "params": { "choiceId": "", "eventId": "first-words" },
+        "tick": 9
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_v",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 9
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_w",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 10
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_x",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 11
+      },
+      {
+        "category": "life",
+        "characterId": "chr_5",
+        "id": "bio_y",
+        "key": "bio.birthday",
+        "params": { "age": 1 },
+        "tick": 12
+      },
+      {
+        "category": "event",
+        "characterId": "chr_5",
+        "id": "bio_11",
+        "key": "bio.event",
+        "params": { "choiceId": "", "eventId": "first-steps" },
+        "tick": 12
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_13",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 12
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_14",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 13
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_15",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 14
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_16",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 15
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_17",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 16
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_18",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 17
+      },
+      {
+        "category": "health",
+        "characterId": "chr_5",
+        "id": "bio_1a",
+        "key": "bio.event",
+        "params": { "choiceId": "", "eventId": "childhood-cold" },
+        "tick": 18
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_1c",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 18
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_1d",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 19
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_1e",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 20
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_1f",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 21
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_1g",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 22
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_1h",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 23
+      },
+      {
+        "category": "life",
+        "characterId": "chr_5",
+        "id": "bio_1i",
+        "key": "bio.birthday",
+        "params": { "age": 2 },
+        "tick": 24
+      },
+      {
+        "category": "life",
+        "characterId": "chr_5",
+        "id": "bio_1k",
+        "key": "bio.stage",
+        "params": { "stage": "toddler" },
+        "tick": 24
+      },
+      {
+        "category": "family",
+        "characterId": "chr_5",
+        "id": "bio_1n",
+        "key": "bio.event",
+        "params": { "choiceId": "", "eventId": "birthday-gifts" },
+        "tick": 24
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_1p",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 24
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_1q",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 25
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_1r",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 26
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_1s",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 27
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_1t",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 28
+      },
+      {
+        "category": "activity",
+        "characterId": "chr_5",
+        "id": "bio_1u",
+        "key": "bio.activity",
+        "params": { "activityId": "family-time" },
+        "tick": 29
+      }
+    ],
+    "characters": {
+      "chr_2": {
+        "appearance": {
+          "eyeColor": 3,
+          "faceShape": 2,
+          "freckles": false,
+          "hairColor": 5,
+          "hairStyle": 0,
+          "skinTone": 0
+        },
+        "birth": { "month": 8, "year": 1991 },
+        "countryCode": "GB",
+        "death": null,
+        "deathCause": null,
+        "flags": {},
+        "habits": { "creativePractice": 0, "exercise": 0, "reading": 0, "sleepRoutine": 0 },
+        "householdId": "hh_1",
+        "id": "chr_2",
+        "identity": {
+          "firstName": "Amelia",
+          "gender": "female",
+          "lastName": "Brown",
+          "nameOrder": "given-first",
+          "title": null
+        },
+        "locationId": "gb-edinburgh",
+        "needs": { "leisure": 750, "nutrition": 750, "rest": 750, "social": 750 },
+        "skills": {
+          "art": 154,
+          "fitness": 340,
+          "logic": 191,
+          "music": 110,
+          "reading": 548,
+          "socializing": 309
+        },
+        "statLog": [],
+        "stats": {
+          "confidence": 402,
+          "creativity": 320,
+          "discipline": 451,
+          "energy": 599,
+          "happiness": 536,
+          "health": 640,
+          "intelligence": 502,
+          "reputation": 550,
+          "socialSkill": 477,
+          "stress": 309
+        },
+        "tier": "close",
+        "traits": {
+          "agreeableness": 70,
+          "conscientiousness": 77,
+          "extraversion": 52,
+          "neuroticism": 42,
+          "openness": 71
+        }
+      },
+      "chr_3": {
+        "appearance": {
+          "eyeColor": 1,
+          "faceShape": 0,
+          "freckles": false,
+          "hairColor": 5,
+          "hairStyle": 0,
+          "skinTone": 8
+        },
+        "birth": { "month": 10, "year": 1988 },
+        "countryCode": "GB",
+        "death": null,
+        "deathCause": null,
+        "flags": {},
+        "habits": { "creativePractice": 0, "exercise": 0, "reading": 0, "sleepRoutine": 0 },
+        "householdId": "hh_1",
+        "id": "chr_3",
+        "identity": {
+          "firstName": "Muhammad",
+          "gender": "male",
+          "lastName": "Brown",
+          "nameOrder": "given-first",
+          "title": null
+        },
+        "locationId": "gb-edinburgh",
+        "needs": { "leisure": 750, "nutrition": 750, "rest": 750, "social": 750 },
+        "skills": {
+          "art": 525,
+          "fitness": 395,
+          "logic": 132,
+          "music": 247,
+          "reading": 350,
+          "socializing": 478
+        },
+        "statLog": [],
+        "stats": {
+          "confidence": 652,
+          "creativity": 611,
+          "discipline": 402,
+          "energy": 604,
+          "happiness": 571,
+          "health": 653,
+          "intelligence": 387,
+          "reputation": 523,
+          "socialSkill": 687,
+          "stress": 297
+        },
+        "tier": "close",
+        "traits": {
+          "agreeableness": 33,
+          "conscientiousness": 50,
+          "extraversion": 49,
+          "neuroticism": 70,
+          "openness": 63
+        }
+      },
+      "chr_4": {
+        "appearance": {
+          "eyeColor": 3,
+          "faceShape": 0,
+          "freckles": false,
+          "hairColor": 5,
+          "hairStyle": 4,
+          "skinTone": 4
+        },
+        "birth": { "month": 10, "year": 2017 },
+        "countryCode": "GB",
+        "death": null,
+        "deathCause": null,
+        "flags": {},
+        "habits": { "creativePractice": 0, "exercise": 0, "reading": 0, "sleepRoutine": 0 },
+        "householdId": "hh_1",
+        "id": "chr_4",
+        "identity": {
+          "firstName": "Freya",
+          "gender": "female",
+          "lastName": "Brown",
+          "nameOrder": "given-first",
+          "title": null
+        },
+        "locationId": "gb-edinburgh",
+        "needs": { "leisure": 750, "nutrition": 750, "rest": 750, "social": 750 },
+        "skills": {
+          "art": 0,
+          "fitness": 0,
+          "logic": 0,
+          "music": 0,
+          "reading": 0,
+          "socializing": 0
+        },
+        "statLog": [],
+        "stats": {
+          "confidence": 419,
+          "creativity": 512,
+          "discipline": 443,
+          "energy": 628,
+          "happiness": 564,
+          "health": 742,
+          "intelligence": 682,
+          "reputation": 512,
+          "socialSkill": 638,
+          "stress": 289
+        },
+        "tier": "close",
+        "traits": {
+          "agreeableness": 45,
+          "conscientiousness": 62,
+          "extraversion": 51,
+          "neuroticism": 57,
+          "openness": 64
+        }
+      },
+      "chr_5": {
+        "appearance": {
+          "eyeColor": 3,
+          "faceShape": 2,
+          "freckles": false,
+          "hairColor": 5,
+          "hairStyle": 7,
+          "skinTone": 5
+        },
+        "birth": { "month": 11, "year": 2026 },
+        "countryCode": "GB",
+        "death": null,
+        "deathCause": null,
+        "flags": {},
+        "habits": { "creativePractice": 0, "exercise": 0, "reading": 0, "sleepRoutine": 0 },
+        "householdId": "hh_1",
+        "id": "chr_5",
+        "identity": {
+          "firstName": "Ada",
+          "gender": "female",
+          "lastName": "Brown",
+          "nameOrder": "given-first",
+          "title": null
+        },
+        "locationId": "gb-edinburgh",
+        "needs": { "leisure": 90, "nutrition": 849, "rest": 550, "social": 995 },
+        "skills": {
+          "art": 0,
+          "fitness": 0,
+          "logic": 0,
+          "music": 0,
+          "reading": 0,
+          "socializing": 0
+        },
+        "statLog": [
+          { "cause": "monthly:stress", "delta": 18, "key": "stats.stress", "tick": 23 },
+          { "cause": "monthly:mood", "delta": -30, "key": "stats.happiness", "tick": 23 },
+          { "cause": "monthly:growing-up", "delta": 2, "key": "stats.intelligence", "tick": 23 },
+          { "cause": "monthly:energy", "delta": 19, "key": "stats.energy", "tick": 23 },
+          { "cause": "activity:family-time", "delta": -20, "key": "stats.energy", "tick": 23 },
+          { "cause": "activity:family-time", "delta": 30, "key": "stats.happiness", "tick": 23 },
+          { "cause": "activity:family-time", "delta": -20, "key": "stats.stress", "tick": 23 },
+          { "cause": "monthly:health", "delta": 1, "key": "stats.health", "tick": 24 },
+          { "cause": "monthly:stress", "delta": 18, "key": "stats.stress", "tick": 24 },
+          { "cause": "monthly:mood", "delta": -30, "key": "stats.happiness", "tick": 24 },
+          { "cause": "monthly:growing-up", "delta": 2, "key": "stats.intelligence", "tick": 24 },
+          { "cause": "monthly:energy", "delta": 18, "key": "stats.energy", "tick": 24 },
+          { "cause": "event:birthday-gifts", "delta": 30, "key": "stats.happiness", "tick": 24 },
+          { "cause": "activity:family-time", "delta": -20, "key": "stats.energy", "tick": 24 },
+          { "cause": "activity:family-time", "delta": -20, "key": "stats.stress", "tick": 24 },
+          { "cause": "monthly:health", "delta": 1, "key": "stats.health", "tick": 25 },
+          { "cause": "monthly:stress", "delta": 18, "key": "stats.stress", "tick": 25 },
+          { "cause": "monthly:mood", "delta": -30, "key": "stats.happiness", "tick": 25 },
+          { "cause": "monthly:growing-up", "delta": 2, "key": "stats.intelligence", "tick": 25 },
+          { "cause": "monthly:energy", "delta": 20, "key": "stats.energy", "tick": 25 },
+          { "cause": "activity:family-time", "delta": -20, "key": "stats.energy", "tick": 25 },
+          { "cause": "activity:family-time", "delta": 30, "key": "stats.happiness", "tick": 25 },
+          { "cause": "activity:family-time", "delta": -20, "key": "stats.stress", "tick": 25 },
+          { "cause": "monthly:health", "delta": 1, "key": "stats.health", "tick": 26 },
+          { "cause": "monthly:stress", "delta": 18, "key": "stats.stress", "tick": 26 },
+          { "cause": "monthly:mood", "delta": -30, "key": "stats.happiness", "tick": 26 },
+          { "cause": "monthly:growing-up", "delta": 2, "key": "stats.intelligence", "tick": 26 },
+          { "cause": "monthly:energy", "delta": 18, "key": "stats.energy", "tick": 26 },
+          { "cause": "activity:family-time", "delta": -20, "key": "stats.energy", "tick": 26 },
+          { "cause": "activity:family-time", "delta": 30, "key": "stats.happiness", "tick": 26 },
+          { "cause": "activity:family-time", "delta": -20, "key": "stats.stress", "tick": 26 },
+          { "cause": "monthly:health", "delta": 1, "key": "stats.health", "tick": 27 },
+          { "cause": "monthly:stress", "delta": 18, "key": "stats.stress", "tick": 27 },
+          { "cause": "monthly:mood", "delta": -30, "key": "stats.happiness", "tick": 27 },
+          { "cause": "monthly:growing-up", "delta": 2, "key": "stats.intelligence", "tick": 27 },
+          { "cause": "monthly:energy", "delta": 18, "key": "stats.energy", "tick": 27 },
+          { "cause": "activity:family-time", "delta": -20, "key": "stats.energy", "tick": 27 },
+          { "cause": "activity:family-time", "delta": 30, "key": "stats.happiness", "tick": 27 },
+          { "cause": "activity:family-time", "delta": -20, "key": "stats.stress", "tick": 27 },
+          { "cause": "monthly:health", "delta": 1, "key": "stats.health", "tick": 28 },
+          { "cause": "monthly:stress", "delta": 19, "key": "stats.stress", "tick": 28 },
+          { "cause": "monthly:mood", "delta": -30, "key": "stats.happiness", "tick": 28 },
+          { "cause": "monthly:growing-up", "delta": 2, "key": "stats.intelligence", "tick": 28 },
+          { "cause": "monthly:energy", "delta": 19, "key": "stats.energy", "tick": 28 },
+          { "cause": "activity:family-time", "delta": -20, "key": "stats.energy", "tick": 28 },
+          { "cause": "activity:family-time", "delta": 30, "key": "stats.happiness", "tick": 28 },
+          { "cause": "activity:family-time", "delta": -20, "key": "stats.stress", "tick": 28 },
+          { "cause": "monthly:health", "delta": 1, "key": "stats.health", "tick": 29 },
+          { "cause": "monthly:stress", "delta": 19, "key": "stats.stress", "tick": 29 },
+          { "cause": "monthly:mood", "delta": -30, "key": "stats.happiness", "tick": 29 },
+          { "cause": "monthly:growing-up", "delta": 2, "key": "stats.intelligence", "tick": 29 },
+          { "cause": "monthly:energy", "delta": 18, "key": "stats.energy", "tick": 29 },
+          { "cause": "activity:family-time", "delta": -20, "key": "stats.energy", "tick": 29 },
+          { "cause": "activity:family-time", "delta": 30, "key": "stats.happiness", "tick": 29 },
+          { "cause": "activity:family-time", "delta": -20, "key": "stats.stress", "tick": 29 },
+          { "cause": "monthly:health", "delta": 1, "key": "stats.health", "tick": 30 },
+          { "cause": "monthly:stress", "delta": 19, "key": "stats.stress", "tick": 30 },
+          { "cause": "monthly:mood", "delta": -30, "key": "stats.happiness", "tick": 30 },
+          { "cause": "monthly:growing-up", "delta": 2, "key": "stats.intelligence", "tick": 30 },
+          { "cause": "monthly:energy", "delta": 19, "key": "stats.energy", "tick": 30 }
+        ],
+        "stats": {
+          "confidence": 520,
+          "creativity": 612,
+          "discipline": 471,
+          "energy": 779,
+          "happiness": 970,
+          "health": 820,
+          "intelligence": 473,
+          "reputation": 500,
+          "socialSkill": 471,
+          "stress": 27
+        },
+        "tier": "close",
+        "traits": {
+          "agreeableness": 51,
+          "conscientiousness": 50,
+          "extraversion": 39,
+          "neuroticism": 66,
+          "openness": 36
+        }
+      }
+    },
+    "clock": { "month": 5, "year": 2029 },
+    "contentVersion": "core-2026.11.1",
+    "events": {
+      "firedCount": {
+        "birthday-gifts": 1,
+        "childhood-cold": 1,
+        "first-steps": 1,
+        "first-words": 1
+      },
+      "instances": {
+        "evt_10": {
+          "characterId": "chr_5",
+          "choiceId": null,
+          "definitionId": "first-steps",
+          "definitionVersion": 1,
+          "id": "evt_10",
+          "sourceInstanceId": null,
+          "status": "resolved",
+          "tick": 12
+        },
+        "evt_19": {
+          "characterId": "chr_5",
+          "choiceId": null,
+          "definitionId": "childhood-cold",
+          "definitionVersion": 1,
+          "id": "evt_19",
+          "sourceInstanceId": null,
+          "status": "resolved",
+          "tick": 18
+        },
+        "evt_1m": {
+          "characterId": "chr_5",
+          "choiceId": null,
+          "definitionId": "birthday-gifts",
+          "definitionVersion": 1,
+          "id": "evt_1m",
+          "sourceInstanceId": null,
+          "status": "resolved",
+          "tick": 24
+        },
+        "evt_s": {
+          "characterId": "chr_5",
+          "choiceId": null,
+          "definitionId": "first-words",
+          "definitionVersion": 1,
+          "id": "evt_s",
+          "sourceInstanceId": null,
+          "status": "resolved",
+          "tick": 9
+        }
+      },
+      "lastFiredTick": {
+        "birthday-gifts": 24,
+        "childhood-cold": 18,
+        "first-steps": 12,
+        "first-words": 9
+      },
+      "pendingInstanceId": null,
+      "scheduled": []
+    },
+    "familyLinks": {
+      "fam_6": { "childId": "chr_4", "id": "fam_6", "parentId": "chr_2", "type": "biological" },
+      "fam_7": { "childId": "chr_5", "id": "fam_7", "parentId": "chr_2", "type": "biological" },
+      "fam_a": { "childId": "chr_4", "id": "fam_a", "parentId": "chr_3", "type": "biological" },
+      "fam_b": { "childId": "chr_5", "id": "fam_b", "parentId": "chr_3", "type": "biological" }
+    },
+    "households": {
+      "hh_1": {
+        "familyTrade": null,
+        "flags": {
+          "adopted": false,
+          "businessHeir": false,
+          "immigrant": false,
+          "noble": false,
+          "political": false,
+          "royal": false,
+          "rural": false,
+          "singleParent": false
+        },
+        "id": "hh_1",
+        "locationId": "gb-edinburgh",
+        "memberIds": ["chr_2", "chr_3", "chr_4", "chr_5"],
+        "originCountryCode": null,
+        "scenario": "middle",
+        "wealth": "upper-middle"
+      }
+    },
+    "id": "world-v1",
+    "lifeStatus": "alive",
+    "nextId": 67,
+    "notifications": [
+      {
+        "category": "life",
+        "id": "ntf_i",
+        "messageKey": "ntf.welcome",
+        "params": { "name": "Ada" },
+        "read": false,
+        "target": "life",
+        "tick": 0
+      },
+      {
+        "category": "event",
+        "id": "ntf_u",
+        "messageKey": "ntf.event",
+        "params": { "eventId": "first-words" },
+        "read": false,
+        "target": "life",
+        "tick": 9
+      },
+      {
+        "category": "life",
+        "id": "ntf_z",
+        "messageKey": "ntf.birthday",
+        "params": { "age": 1 },
+        "read": false,
+        "target": "character",
+        "tick": 12
+      },
+      {
+        "category": "event",
+        "id": "ntf_12",
+        "messageKey": "ntf.event",
+        "params": { "eventId": "first-steps" },
+        "read": false,
+        "target": "life",
+        "tick": 12
+      },
+      {
+        "category": "health",
+        "id": "ntf_1b",
+        "messageKey": "ntf.event",
+        "params": { "eventId": "childhood-cold" },
+        "read": false,
+        "target": "life",
+        "tick": 18
+      },
+      {
+        "category": "life",
+        "id": "ntf_1j",
+        "messageKey": "ntf.birthday",
+        "params": { "age": 2 },
+        "read": false,
+        "target": "character",
+        "tick": 24
+      },
+      {
+        "category": "life",
+        "id": "ntf_1l",
+        "messageKey": "ntf.stage",
+        "params": { "stage": "toddler" },
+        "read": false,
+        "target": "character",
+        "tick": 24
+      },
+      {
+        "category": "family",
+        "id": "ntf_1o",
+        "messageKey": "ntf.event",
+        "params": { "eventId": "birthday-gifts" },
+        "read": false,
+        "target": "life",
+        "tick": 24
+      }
+    ],
+    "recentCommandIds": [
+      "v1-act-0",
+      "v1-adv-0",
+      "v1-act-1",
+      "v1-adv-1",
+      "v1-act-2",
+      "v1-adv-2",
+      "v1-act-3",
+      "v1-adv-3",
+      "v1-act-4",
+      "v1-adv-4",
+      "v1-act-5",
+      "v1-adv-5",
+      "v1-act-6",
+      "v1-adv-6",
+      "v1-act-7",
+      "v1-adv-7",
+      "v1-act-8",
+      "v1-adv-8",
+      "v1-act-9",
+      "v1-adv-9",
+      "v1-act-10",
+      "v1-adv-10",
+      "v1-act-11",
+      "v1-adv-11",
+      "v1-act-12",
+      "v1-adv-12",
+      "v1-act-13",
+      "v1-adv-13",
+      "v1-act-14",
+      "v1-adv-14",
+      "v1-act-15",
+      "v1-adv-15",
+      "v1-act-16",
+      "v1-adv-16",
+      "v1-act-17",
+      "v1-adv-17",
+      "v1-act-18",
+      "v1-adv-18",
+      "v1-act-19",
+      "v1-adv-19",
+      "v1-act-20",
+      "v1-adv-20",
+      "v1-act-21",
+      "v1-adv-21",
+      "v1-act-22",
+      "v1-adv-22",
+      "v1-act-23",
+      "v1-adv-23",
+      "v1-act-24",
+      "v1-adv-24",
+      "v1-act-25",
+      "v1-adv-25",
+      "v1-act-26",
+      "v1-adv-26",
+      "v1-act-27",
+      "v1-adv-27",
+      "v1-act-28",
+      "v1-adv-28",
+      "v1-act-29",
+      "v1-adv-29"
+    ],
+    "relationships": {
+      "rel_8": {
+        "aId": "chr_5",
+        "bId": "chr_2",
+        "closeness": 99,
+        "conflict": 0,
+        "id": "rel_8",
+        "lastContactTick": 29,
+        "respect": 60,
+        "trust": 84,
+        "type": "parent"
+      },
+      "rel_9": {
+        "aId": "chr_2",
+        "bId": "chr_5",
+        "closeness": 99,
+        "conflict": 0,
+        "id": "rel_9",
+        "lastContactTick": 29,
+        "respect": 60,
+        "trust": 84,
+        "type": "child"
+      },
+      "rel_c": {
+        "aId": "chr_5",
+        "bId": "chr_3",
+        "closeness": 99,
+        "conflict": 0,
+        "id": "rel_c",
+        "lastContactTick": 29,
+        "respect": 60,
+        "trust": 85,
+        "type": "parent"
+      },
+      "rel_d": {
+        "aId": "chr_3",
+        "bId": "chr_5",
+        "closeness": 99,
+        "conflict": 0,
+        "id": "rel_d",
+        "lastContactTick": 29,
+        "respect": 60,
+        "trust": 85,
+        "type": "child"
+      },
+      "rel_e": {
+        "aId": "chr_5",
+        "bId": "chr_4",
+        "closeness": 70,
+        "conflict": 0,
+        "id": "rel_e",
+        "lastContactTick": 0,
+        "respect": 60,
+        "trust": 73,
+        "type": "sibling"
+      },
+      "rel_f": {
+        "aId": "chr_4",
+        "bId": "chr_5",
+        "closeness": 70,
+        "conflict": 0,
+        "id": "rel_f",
+        "lastContactTick": 0,
+        "respect": 60,
+        "trust": 73,
+        "type": "sibling"
+      }
+    },
+    "rng": {
+      "creation": [3395465746, 1973603462, 2858360322, 3367395608],
+      "events": [249995583, 506535068, 4090860240, 4165943182],
+      "genetics": [672379391, 2325489861, 3035819582, 1689079767],
+      "mortality": [3643580096, 2082296610, 3360204492, 3506240358],
+      "npc": [2270661773, 4044829483, 1199873480, 2723477705]
+    },
+    "ruleChanges": [],
+    "rules": { "difficulty": "realistic", "easyMigration": false },
+    "schemaVersion": 1,
+    "seed": "v1-fixture",
+    "startIndex": 24322,
+    "tick": 30
+  }
+}

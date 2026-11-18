@@ -15,6 +15,7 @@ function define(input: EventInput): EventDefinition {
   return {
     version: 1,
     scheduledOnly: false,
+    subject: null,
     chancePpm: 0,
     multipliers: [],
     cooldownMonths: 0,
@@ -71,6 +72,7 @@ const schedule = (eventId: string, inMonths: number, chancePercent = 100): Effec
   eventId,
   inMonths,
   chancePercent,
+  keepSubject: false,
 });
 
 export const CORE_EVENTS: EventDefinition[] = [

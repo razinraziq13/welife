@@ -2,10 +2,65 @@ import { z } from 'zod';
 import { deepClone } from './data';
 import { assertInvariants } from './invariants';
 import { advanceMonth, completePendingMonth, TickError, type TickReport } from './tick';
-import { addBiography, rememberCommand } from './world';
+import { activeCharacter, addBiography, rememberCommand } from './world';
 import { performActivity, type ActivityResult } from '../activities/activities';
+import {
+  CalendarError,
+  cancelItem,
+  cancelPlan,
+  planActivity,
+  scheduleItem,
+} from '../calendar/calendar';
+import { spendHours } from '../calendar/time';
+import {
+  JobError,
+  applyForJob,
+  prepareForInterview,
+  quitJob,
+  requestRaise,
+  respondToOffer,
+  retire,
+} from '../career/jobs';
+import {
+  FinanceError,
+  LedgerError,
+  buyInsurance,
+  cancelInsurance,
+  moveHome,
+  moveOut,
+  repayLoan,
+  setLifestyle,
+  setPensionContribution,
+  startStudentLoan,
+  takePersonalLoan,
+  transferBetween,
+} from '../economy/finance';
+import {
+  EducationError,
+  applyForStudy,
+  joinClub,
+  leaveClub,
+  leaveEducation,
+  respondToStudyOffer,
+} from '../education/school';
 import { ChoiceError } from '../events/runtime';
-import { DIFFICULTIES, type World } from '../state/schema';
+import { familyHomeFor } from '../social/family';
+import { enforcePopulation } from '../social/population';
+import {
+  INTERACTION_IDS,
+  InteractionError,
+  interact,
+  meetNewPeople,
+  type InteractionResult,
+} from '../social/interactions';
+import {
+  DIFFICULTIES,
+  HOME_SIZES,
+  LIFESTYLES,
+  STUDY_EFFORTS,
+  WORK_EFFORTS,
+  type World,
+} from '../state/schema';
 
 /**
  * Player commands (spec §2 "All gameplay writes go through validated commands").
@@ -13,33 +68,72 @@ import { DIFFICULTIES, type World } from '../state/schema';
  */
 
 const CommandId = z.string().min(4).max(80);
+const EntityId = z.string().min(1).max(80);
+const AmountMinor = z.string().regex(/^[1-9]\d{0,17}$/, 'Enter a whole amount in minor units.');
+
+const command = <L extends string, T extends z.ZodRawShape>(type: L, shape: T) =>
+  z.object({ type: z.literal(type), id: CommandId, ...shape }).strict();
 
 export const CommandSchema = z.discriminatedUnion('type', [
-  z
-    .object({ type: z.literal('advance'), id: CommandId, expectedTick: z.number().int().min(0) })
-    .strict(),
-  z
-    .object({
-      type: z.literal('choose'),
-      id: CommandId,
-      instanceId: z.string().min(1).max(80),
-      choiceId: z.string().min(1).max(40),
-    })
-    .strict(),
-  z
-    .object({ type: z.literal('act'), id: CommandId, activityId: z.string().min(1).max(40) })
-    .strict(),
-  z
-    .object({
-      type: z.literal('markRead'),
-      id: CommandId,
-      notificationIds: z.union([z.literal('all'), z.array(z.string().min(1).max(80)).max(500)]),
-    })
-    .strict(),
-  z
-    .object({ type: z.literal('setDifficulty'), id: CommandId, value: z.enum(DIFFICULTIES) })
-    .strict(),
-  z.object({ type: z.literal('setEasyMigration'), id: CommandId, value: z.boolean() }).strict(),
+  command('advance', { expectedTick: z.number().int().min(0) }),
+  command('choose', { instanceId: EntityId, choiceId: z.string().min(1).max(40) }),
+  command('act', { activityId: z.string().min(1).max(40) }),
+  command('markRead', {
+    notificationIds: z.union([z.literal('all'), z.array(EntityId).max(500)]),
+  }),
+  command('setDifficulty', { value: z.enum(DIFFICULTIES) }),
+  command('setEasyMigration', { value: z.boolean() }),
+  // Social (Milestone 3)
+  command('interact', { personId: EntityId, interactionId: z.enum(INTERACTION_IDS) }),
+  command('meetPeople', {}),
+  // Education (Milestone 3)
+  command('setStudyEffort', { value: z.enum(STUDY_EFFORTS) }),
+  command('joinClub', { clubId: z.string().min(1).max(40) }),
+  command('leaveClub', { clubId: z.string().min(1).max(40) }),
+  command('applyStudy', {
+    programId: z.string().min(1).max(40),
+    level: z.enum(['diploma', 'bachelor', 'master']),
+  }),
+  command('respondStudy', { applicationId: EntityId, accept: z.boolean() }),
+  command('leaveSchool', {}),
+  // Calendar (Milestone 3)
+  command('planActivity', {
+    activityId: z.string().min(1).max(40),
+    timesPerMonth: z.number().int().min(1).max(4),
+  }),
+  command('cancelPlan', { planId: EntityId }),
+  command('scheduleItem', {
+    itemKind: z.enum(['vacation', 'checkup']),
+    option: z.string().min(1).max(40),
+    tick: z.number().int().min(0),
+  }),
+  command('cancelItem', { itemId: EntityId }),
+  // Work (Milestone 4)
+  command('applyJob', { postingId: EntityId }),
+  command('prepareInterview', { applicationId: EntityId }),
+  command('respondOffer', {
+    applicationId: EntityId,
+    response: z.enum(['accept', 'negotiate', 'decline']),
+  }),
+  command('withdrawApplication', { applicationId: EntityId }),
+  command('quitJob', {}),
+  command('setWorkEffort', { value: z.enum(WORK_EFFORTS) }),
+  command('requestRaise', {}),
+  command('retire', {}),
+  // Money (Milestone 4)
+  command('transfer', { from: z.enum(['checking', 'savings']), amountMinor: AmountMinor }),
+  command('takeLoan', { amountMinor: AmountMinor, termMonths: z.number().int().min(6).max(120) }),
+  command('startStudentLoan', {}),
+  command('repayLoan', { loanId: EntityId, amountMinor: AmountMinor }),
+  command('buyInsurance', {
+    policyType: z.enum(['health', 'life']),
+    coverageMinor: z.union([AmountMinor, z.literal('0')]),
+  }),
+  command('cancelInsurance', { policyId: EntityId }),
+  command('setLifestyle', { value: z.enum(LIFESTYLES) }),
+  command('setPension', { bp: z.number().int().min(0).max(3000) }),
+  command('moveOut', { size: z.enum(HOME_SIZES) }),
+  command('moveHome', {}),
 ]);
 export type Command = z.infer<typeof CommandSchema>;
 
@@ -56,7 +150,8 @@ export type RejectReason =
   | 'noPendingChoice'
   | 'lifeEnded'
   | 'invalidChoice'
-  | 'noChange';
+  | 'noChange'
+  | 'ineligible';
 
 export type CommandOutcome =
   | { status: 'rejected'; reason: RejectReason; message: string }
@@ -65,7 +160,10 @@ export type CommandOutcome =
   | { status: 'applied'; kind: 'chosen' }
   | { status: 'applied'; kind: 'acted'; activity: ActivityResult }
   | { status: 'applied'; kind: 'rule' }
-  | { status: 'applied'; kind: 'read'; count: number };
+  | { status: 'applied'; kind: 'read'; count: number }
+  | { status: 'applied'; kind: 'interacted'; interaction: InteractionResult }
+  /** Other actions: a localisation key and parameters describing the result. */
+  | { status: 'applied'; kind: 'done'; key: string; params: Record<string, string | number> };
 
 /** True when the outcome moved the committed world into a new month (needs a snapshot). */
 export function committedNewMonth(outcome: CommandOutcome): boolean {
@@ -82,6 +180,157 @@ function seen(state: SimState, id: string): boolean {
     (state.pending?.recentCommandIds.includes(id) ?? false)
   );
 }
+
+class Ineligible extends Error {}
+
+const done = (key: string, params: Record<string, string | number> = {}): CommandOutcome => ({
+  status: 'applied',
+  kind: 'done',
+  key,
+  params,
+});
+
+/** Runs a player action on the world copy; domain errors become "ineligible" rejections. */
+function playerAction(world: World, cmd: Command): CommandOutcome {
+  const player = activeCharacter(world);
+  switch (cmd.type) {
+    case 'interact':
+      return {
+        status: 'applied',
+        kind: 'interacted',
+        interaction: interact(world, cmd.personId, cmd.interactionId),
+      };
+    case 'meetPeople': {
+      const met = meetNewPeople(world);
+      return done(met.personId ? 'out.metSomeone' : 'out.metNoOne', {
+        personId: met.personId ?? '',
+      });
+    }
+    case 'setStudyEffort':
+      if (!player.education.current)
+        throw new EducationError('notStudying', 'You are not studying.');
+      if (player.education.effort === cmd.value)
+        throw new EducationError('noChange', 'That is already your setting.');
+      player.education.effort = cmd.value;
+      return done('out.studyEffort', { value: cmd.value });
+    case 'joinClub':
+      joinClub(world, player, cmd.clubId);
+      return done('out.joinedClub', { clubId: cmd.clubId });
+    case 'leaveClub':
+      leaveClub(player, cmd.clubId);
+      return done('out.leftClub', { clubId: cmd.clubId });
+    case 'applyStudy':
+      applyForStudy(world, player, cmd.programId, cmd.level);
+      return done('out.appliedStudy', { programId: cmd.programId, level: cmd.level });
+    case 'respondStudy':
+      respondToStudyOffer(world, player, cmd.applicationId, cmd.accept);
+      return done(cmd.accept ? 'out.acceptedStudy' : 'out.declinedStudy');
+    case 'leaveSchool':
+      leaveEducation(world, player);
+      return done('out.leftSchool');
+    case 'planActivity':
+      planActivity(world, cmd.activityId, cmd.timesPerMonth);
+      return done('out.planned', { activityId: cmd.activityId, times: cmd.timesPerMonth });
+    case 'cancelPlan':
+      cancelPlan(world, cmd.planId);
+      return done('out.planCancelled');
+    case 'scheduleItem':
+      scheduleItem(world, player, cmd.itemKind, cmd.option, cmd.tick);
+      return done('out.scheduled', { kind: cmd.itemKind, option: cmd.option });
+    case 'cancelItem':
+      cancelItem(world, cmd.itemId);
+      return done('out.itemCancelled');
+    case 'applyJob': {
+      const app = applyForJob(world, player, cmd.postingId);
+      return done(app.status === 'interview' ? 'out.shortlisted' : 'out.applied', {
+        employer: app.terms.employer,
+      });
+    }
+    case 'prepareInterview': {
+      if (!spendHours(world, 6)) throw new Ineligible('You have no free time left this month.');
+      const level = prepareForInterview(world, player, cmd.applicationId);
+      return done('out.prepared', { level });
+    }
+    case 'respondOffer': {
+      const result = respondToOffer(world, player, cmd.applicationId, cmd.response);
+      return done(`out.offer.${result}`);
+    }
+    case 'withdrawApplication': {
+      const app = world.jobs.applications[cmd.applicationId];
+      if (
+        app?.characterId !== player.id ||
+        (app.status !== 'applied' && app.status !== 'interview' && app.status !== 'offered')
+      ) {
+        throw new Ineligible('There is no application to withdraw.');
+      }
+      app.status = 'withdrawn';
+      world.events.scheduled = world.events.scheduled.filter((s) => s.sourceInstanceId !== app.id);
+      return done('out.withdrawn');
+    }
+    case 'quitJob':
+      quitJob(world, player);
+      return done('out.quit');
+    case 'setWorkEffort': {
+      const job = player.employmentId ? world.employment[player.employmentId] : undefined;
+      if (job?.status !== 'active') throw new JobError('noJob');
+      if (job.effort === cmd.value) throw new JobError('noChange');
+      job.effort = cmd.value;
+      return done('out.workEffort', { value: cmd.value });
+    }
+    case 'requestRaise':
+      return done(
+        requestRaise(world, player) === 'granted' ? 'out.raiseGranted' : 'out.raiseRefused',
+      );
+    case 'retire':
+      retire(world, player);
+      return done('out.retired');
+    case 'transfer':
+      transferBetween(world, player, cmd.from, BigInt(cmd.amountMinor));
+      return done('out.transferred');
+    case 'takeLoan':
+      takePersonalLoan(world, player, BigInt(cmd.amountMinor), cmd.termMonths);
+      return done('out.loanTaken');
+    case 'startStudentLoan':
+      startStudentLoan(world, player);
+      return done('out.studentLoan');
+    case 'repayLoan':
+      repayLoan(world, player, cmd.loanId, BigInt(cmd.amountMinor));
+      return done('out.loanRepaid');
+    case 'buyInsurance':
+      buyInsurance(world, player, cmd.policyType, BigInt(cmd.coverageMinor));
+      return done('out.insured', { type: cmd.policyType });
+    case 'cancelInsurance':
+      cancelInsurance(world, player, cmd.policyId);
+      return done('out.insuranceCancelled');
+    case 'setLifestyle':
+      setLifestyle(world, player, cmd.value);
+      return done('out.lifestyle', { value: cmd.value });
+    case 'setPension':
+      setPensionContribution(world, player, cmd.bp);
+      return done('out.pension', { bp: cmd.bp });
+    case 'moveOut':
+      moveOut(world, player, cmd.size);
+      return done('out.movedOut', { size: cmd.size });
+    case 'moveHome': {
+      const family = familyHomeFor(world, player);
+      if (!family) throw new FinanceError('cannotMoveHome');
+      moveHome(world, player, family);
+      return done('out.movedHome');
+    }
+    default:
+      throw new Ineligible('Unknown action.');
+  }
+}
+
+const DOMAIN_ERRORS = [
+  Ineligible,
+  EducationError,
+  JobError,
+  FinanceError,
+  LedgerError,
+  InteractionError,
+  CalendarError,
+];
 
 /**
  * Applies one command. Pure: returns a new state and never modifies the input.
@@ -186,6 +435,18 @@ export function execute(
       });
       outcome = { status: 'applied', kind: 'rule' };
       break;
+    }
+    default: {
+      if (world.lifeStatus !== 'alive') return reject(state, 'lifeEnded', 'This life has ended.');
+      try {
+        outcome = playerAction(world, command);
+        enforcePopulation(world);
+      } catch (error) {
+        if (DOMAIN_ERRORS.some((E) => error instanceof E)) {
+          return reject(state, 'ineligible', (error as Error).message);
+        }
+        throw error;
+      }
     }
   }
   rememberCommand(world, command.id);

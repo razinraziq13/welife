@@ -1,6 +1,7 @@
 import { monthIndex } from './clock';
 import { findEvent } from '../content';
 import { findLocation } from '../world/countries';
+import { checkLedger } from '../economy/ledger';
 import type { World } from '../state/schema';
 
 /**
@@ -122,6 +123,81 @@ export function checkInvariants(world: World): string[] {
     if (!findEvent(s.eventId)) v.push(`scheduled consequence ${s.id} has unknown event`);
     if (!world.characters[s.characterId])
       v.push(`scheduled consequence ${s.id} has unknown character`);
+  }
+
+  // Money (spec §6: debits = credits; no illegal negative balances).
+  v.push(...checkLedger(world));
+  for (const h of Object.values(world.households)) {
+    if (!h.finance) continue;
+    for (const id of [h.finance.checkingId, h.finance.savingsId]) {
+      if (!world.ledger.accounts[id]) v.push(`household ${h.id} has a missing account`);
+    }
+    if (!world.characters[h.finance.headId]) v.push(`household ${h.id} has an unknown head`);
+  }
+
+  // Partnerships are mutual and between adults.
+  for (const c of Object.values(world.characters)) {
+    const p = c.partnership;
+    if (!p) continue;
+    const partner = world.characters[p.partnerId];
+    if (!partner) {
+      v.push(`character ${c.id} has a missing partner`);
+      continue;
+    }
+    if (partner.partnership?.partnerId !== c.id) v.push(`partnership of ${c.id} is not mutual`);
+    if (c.death === null && partner.death !== null)
+      v.push(`character ${c.id} is partnered to someone who died`);
+    if (monthIndex(world.clock) - monthIndex(c.birth) < 18 * 12 && c.death === null) {
+      v.push(`character ${c.id} is partnered under 18`);
+    }
+  }
+
+  // Employment: one active job per person, records consistent.
+  const activeJobs = new Map<string, number>();
+  for (const e of Object.values(world.employment)) {
+    const owner = world.characters[e.characterId];
+    if (!owner) v.push(`employment ${e.id} has a missing character`);
+    if (e.status === 'active') {
+      activeJobs.set(e.characterId, (activeJobs.get(e.characterId) ?? 0) + 1);
+      if (owner && owner.employmentId !== e.id) v.push(`active employment ${e.id} is not linked`);
+      if (owner && owner.death !== null) v.push(`employment ${e.id} belongs to someone who died`);
+    }
+  }
+  for (const [id, n] of activeJobs)
+    if (n > 1) v.push(`character ${id} has ${String(n)} active jobs`);
+  for (const c of Object.values(world.characters)) {
+    if (c.employmentId && world.employment[c.employmentId]?.status !== 'active') {
+      v.push(`character ${c.id} points to an inactive job`);
+    }
+  }
+
+  // Population (spec §4: at most 150 individually simulated NPCs, 30 of them close).
+  let activeNpcs = 0;
+  let close = 0;
+  for (const c of Object.values(world.characters)) {
+    if (c.id === world.activeCharacterId || c.death !== null || c.tier === 'archived') continue;
+    activeNpcs += 1;
+    if (c.tier === 'close') close += 1;
+  }
+  if (activeNpcs > 150) v.push(`too many active NPCs (${String(activeNpcs)})`);
+  if (close > 30) v.push(`too many close NPCs (${String(close)})`);
+
+  for (const m of Object.values(world.memories)) {
+    if (!world.characters[m.ownerId] || m.subjectIds.some((s) => !world.characters[s])) {
+      v.push(`memory ${m.id} references a missing character`);
+      break;
+    }
+  }
+  for (const e of world.expecting) {
+    if (e.parentIds.some((id) => !world.characters[id]))
+      v.push(`expecting ${e.id} has a missing parent`);
+  }
+  for (const item of world.calendar.items) {
+    if (item.withId !== null && !world.characters[item.withId])
+      v.push(`calendar item ${item.id} references a missing person`);
+  }
+  for (const a of Object.values(world.jobs.applications)) {
+    if (!world.characters[a.characterId]) v.push(`application ${a.id} has a missing character`);
   }
 
   // Command ids are never applied twice.

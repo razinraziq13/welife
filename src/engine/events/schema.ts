@@ -5,11 +5,14 @@ import { HABIT_KEYS, NEED_KEYS, SKILL_KEYS, STAT_KEYS } from '../state/schema';
  * Declarative event schema (spec §4 Events, §7). Content is pure data: no functions,
  * no code execution. The same schema validates built-in content and (from M8) imported packs.
  *
- * Fact values for stats/needs/skills are fixed-point tenths (0..1000 = 0..100 displayed).
+ * Fact values for stats/needs/skills/grades are fixed-point tenths (0..1000 = 0..100 shown).
+ * An event may be about another person (its "subject"): the runtime picks a suitable person
+ * from the player's relationships, and effects can change that relationship or create
+ * memories that make other events eligible years later (spec §4 Butterfly effects).
  */
 
 const FACT_PATTERN =
-  /^(age\.(years|totalMonths)|month|isBirthMonth|stage|country|scenario|wealth|gender|difficulty|(stats|needs|skills|traits|habits)\.[a-zA-Z]+|flags\.[a-zA-Z0-9._-]+)$/;
+  /^(age\.(years|totalMonths)|month|isBirthMonth|stage|country|scenario|wealth|gender|difficulty|(stats|needs|skills|traits|habits)\.[a-zA-Z]+|flags\.[a-zA-Z0-9._-]+|school\.(stage|grade|final|private)|clubs\.[a-z-]+|job\.(employed|industry|level|performance|tenure)|money\.(savingsMonths|inDebt)|social\.(friends|partnered|married|children)|home\.own|memory\.[a-zA-Z0-9-]+|economy\.cycle)$/;
 
 export const FactSchema = z.string().regex(FACT_PATTERN, 'Unknown fact name');
 
@@ -51,7 +54,49 @@ export const PredicateSchema: z.ZodType<Predicate> = z.lazy(() =>
   ]),
 );
 
+export const SUBJECT_ROLES = [
+  'parent',
+  'sibling',
+  'grandparent',
+  'child',
+  'relative',
+  'partner',
+  'friend',
+  'classmate',
+  'teacher',
+  'colleague',
+  'manager',
+  'neighbour',
+  'anyone',
+] as const;
+export type SubjectRole = (typeof SUBJECT_ROLES)[number];
+
+/** Who an event is about. The runtime picks one matching person (seeded). */
+export const SubjectSchema = z
+  .object({
+    role: z.enum(SUBJECT_ROLES),
+    minCloseness: z.number().int().min(0).max(100),
+    maxCloseness: z.number().int().min(0).max(100),
+    minAge: z.number().int().min(0).max(120),
+    maxAge: z.number().int().min(0).max(120),
+    /** Only people who remember this about the player. */
+    memory: z
+      .string()
+      .regex(/^[a-z][a-zA-Z0-9-]{1,39}$/)
+      .nullable(),
+  })
+  .strict();
+export type Subject = z.infer<typeof SubjectSchema>;
+
 const FixedDelta = z.number().int().min(-1000).max(1000);
+const Small = z.number().int().min(-100).max(100);
+
+/** Engine actions content may trigger (a closed list; content cannot run code). */
+export const EVENT_ACTIONS = [
+  'interview.confident',
+  'interview.honest',
+  'interview.curious',
+] as const;
 
 export const EffectSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('stat'), key: z.enum(STAT_KEYS), delta: FixedDelta }).strict(),
@@ -74,16 +119,57 @@ export const EffectSchema = z.discriminatedUnion('kind', [
   z
     .object({
       kind: z.literal('relationship'),
-      with: z.enum(['parents', 'siblings']),
+      with: z.enum(['parents', 'siblings', 'friends', 'partner']),
       closeness: z.number().int().min(-100).max(100),
     })
     .strict(),
+  z
+    .object({
+      kind: z.literal('subjectRelationship'),
+      closeness: Small,
+      trust: Small,
+      respect: Small,
+      conflict: Small,
+    })
+    .strict(),
+  z.object({ kind: z.literal('subjectFriend') }).strict(),
+  z
+    .object({
+      kind: z.literal('memory'),
+      /** Who remembers: the subject (about the player) or the player (about the subject). */
+      owner: z.enum(['subject', 'player']),
+      key: z.string().regex(/^[a-z][a-zA-Z0-9-]{1,39}$/),
+      valence: Small,
+      salience: z.number().int().min(1).max(100),
+      decay: z.enum(['fast', 'slow', 'permanent']),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('money'),
+      /** Percent of the local median monthly wage; negative is a cost. */
+      percent: z.number().int().min(-2000).max(2000),
+      category: z.string().regex(/^[a-z][a-zA-Z]{1,30}$/),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('medical'),
+      /** Treatment cost before coverage, percent of the median monthly wage. */
+      percent: z.number().int().min(1).max(5000),
+    })
+    .strict(),
+  z.object({ kind: z.literal('grade'), delta: FixedDelta }).strict(),
+  z.object({ kind: z.literal('performance'), delta: FixedDelta }).strict(),
+  z.object({ kind: z.literal('action'), action: z.enum(EVENT_ACTIONS) }).strict(),
   z
     .object({
       kind: z.literal('schedule'),
       eventId: z.string().min(1).max(60),
       inMonths: z.number().int().min(1).max(240),
       chancePercent: z.number().int().min(1).max(100),
+      /** The follow-up is about the same person. */
+      keepSubject: z.boolean(),
     })
     .strict(),
 ]);
@@ -101,6 +187,7 @@ export type Choice = z.infer<typeof ChoiceSchema>;
 export const EventTextSchema = z
   .object({
     title: z.string().min(1).max(80),
+    /** May use {subject} (the person's first name) and context fields such as {employer}. */
     body: z.string().min(1).max(600),
     choices: z.record(z.string(), z.string().min(1).max(120)),
     /** Short outcome line per choice (or "default" for events without choices). */
@@ -108,14 +195,29 @@ export const EventTextSchema = z
   })
   .strict();
 
+export const EVENT_CATEGORIES = [
+  'childhood',
+  'teen',
+  'adult',
+  'health',
+  'family',
+  'personal',
+  'school',
+  'social',
+  'work',
+  'money',
+  'romance',
+] as const;
+
 export const EventDefinitionSchema = z
   .object({
     id: z.string().regex(/^[a-z][a-z0-9-]{1,59}$/),
     version: z.number().int().min(1),
-    category: z.enum(['childhood', 'teen', 'adult', 'health', 'family', 'personal']),
-    /** Only fires when scheduled by another event's delayed consequence. */
+    category: z.enum(EVENT_CATEGORIES),
+    /** Only fires when scheduled by another event's delayed consequence or the engine. */
     scheduledOnly: z.boolean(),
     when: PredicateSchema,
+    subject: SubjectSchema.nullable(),
     /** Base probability per eligible month, in parts per million. */
     chancePpm: z.number().int().min(0).max(1_000_000),
     multipliers: z
@@ -171,6 +273,24 @@ export const EventDefinitionSchema = z
         message: 'Missing outcome text.',
       });
     }
+    const allEffects = [...def.effects, ...def.choices.flatMap((c) => c.effects)];
+    const needsSubject = allEffects.some(
+      (e) =>
+        e.kind === 'subjectRelationship' ||
+        e.kind === 'subjectFriend' ||
+        e.kind === 'memory' ||
+        (e.kind === 'schedule' && e.keepSubject),
+    );
+    if (needsSubject && def.subject === null) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['subject'],
+        message: 'Effects refer to a subject but the event has none.',
+      });
+    }
+    if (def.subject && def.subject.minAge > def.subject.maxAge) {
+      ctx.addIssue({ code: 'custom', path: ['subject', 'minAge'], message: 'minAge > maxAge.' });
+    }
   });
 export type EventDefinition = z.infer<typeof EventDefinitionSchema>;
 
@@ -208,9 +328,15 @@ export function validateEventSet(raw: unknown[]): {
     const collect = (effects: readonly Effect[]) => {
       for (const effect of effects) {
         if (effect.kind !== 'schedule') continue;
-        if (!byId.has(effect.eventId)) {
+        const target = byId.get(effect.eventId);
+        if (!target) {
           issues.push({ path: event.id, message: `Schedules unknown event "${effect.eventId}".` });
-        } else targets.push(effect.eventId);
+          continue;
+        }
+        if (effect.keepSubject && target.subject === null) {
+          issues.push({ path: event.id, message: `"${effect.eventId}" has no subject to keep.` });
+        }
+        targets.push(effect.eventId);
       }
     };
     collect(event.effects);

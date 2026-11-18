@@ -3,7 +3,7 @@
  * replay results; snapshots record it so the UI can warn when replay equivalence
  * cannot be guaranteed (spec §5).
  */
-export const ENGINE_VERSION = '0.2.0';
+export const ENGINE_VERSION = '0.4.0';
 
 export { CONTENT_VERSION } from './content';
 export { WORLD_SCHEMA_VERSION } from './state/schema';

@@ -1,3 +1,8 @@
+| M4 Careers and household economy | **Complete, awaiting review** | `milestone-3-4` |
+| M3 Social, childhood, education | **Complete, awaiting review** | `milestone-3-4` |
+| M2 New Life and character | Complete (commit 26ffa4e) | `milestone-1-2` |
+| M1 Deterministic core | Complete (commit 26ffa4e) | `milestone-1-2` |
+
 # WeLife — Development Progress
 
 Spec: `WeLife_Claude_Development_Specification.md` v1.0 · Decisions: [docs/DECISIONS.md](docs/DECISIONS.md) ·
@@ -15,6 +20,79 @@ Requirement map: [docs/TRACEABILITY.md](docs/TRACEABILITY.md)
 | M7 Media, legacy, narrative      | Not started                   | —               |
 | M8 Event editor and content      | Not started                   | —               |
 | M9 Integration, balance, release | Not started                   | —               |
+
+---
+
+## Milestones 3 and 4: Social, childhood and education · Careers and household economy
+
+Built together on branch `milestone-3-4` (from `milestone-1-2`) at the user's request ("Start Milestone 3 and 4"), with a single review gate at the end.
+
+**Exit criteria (spec §9):**
+
+- M3: NPCs progress independently and persistent choices influence later events. **Met** (`life.test.ts`: over 30 years NPCs form partnerships, have children, change jobs and age without the player; standing up for a teased classmate leaves a permanent memory that later makes a job referral possible, while walking away makes a different reunion event possible instead).
+- M4: finances reconcile through employment changes. **Met** (`economy.test.ts`: after every command of an adult life with jobs, a move, a loan, insurance, a layoff, benefits and a new job, the change in net worth equals booked income minus expenses, and the ledger balances).
+
+### Milestone 3 checklist (social, childhood, education)
+
+- [x] World schema v2 with a deterministic upgrade from v1 (tested with a real Milestone 2 world and a stored v1 save)
+- [x] Individually simulated people: grandparents, aunts and uncles, cousins, neighbours, classmates, teachers, club members, colleagues, partners
+- [x] Population tiers: close NPCs monthly, relevant NPCs yearly, archived NPCs kept for history; at most 150 active and 30 close (invariant)
+- [x] NPC autonomy with weighted utility: dating, marriage, children, separation, moving away, job search, promotions, layoffs, retirement
+- [x] Relationships with chemistry (personality and interests), trust, respect, conflict, shared history and last contact; drift from living together, contact and memories
+- [x] Durable memories (valence, salience, decay rules) that shape relationships and make events eligible years later; people who moved away can still get in touch
+- [x] 19 interactions with time costs and per-person diminishing returns; romance, engagement, weddings, moving in and family planning for adults only (18+), non-explicit; adoption
+- [x] Births and adoptions; family links and relationships for new relatives
+- [x] Country school structures for all 20 countries (stage names, ages, school-year month, national exams; baseline, unverified)
+- [x] Preschool to upper secondary with grades, study effort, report cards, repeat years, exams and qualifications; legal leaving age
+- [x] Further study: 20 programmes at diploma, bachelor and master level; applications, admission scores, offers, scholarships, tuition, student loans, graduation
+- [x] 14 clubs with fees, hours, skill gains and yearly competitions with awards
+- [x] Calendar: itemised free time, recurring activity plans, holidays, check-ups, weddings, clash warnings, cost previews and the next 12 months
+- [x] Event system: events about a specific person (subject), memory facts, new effects (money, medical, grade, performance, engine actions); 59 new events (80 in total)
+- [x] Screens: Social (partner, family, friends, others, meet people), person profile with memories and interactions, family tree, calendar; four new dashboard widgets
+
+### Milestone 4 checklist (careers and household economy)
+
+- [x] Balanced double-entry ledger in BigInt minor units; trial-balance and no-negative-asset invariants; bounded journal (snapshots keep every month)
+- [x] Aggregate country economy: business cycle, inflation, wages, unemployment, policy rate, retirement-fund index
+- [x] Baseline tax bands, social contributions, pensions, unemployment benefits and healthcare coverage for all 20 countries (unverified, researched in M6)
+- [x] Payroll with monthly withholding and year-end tax reconciliation (refund or bill)
+- [x] Tracked households: parents' jobs matching the family's circumstances, living costs, rent or home upkeep, childcare, school fees, family support, lifestyle adjustment
+- [x] The player's accounts: child savings, birthday money, a current account at 16, retirement fund, transfers
+- [x] 150 occupations in 25 industries (decision D8), seniority titles, salary bands by location and economy
+- [x] Job board refreshed monthly (teen jobs for minors), eligibility with reasons, screening, interview decision, offers, negotiation, acceptance
+- [x] Employment: effort, performance, skill growth, annual reviews and raises, promotions, warnings and dismissal, fixed-term renewals, layoffs, raise requests, quitting, retirement
+- [x] Personal loans with affordability checks and amortised repayment; student loans that start after study; early repayment
+- [x] Health and life insurance; medical costs after public coverage; life insurance pays the household
+- [x] State pensions (basic and earnings-related) and retirement-fund drawdown; voluntary contributions with employer match where relevant
+- [x] Moving out to a rented room, apartment or house; moving back home; lifestyle choice
+- [x] Screens: Career (education, clubs, further study, job, applications, job board, history), Finance (overview, accounts, cash flow with a table view, tax, loans, insurance, retirement, home, transactions, economy)
+
+### Verification results (actual runs, 2026-11-18)
+
+| Command                       | Result                                                                                                                                                                                                                                                                              |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run verify`              | exit 0: typecheck (5 projects) ✔, ESLint 0 problems ✔, dependency-cruiser "no dependency violations found (136 modules, 697 dependencies)" ✔, Prettier ✔, Vitest **136/136 passed** (16 files) ✔, production build ✔                                                                |
+| `npm run e2e`                 | exit 0: **138 passed, 2 skipped** (desktop Chromium, desktop WebKit, Pixel 7 Chromium, iPhone 15 WebKit); the skips are the Chromium-only offline test on WebKit. New: people, family tree, calendar, and an imported adult life (career, finance, person) with accessibility scans |
+| M3 exit                       | `life.test.ts`: independent NPC lives over 30 years; the butterfly-effect chain from a playground choice to a later referral or reunion                                                                                                                                             |
+| M4 exit                       | `economy.test.ts`: net-worth change equals booked income minus expenses after every command of an adult life with job changes                                                                                                                                                       |
+| Performance                   | engine p95 **15.5 ms** per month in a 150-NPC world (Node); target 250 ms                                                                                                                                                                                                           |
+| Save upgrade                  | a real Milestone 2 world (generated with the old engine) upgrades to a valid v2 world, deterministically; a stored v1 save opens, plays, starts a fresh keyframe and can be rewound into                                                                                            |
+| Property tests                | ledger invariants over random postings; loan schedules always clear within their term (fast-check found a rounding edge case, now fixed and pinned)                                                                                                                                 |
+| Manual check (in-app browser) | new life in George Town: Social, person profile, family tree, Finance, Career and Calendar screens; months advanced with household money flowing                                                                                                                                    |
+
+### Known issues and limitations (M3 and M4)
+
+1. **Country institutions are baseline approximations** (tax bands, contributions, pensions, benefits, school structures, tuition; about 2024-2025, single earner, regional taxes folded in, caps ignored). Labelled unverified; researched with sources in M6.
+2. **Event content is 80 of the 400+ target** (D8). More arrive through M8.
+3. **Romance and family planning are for adults only (18+)**; teenagers have crushes and friendships but no partnerships.
+4. **NPC households are background**: only the player's and the parents' households are tracked in the ledger; other NPCs have jobs and salaries but no accounts.
+5. **Buying property, mortgages, investments beyond the retirement fund, and businesses** arrive in M5; healthcare depth, migration and citizenship in M6; inheritance in M7.
+6. **Command rejection messages** are still plain English rather than localisation keys.
+7. **The main bundle is 754 KB (224 KB gzip)**; code-splitting is planned for M9.
+8. **Firefox e2e** is still blocked locally by Windows policy (it runs in CI).
+9. Many numbers are **proposed tuning** (see docs/DECISIONS.md).
+
+### Next: Milestone 5, business and real estate (awaiting approval)
 
 ---
 
@@ -87,8 +165,6 @@ Built together on branch `milestone-1-2` at the user's request ("Start Milestone
 6. **The desktop app's built-in browser** refuses service-worker registration, so it cannot test offline mode; Playwright Chromium does.
 7. **The main bundle grew to 598 KB (183 KB gzip)** because country and event content ships with the UI. Code-splitting is planned for M9.
 8. **Snapshot keyframe interval (12), family care, diminishing coefficient (0.35), mortality curve and activity numbers** are proposed tuning values (docs/DECISIONS.md).
-
-### Next: Milestone 3, social, childhood and education (awaiting approval)
 
 ---
 

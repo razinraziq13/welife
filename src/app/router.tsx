@@ -7,11 +7,17 @@ import { NotFoundScreen } from '@app/screens/NotFoundScreen';
 import { RouteErrorScreen } from '@app/screens/RouteErrorScreen';
 import { PlayLayout } from '@app/play/PlayLayout';
 import { LifeTab } from '@app/play/tabs/LifeTab';
-import { CareerTab, FinanceTab, MoreTab, SocialTab } from '@app/play/tabs/OtherTabs';
+import { CareerTab } from '@app/play/tabs/CareerTab';
+import { FinanceTab } from '@app/play/tabs/FinanceTab';
+import { MoreTab } from '@app/play/tabs/MoreTab';
+import { SocialTab } from '@app/play/tabs/SocialTab';
 import { CharacterScreen } from '@app/play/screens/CharacterScreen';
 import { TimelineScreen } from '@app/play/screens/TimelineScreen';
 import { NotificationsScreen } from '@app/play/screens/NotificationsScreen';
 import { RulesScreen } from '@app/play/screens/RulesScreen';
+import { PersonScreen } from '@app/play/screens/PersonScreen';
+import { FamilyTreeScreen } from '@app/play/screens/FamilyTreeScreen';
+import { CalendarScreen } from '@app/play/screens/CalendarScreen';
 
 /** Routes are added only when their screen is fully functional (no placeholder screens). */
 export const router = createBrowserRouter([
@@ -36,6 +42,9 @@ export const router = createBrowserRouter([
           { path: 'timeline', element: <TimelineScreen /> },
           { path: 'notifications', element: <NotificationsScreen /> },
           { path: 'rules', element: <RulesScreen /> },
+          { path: 'people/:personId', element: <PersonScreen /> },
+          { path: 'family', element: <FamilyTreeScreen /> },
+          { path: 'calendar', element: <CalendarScreen /> },
         ],
       },
       { path: '*', element: <NotFoundScreen /> },

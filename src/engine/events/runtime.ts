@@ -1,18 +1,89 @@
+import { ageOf } from '../core/clock';
+import { sortedValues } from '../core/data';
 import { addBiography, addNotification, activeCharacter, nextId, withRng } from '../core/world';
 import { EVENTS, getEvent } from '../content';
-import type { BiographyEntry, EventInstance, NotificationCategory, World } from '../state/schema';
+import { holdersOf } from '../social/memories';
+import { FAMILY_TYPES, kinship } from '../social/relationships';
+import type {
+  BiographyEntry,
+  Character,
+  EventInstance,
+  NotificationCategory,
+  World,
+} from '../state/schema';
 import { applyEffects } from './effects';
 import { evaluate } from './predicates';
-import type { EventDefinition } from './schema';
+import type { EventDefinition, Subject } from './schema';
 
 /** At most this many events without choices fire for the player in one month. */
 export const MAX_AUTOMATIC_EVENTS_PER_MONTH = 2;
 
 function bioCategory(def: EventDefinition): BiographyEntry['category'] {
-  return def.category === 'health' ? 'health' : def.category === 'family' ? 'family' : 'event';
+  switch (def.category) {
+    case 'health':
+      return 'health';
+    case 'family':
+      return 'family';
+    case 'school':
+      return 'school';
+    case 'work':
+      return 'work';
+    case 'money':
+      return 'money';
+    case 'social':
+    case 'romance':
+      return 'social';
+    default:
+      return 'event';
+  }
 }
 function notificationCategory(def: EventDefinition): NotificationCategory {
-  return def.category === 'health' ? 'health' : def.category === 'family' ? 'family' : 'event';
+  const bio = bioCategory(def);
+  return bio === 'activity' || bio === 'rules' || bio === 'life' ? 'event' : bio;
+}
+
+/** People who could be the subject of an event, in id order. */
+export function subjectCandidates(world: World, subject: Subject): Character[] {
+  const player = activeCharacter(world);
+  const holders = subject.memory ? new Set(holdersOf(world, subject.memory, player.id)) : null;
+  const out: Character[] = [];
+  for (const rel of sortedValues(world.relationships)) {
+    if (rel.aId !== player.id) continue;
+    const other = world.characters[rel.bId];
+    // People who moved away can still get in touch about something they remember.
+    if (other?.death !== null || (other.tier === 'archived' && !holders)) continue;
+    if (holders && !holders.has(other.id)) continue;
+    if (rel.closeness < subject.minCloseness || rel.closeness > subject.maxCloseness) continue;
+    const age = ageOf(other.birth, world.clock).years;
+    if (age < subject.minAge || age > subject.maxAge) continue;
+    const matches = (() => {
+      switch (subject.role) {
+        case 'anyone':
+          return true;
+        case 'relative': {
+          const kin = kinship(world, player.id, other.id);
+          return (
+            kin !== null &&
+            FAMILY_TYPES.has(kin) &&
+            kin !== 'parent' &&
+            kin !== 'sibling' &&
+            kin !== 'child'
+          );
+        }
+        case 'partner':
+          return player.partnership?.partnerId === other.id;
+        case 'parent':
+        case 'sibling':
+        case 'grandparent':
+        case 'child':
+          return kinship(world, player.id, other.id) === subject.role;
+        default:
+          return rel.type === subject.role;
+      }
+    })();
+    if (matches) out.push(other);
+  }
+  return out;
 }
 
 /** Effective chance in ppm: clamp(base x multipliers, 0, 1) as integers (spec §4 Events). */
@@ -26,7 +97,7 @@ export function eventChancePpm(def: EventDefinition, world: World): number {
   return Math.max(0, Math.min(1_000_000, chance));
 }
 
-/** Eligibility is checked before probability: predicate, cooldown and occurrence limits. */
+/** Eligibility is checked before probability: predicate, cooldown, limits, subject. */
 export function isEligible(def: EventDefinition, world: World): boolean {
   if (def.scheduledOnly) return false;
   const fired = world.events.firedCount[def.id] ?? 0;
@@ -34,13 +105,24 @@ export function isEligible(def: EventDefinition, world: World): boolean {
   const last = world.events.lastFiredTick[def.id];
   if (last !== undefined && def.cooldownMonths > 0 && world.tick - last < def.cooldownMonths)
     return false;
-  return evaluate(def.when, world, activeCharacter(world));
+  if (!evaluate(def.when, world, activeCharacter(world))) return false;
+  return def.subject === null || subjectCandidates(world, def.subject).length > 0;
+}
+
+function pickSubject(world: World, def: EventDefinition, preferred: string | null): string | null {
+  if (!def.subject) return null;
+  const candidates = subjectCandidates(world, def.subject);
+  if (preferred && candidates.some((c) => c.id === preferred)) return preferred;
+  if (candidates.length === 0) return null;
+  return withRng(world, 'events', (rng) => rng.pick(candidates)).id;
 }
 
 function createInstance(
   world: World,
   def: EventDefinition,
   sourceInstanceId: string | null,
+  subjectId: string | null,
+  context: EventInstance['context'],
 ): EventInstance {
   const instance: EventInstance = {
     id: nextId(world, 'evt'),
@@ -51,6 +133,8 @@ function createInstance(
     status: def.choices.length > 0 ? 'pending' : 'resolved',
     choiceId: null,
     sourceInstanceId,
+    subjectId,
+    context,
   };
   world.events.instances[instance.id] = instance;
   world.events.lastFiredTick[def.id] = world.tick;
@@ -58,19 +142,49 @@ function createInstance(
   return instance;
 }
 
-function fireAutomatic(world: World, def: EventDefinition, sourceInstanceId: string | null): void {
-  const instance = createInstance(world, def, sourceInstanceId);
+/** Parameters for text: the subject's first name and the engine context. */
+export function textParams(world: World, instance: EventInstance): Record<string, string | number> {
+  const subject = instance.subjectId ? world.characters[instance.subjectId] : undefined;
+  return { ...instance.context, subject: subject?.identity.firstName ?? '' };
+}
+
+function fireAutomatic(
+  world: World,
+  def: EventDefinition,
+  sourceInstanceId: string | null,
+  subjectId: string | null,
+  context: EventInstance['context'],
+): void {
+  const instance = createInstance(world, def, sourceInstanceId, subjectId, context);
   const character = activeCharacter(world);
-  applyEffects(world, character, def.effects, `event:${def.id}`, instance.id);
+  applyEffects(world, character, def.effects, `event:${def.id}`, instance.id, {
+    subjectId,
+    context,
+  });
+  const params = textParams(world, instance);
   addBiography(world, character.id, bioCategory(def), 'bio.event', {
     eventId: def.id,
     choiceId: '',
+    ...params,
   });
-  addNotification(world, notificationCategory(def), 'ntf.event', { eventId: def.id }, 'life');
+  addNotification(
+    world,
+    notificationCategory(def),
+    'ntf.event',
+    { eventId: def.id, ...params },
+    subjectId ? 'person' : 'life',
+    subjectId,
+  );
 }
 
-function firePending(world: World, def: EventDefinition, sourceInstanceId: string | null): string {
-  const instance = createInstance(world, def, sourceInstanceId);
+function firePending(
+  world: World,
+  def: EventDefinition,
+  sourceInstanceId: string | null,
+  subjectId: string | null,
+  context: EventInstance['context'],
+): string {
+  const instance = createInstance(world, def, sourceInstanceId, subjectId, context);
   world.events.pendingInstanceId = instance.id;
   return instance.id;
 }
@@ -98,13 +212,26 @@ export function runMonthlyEvents(world: World): string | null {
       continue;
     }
     world.events.scheduled = world.events.scheduled.filter((s) => s.id !== consequence.id);
+    const subjectId = pickSubject(world, def, consequence.subjectId);
+    if (def.subject && subjectId === null) continue; // the person is gone: the follow-up lapses
     if (def.exclusiveGroup !== null) groups.add(def.exclusiveGroup);
-    if (def.choices.length > 0) pending = firePending(world, def, consequence.sourceInstanceId);
+    if (def.choices.length > 0)
+      pending = firePending(
+        world,
+        def,
+        consequence.sourceInstanceId,
+        subjectId,
+        consequence.context,
+      );
     else {
-      fireAutomatic(world, def, consequence.sourceInstanceId);
+      fireAutomatic(world, def, consequence.sourceInstanceId, subjectId, consequence.context);
       automatic += 1;
     }
   }
+  // Drop consequences for characters who are no longer the active one (e.g. after death).
+  world.events.scheduled = world.events.scheduled.filter(
+    (s) => world.characters[s.characterId]?.death === null,
+  );
 
   // 2. Random events, in a seeded random order.
   const eligible = EVENTS.filter((def) => isEligible(def, world));
@@ -117,10 +244,12 @@ export function runMonthlyEvents(world: World): string | null {
     const chance = eventChancePpm(def, world);
     const fires = withRng(world, 'events', (rng) => rng.chancePpm(chance));
     if (!fires) continue;
+    const subjectId = pickSubject(world, def, null);
+    if (def.subject && subjectId === null) continue;
     if (def.exclusiveGroup !== null) groups.add(def.exclusiveGroup);
-    if (hasChoices) pending = firePending(world, def, null);
+    if (hasChoices) pending = firePending(world, def, null, subjectId, {});
     else {
-      fireAutomatic(world, def, null);
+      fireAutomatic(world, def, null, subjectId, {});
       automatic += 1;
     }
   }
@@ -177,6 +306,25 @@ export function resolveChoice(world: World, instanceId: string, choiceId: string
     [...def.effects, ...choice.effects],
     `event:${def.id}`,
     instance.id,
+    {
+      subjectId: instance.subjectId,
+      context: instance.context,
+    },
   );
-  addBiography(world, character.id, bioCategory(def), 'bio.event', { eventId: def.id, choiceId });
+  addBiography(world, character.id, bioCategory(def), 'bio.event', {
+    eventId: def.id,
+    choiceId,
+    ...textParams(world, instance),
+  });
+}
+
+/** Old resolved instances are compacted to keep the world bounded (counts stay). */
+export function pruneEventInstances(world: World, keep = 400): void {
+  const ids = Object.keys(world.events.instances);
+  if (ids.length <= keep + 100) return;
+  const resolved = sortedValues(world.events.instances)
+    .filter((i) => i.status === 'resolved')
+    .sort((a, b) => a.tick - b.tick || (a.id < b.id ? -1 : 1));
+  for (const i of resolved.slice(0, ids.length - keep))
+    Reflect.deleteProperty(world.events.instances, i.id);
 }

@@ -33,20 +33,27 @@ src/contracts  protocol + shared shapes (zod + engine types only)
 
 ## Simulation core (`src/engine`)
 
-| Module               | Responsibility                                                                                                                                                                    |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `state/schema.ts`    | The whole `World` as one Zod-validated, JSON-serialisable object. All numbers are integers; stats/needs/skills are fixed-point tenths.                                            |
-| `core/rng.ts`        | `sfc32` generator seeded by `cyrb128`; one stream per subsystem (`creation`, `genetics`, `events`, `npc`, `mortality`) stored in the world.                                       |
-| `core/commands.ts`   | `execute(state, command)`: pure, validated, idempotent commands (`advance`, `choose`, `act`, `markRead`, `setDifficulty`, `setEasyMigration`); `replay()` re-runs a command list. |
-| `core/tick.ts`       | Monthly turn in the spec's order; returns a _pending_ turn when a decision is needed; `completePendingMonth` finishes it.                                                         |
-| `core/invariants.ts` | Consistency checks run after every command and month.                                                                                                                             |
-| `core/diff.ts`       | Structural diff/patch used for monthly delta snapshots (append-only arrays become `append` ops).                                                                                  |
-| `characters/*`       | World creation (scenarios, families, names, genetics), monthly updates, mortality, stats with causes.                                                                             |
-| `activities/*`       | Unlimited activities with time/energy costs and diminishing returns.                                                                                                              |
-| `events/*`           | Declarative event schema, predicate evaluation, effects, monthly selection and decisions.                                                                                         |
-| `world/*`            | Country profiles (baseline) and locations.                                                                                                                                        |
-| `content/*`          | Built-in content, validated at load.                                                                                                                                              |
-| `view.ts`            | Read-only projection (`GameView`) sent to the UI.                                                                                                                                 |
+| Module                              | Responsibility                                                                                                                                                                                          |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `state/schema.ts`                   | The whole `World` as one Zod-validated, JSON-serialisable object. All numbers are integers; stats/needs/skills are fixed-point tenths.                                                                  |
+| `core/rng.ts`                       | `sfc32` generator seeded by `cyrb128`; one stream per subsystem (`creation`, `genetics`, `events`, `npc`, `mortality`) stored in the world.                                                             |
+| `core/commands.ts`                  | `execute(state, command)`: pure, validated, idempotent commands (`advance`, `choose`, `act`, `markRead`, `setDifficulty`, `setEasyMigration`); `replay()` re-runs a command list.                       |
+| `core/tick.ts`                      | Monthly turn in the spec's order; returns a _pending_ turn when a decision is needed; `completePendingMonth` finishes it.                                                                               |
+| `core/invariants.ts`                | Consistency checks run after every command and month.                                                                                                                                                   |
+| `core/diff.ts`                      | Structural diff/patch used for monthly delta snapshots (append-only arrays become `append` ops).                                                                                                        |
+| `characters/*`                      | World creation (scenarios, families, names, genetics), monthly updates, mortality, stats with causes.                                                                                                   |
+| `activities/*`                      | Unlimited activities with time/energy costs and diminishing returns.                                                                                                                                    |
+| `events/*`                          | Declarative event schema, predicate evaluation, effects, monthly selection and decisions.                                                                                                               |
+| `world/*`                           | Country profiles (baseline) and locations.                                                                                                                                                              |
+| `content/*`                         | Built-in content, validated at load.                                                                                                                                                                    |
+| `view.ts`                           | Read-only projection (`GameView`) sent to the UI.                                                                                                                                                       |
+| `social/*`                          | People: NPC generation (family, neighbours, classmates, colleagues, partners), relationships and kinship, memories, population tiers (≤150 active, ≤30 close), NPC autonomy, family life, interactions. |
+| `education/*`                       | Programmes and clubs catalogue; country school stages, grades, reports, exams, applications, scholarships.                                                                                              |
+| `career/*`                          | 150 occupations in 25 industries; job board, applications, interviews, offers, employment, reviews, layoffs, NPC careers.                                                                               |
+| `economy/*`                         | Double-entry ledger (BigInt), country economy, tax and payslips, household finance, loans, insurance, pensions.                                                                                         |
+| `calendar/*`                        | Free-time budget with its breakdown, recurring plans, holidays, check-ups, weddings, upcoming dates.                                                                                                    |
+| `world/rules.ts`                    | Baseline institutions per country (schools, tax bands, contributions, pensions, benefits, healthcare, rates).                                                                                           |
+| `core/setup.ts`, `state/upgrade.ts` | Sets up M3-M4 systems for a new world, and upgrades version-1 worlds the same way.                                                                                                                      |
 
 `SimState = { world, pending }`: `world` is the committed month; `pending` holds the
 next month while a decision waits. A month is committed exactly once: when Advance finishes
@@ -83,8 +90,11 @@ can be rebuilt from the branch's last complete month (`saves.repair`).
 snapshots, heads and commands, and a SHA-256 checksum. Imports are validated completely
 (structure, references, every snapshot hash) before anything is written; ids are remapped.
 
-**Migrations:** `migrations.ts` upgrades stored worlds/bundles one version at a time; newer
-versions are refused with a clear message. Dexie schema changes add new `version(n)` blocks.
+**Migrations:** `migrations.ts` upgrades stored worlds/bundles one version at a time (1 → 2 adds
+the Milestone 3-4 systems); newer versions are refused with a clear message. Snapshots are
+rebuilt in the format they were stored in, hash-checked, and only then upgraded; the first
+snapshot written by a new engine version is always a full keyframe. Dexie schema changes add
+new `version(n)` blocks.
 
 ## Request flow
 
@@ -100,7 +110,7 @@ Home screen offers **Retry**, which starts a fresh worker.
 
 ## UI (`src/app`)
 
-- Routes: `/` (lives), `/new` (wizard), `/settings`, `/play/:saveId/{life,career,finance,social,more,character,timeline,notifications,rules}`.
+- Routes: `/` (lives), `/new` (wizard), `/settings`, `/play/:saveId/{life,career,finance,social,more,character,timeline,notifications,rules,calendar,family,people/:personId}`. Person details and the family tree are read-only `game.person` / `game.family` requests.
 - `play/PlayLayout.tsx`: header, Advance Month, event dialog, banners; five tabs (sidebar on
   desktop, bottom bar on phones).
 - Strings produced by the engine are keys resolved in `i18n/en.ts`; event text lives in each
@@ -127,4 +137,4 @@ are never applied silently. If service-worker registration fails, Home says so.
 | Integration (UI client ↔ real worker host ↔ IndexedDB)         | Vitest + fake-indexeddb                                                  | `tests/integration`                     |
 | End-to-end (production build + service worker)                 | Playwright: desktop Chromium/WebKit (+Firefox in CI), Pixel 7, iPhone 15 | `tests/e2e`                             |
 | Accessibility                                                  | axe-core (WCAG 2.2 A/AA) on every screen, light and dark                 | `tests/e2e`                             |
-| Performance                                                    | Monthly turn p95 (engine)                                                | `tests/unit/engine/performance.test.ts` |
+| Performance                                                    | Monthly turn p95 in a 150-NPC world (engine)                             | `tests/unit/engine/performance.test.ts` |

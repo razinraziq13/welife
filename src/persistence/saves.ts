@@ -82,7 +82,11 @@ async function snapshotRow(
   world: World,
   parent: { row: SnapshotRow; world: World } | null,
 ): Promise<SnapshotRow> {
-  const full = parent === null || parent.row.depth + 1 >= KEYFRAME_INTERVAL;
+  // A new engine version always starts a fresh keyframe, so deltas never mix world formats.
+  const full =
+    parent === null ||
+    parent.row.depth + 1 >= KEYFRAME_INTERVAL ||
+    parent.row.engineVersion !== ENGINE_VERSION;
   const hash = await hashValue(world);
   const payload = full
     ? (await encodeValue(world)).bytes
@@ -170,17 +174,19 @@ export async function reconstructWorld(
   const base = chain[0];
   if (base?.kind !== 'full')
     throw new PersistenceError('CORRUPTED', 'Snapshot chain has no keyframe.');
-  let world = migrateWorld(await decodeValue(base.payload)) as World;
+  // Deltas apply to the world exactly as it was stored; the hash is checked on that, and
+  // only then is the result migrated to the current format.
+  let stored = await decodeValue(base.payload);
   for (const row of chain.slice(1)) {
-    world = applyPatch(world, (await decodeValue(row.payload)) as PatchOp[]);
+    stored = applyPatch(stored, (await decodeValue(row.payload)) as PatchOp[]);
   }
   const target = chain[chain.length - 1] as SnapshotRow;
-  if ((await hashValue(world)) !== target.hash) {
+  if ((await hashValue(stored)) !== target.hash) {
     throw new IntegrityError(
       `Snapshot for ${String(target.clock.year)}-${String(target.clock.month)} failed its integrity check.`,
     );
   }
-  return { row: target, world };
+  return { row: target, world: migrateWorld(stored) as World };
 }
 
 async function lineageVersionsMatch(db: WeLifeDatabase, snapshotId: string): Promise<boolean> {

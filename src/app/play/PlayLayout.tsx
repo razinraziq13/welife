@@ -1,10 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useParams } from 'react-router';
-import { Bell, Briefcase, HeartHandshake, Home, Loader2, Menu, Wallet } from 'lucide-react';
+import {
+  Bell,
+  Briefcase,
+  CalendarDays,
+  HeartHandshake,
+  Home,
+  Loader2,
+  Menu,
+  Wallet,
+} from 'lucide-react';
 import { Avatar } from '@app/components/avatar/Avatar';
 import { buttonVariants } from '@app/components/ui/button';
 import { Button } from '@app/components/ui/button';
-import { formatAge, formatMonth } from '@app/i18n/format';
+import { formatAge, formatMonth, setActiveCurrency } from '@app/i18n/format';
 import { cn } from '@app/lib/cn';
 import { getEngine } from '@app/bridge/engine';
 import { describeError } from '@app/bridge/errors';
@@ -71,6 +80,11 @@ export function PlayLayout() {
     if (openId !== saveId) void open(saveId);
   }, [saveId, openId, open]);
 
+  const currency = session?.view.country.currency;
+  useEffect(() => {
+    setActiveCurrency(currency ?? null);
+  }, [currency]);
+
   useEffect(() => {
     if (!message) return;
     const timer = window.setTimeout(clearMessage, 6000);
@@ -112,6 +126,13 @@ export function PlayLayout() {
               {formatMonth(view.clock)}
             </span>
           </span>
+        </Link>
+        <Link
+          to={`${base}/calendar`}
+          className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'size-11')}
+          aria-label="Calendar"
+        >
+          <CalendarDays aria-hidden="true" className="size-5" />
         </Link>
         <Link
           to={`${base}/notifications`}

@@ -2,15 +2,8 @@ import { ageOf } from '../core/clock';
 import { addBiography, activeCharacter } from '../core/world';
 import { changeHabit, changeNeed, changeSkill, changeStat } from '../characters/stats';
 import { adjustFamilyCloseness } from '../events/effects';
-import type {
-  Difficulty,
-  HabitKey,
-  NeedKey,
-  SkillKey,
-  StatKey,
-  WealthTier,
-  World,
-} from '../state/schema';
+import { timeBudget } from '../calendar/time';
+import type { HabitKey, NeedKey, SkillKey, StatKey, WealthTier, World } from '../state/schema';
 
 /**
  * Personal activities (spec §4 Actions): players may attempt any number, but each costs
@@ -193,6 +186,89 @@ export const ACTIVITIES: readonly ActivityDefinition[] = [
     parentCloseness: 0,
   },
   {
+    id: 'study',
+    category: 'learn',
+    minAgeMonths: 96,
+    maxAgeYears: null,
+    hours: 8,
+    energy: 50,
+    gains: [
+      { kind: 'skill', key: 'science', base: 30 },
+      { kind: 'skill', key: 'logic', base: 10 },
+    ],
+    habit: 'reading',
+    parentCloseness: 0,
+  },
+  {
+    id: 'code',
+    category: 'learn',
+    minAgeMonths: 108,
+    maxAgeYears: null,
+    hours: 8,
+    energy: 50,
+    gains: [
+      { kind: 'skill', key: 'technology', base: 30 },
+      { kind: 'skill', key: 'logic', base: 10 },
+    ],
+    habit: null,
+    parentCloseness: 0,
+  },
+  {
+    id: 'tinker',
+    category: 'creative',
+    minAgeMonths: 72,
+    maxAgeYears: null,
+    hours: 8,
+    energy: 60,
+    gains: [
+      { kind: 'skill', key: 'craft', base: 30 },
+      { kind: 'stat', key: 'creativity', base: 10 },
+    ],
+    habit: 'creativePractice',
+    parentCloseness: 0,
+  },
+  {
+    id: 'volunteer',
+    category: 'social',
+    minAgeMonths: 144,
+    maxAgeYears: null,
+    hours: 8,
+    energy: 60,
+    gains: [
+      { kind: 'skill', key: 'care', base: 30 },
+      { kind: 'stat', key: 'happiness', base: 20 },
+      { kind: 'stat', key: 'reputation', base: 10 },
+    ],
+    habit: null,
+    parentCloseness: 0,
+  },
+  {
+    id: 'business-reading',
+    category: 'learn',
+    minAgeMonths: 168,
+    maxAgeYears: null,
+    hours: 6,
+    energy: 40,
+    gains: [{ kind: 'skill', key: 'business', base: 30 }],
+    habit: 'reading',
+    parentCloseness: 0,
+  },
+  {
+    id: 'organize-event',
+    category: 'social',
+    minAgeMonths: 144,
+    maxAgeYears: null,
+    hours: 10,
+    energy: 80,
+    gains: [
+      { kind: 'skill', key: 'leadership', base: 30 },
+      { kind: 'skill', key: 'socializing', base: 10 },
+      { kind: 'need', key: 'social', base: 100 },
+    ],
+    habit: null,
+    parentCloseness: 0,
+  },
+  {
     id: 'meditate',
     category: 'rest',
     minAgeMonths: 120,
@@ -212,25 +288,6 @@ const BY_ID = new Map(ACTIVITIES.map((a) => [a.id, a]));
 
 export function findActivity(id: string): ActivityDefinition | undefined {
   return BY_ID.get(id);
-}
-
-/** Free hours per month by age; later milestones subtract school and work hours. */
-export function monthlyFreeHours(ageYears: number, difficulty: Difficulty): number {
-  const base =
-    ageYears < 2
-      ? 30
-      : ageYears < 6
-        ? 50
-        : ageYears < 13
-          ? 60
-          : ageYears < 18
-            ? 70
-            : ageYears < 65
-              ? 80
-              : 100;
-  if (difficulty === 'casual') return base * 2;
-  if (difficulty === 'challenging') return Math.floor((base * 80) / 100);
-  return base;
 }
 
 /** Training quality by household circumstance, percent (spec §4 skill formula). */
@@ -288,8 +345,7 @@ export function listActivities(world: World): ActivityAvailability[] {
   const character = activeCharacter(world);
   const age = ageOf(character.birth, world.clock);
   const sameMonth = world.activity.tick === world.tick;
-  const hoursUsed = sameMonth ? world.activity.hoursUsed : 0;
-  const budget = monthlyFreeHours(age.years, world.rules.difficulty);
+  const { total: budget, used: hoursUsed } = timeBudget(world);
   return ACTIVITIES.map((def) => {
     const times = sameMonth ? (world.activity.counts[def.id] ?? 0) : 0;
     const gate = ageGate(def, age.totalMonths);
@@ -305,15 +361,6 @@ export function listActivities(world: World): ActivityAvailability[] {
       nextEffectPercent: diminishingPercent(times),
     };
   });
-}
-
-export function timeBudget(world: World): { total: number; used: number } {
-  const character = activeCharacter(world);
-  const age = ageOf(character.birth, world.clock);
-  return {
-    total: monthlyFreeHours(age.years, world.rules.difficulty),
-    used: world.activity.tick === world.tick ? world.activity.hoursUsed : 0,
-  };
 }
 
 /**
@@ -337,9 +384,9 @@ export function performActivity(world: World, activityId: string): ActivityResul
   const gate = ageGate(def, age.totalMonths);
   if (gate) return result(gate);
 
-  const budget = monthlyFreeHours(age.years, world.rules.difficulty);
+  const budget = timeBudget(world).total;
   const casual = world.rules.difficulty === 'casual';
-  // Casual doubles the budget (monthlyFreeHours) but keeps a limit, so gains stay bounded.
+  // Casual doubles free time (calendar/time.ts) but keeps a limit, so gains stay bounded.
   if (world.activity.hoursUsed + def.hours > budget) return result('no-time');
 
   const times = world.activity.counts[def.id] ?? 0;
@@ -385,3 +432,5 @@ export function performActivity(world: World, activityId: string): ActivityResul
     effectPercent: percent,
   };
 }
+
+export { timeBudget } from '../calendar/time';

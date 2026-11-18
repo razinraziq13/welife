@@ -13,7 +13,7 @@ import { createWorld, CreationError } from '@engine/characters/create';
 import { committedNewMonth, execute } from '@engine/core/commands';
 import { InvariantError } from '@engine/core/invariants';
 import { CONTENT_VERSION, ENGINE_VERSION } from '@engine/version';
-import { projectGame, summarizeWorld } from '@engine/view';
+import { projectFamily, projectGame, projectPerson, summarizeWorld } from '@engine/view';
 import { duplicateSave, exportSave, importSave, ImportError } from '@persistence/bundle';
 import { IntegrityError } from '@persistence/codec';
 import { DB_SCHEMA_VERSION, type WeLifeDatabase } from '@persistence/db';
@@ -190,6 +190,11 @@ export function createEngineHost(db: WeLifeDatabase): EngineHost {
         session = { ...current, save: { ...current.save, layout: request.params.layout } };
         return request.params.layout;
       }
+
+      case 'game.person':
+        return projectPerson((await ensure(request.params.saveId)).state, request.params.personId);
+      case 'game.family':
+        return projectFamily((await ensure(request.params.saveId)).state);
 
       case 'timeline.get':
         return getTimeline(db, request.params.saveId);
