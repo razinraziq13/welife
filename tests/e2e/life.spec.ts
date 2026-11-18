@@ -14,13 +14,9 @@ test('creates a life, plays months, and keeps everything after a reload', async 
   await expect(page.getByText(/free hours left\./)).toBeVisible();
   await expect(page.getByText(/24 of 30 free hours left this month/)).toBeVisible();
 
+  // Each click plays up to four months (stopping early for a decision).
   for (let i = 0; i < 4; i++) await advanceOnce(page);
-  await expect(
-    page
-      .getByText(/^\d+ months?$/)
-      .first()
-      .or(page.getByText(/months ·/).first()),
-  ).toBeVisible();
+  await expect(page.getByText(/\d+ (years?|months?)/).first()).toBeVisible();
   const header = await page.getByRole('link', { name: /Yui/ }).first().textContent();
 
   await page.reload();
@@ -64,10 +60,22 @@ test('decisions pause the month until the player chooses', async ({ page }) => {
   test.setTimeout(240_000); // may need many months before a decision comes up (slow under load on WebKit)
   await createLife(page, { seed: 'e2e-decision' });
   const dialog = page.getByRole('dialog');
-  for (let i = 0; i < 80 && !(await dialog.isVisible()); i++) {
-    await page.getByTestId('advance-month').locator('visible=true').first().click();
-    await page.waitForTimeout(50);
+  const advance = page.getByTestId('advance-month').locator('visible=true').first();
+  for (let i = 0; i < 40 && !(await dialog.isVisible()); i++) {
+    // Wait until the previous click's months are done (or a decision has opened).
+    await expect
+      .poll(async () => (await dialog.isVisible()) || (await advance.isEnabled()), {
+        timeout: 30_000,
+      })
+      .toBe(true);
+    if (await dialog.isVisible()) break;
+    await advance.click();
   }
+  await expect
+    .poll(async () => (await dialog.isVisible()) || (await advance.isEnabled()), {
+      timeout: 30_000,
+    })
+    .toBe(true);
   if (!(await dialog.isVisible())) test.skip(true, 'No decision occurred for this seed');
   // While the decision waits, Advance is disabled and says why.
   await dialog.getByRole('button', { name: 'Close' }).click();

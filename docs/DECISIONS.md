@@ -18,6 +18,12 @@ This file records decisions that fill gaps in, or clarify, the specification.
 | D9  | Player crime                 | Abstract choices with risk and legal consequences only; never procedural detail.                                                                             |
 | D10 | Achievements                 | Recorded per branch with provenance, plus a gallery across all saves.                                                                                        |
 
+## User-approved changes after the plan
+
+| #   | Date       | Change                                                                                                                                                                                                                                                                                                                                                                                                             |
+| --- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| D11 | 2026-11-19 | **One click of Advance plays four months** (replacing "one click advances one month", spec §1/§4). Each month is still a separate validated command with its own snapshot, so the monthly turn order, rewind to any month, replay and the once-per-month guarantees are unchanged. The run stops early when a decision is waiting, the life ends or a month is refused; the button stays locked for the whole run. |
+
 ## Engineering resolutions (accepted with the plan)
 
 | #   | Topic                           | Resolution                                                                                                                                                                             |

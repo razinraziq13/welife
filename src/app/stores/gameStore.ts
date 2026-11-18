@@ -23,6 +23,8 @@ interface GameState {
   errorCode: string | null;
   /** True while a command is in flight; Advance is disabled meanwhile (double-click guard). */
   busy: boolean;
+  /** True for the whole of a multi-month advance (keeps Advance locked between months). */
+  advancing: boolean;
   lastActivity: ActivityResult | null;
   /** Short status message announced to screen readers. */
   message: string | null;
@@ -63,6 +65,9 @@ function newCommandId(): string {
   return crypto.randomUUID();
 }
 
+/** Months played by one click of Advance. */
+export const ADVANCE_MONTHS = 4;
+
 export const useGameStore = create<GameState>()((set, get) => ({
   saveId: null,
   session: null,
@@ -70,6 +75,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
   error: null,
   errorCode: null,
   busy: false,
+  advancing: false,
   lastActivity: null,
   message: null,
 
@@ -116,11 +122,26 @@ export const useGameStore = create<GameState>()((set, get) => ({
     }
   },
 
+  /**
+   * One click plays up to ADVANCE_MONTHS months (user decision, 2026-11-19). Each month is
+   * still its own validated command with its own snapshot, so rewind, replay and the
+   * once-per-month guarantees are unchanged. It stops early when a decision is waiting, the
+   * life ends or a month is refused.
+   */
   async advance() {
-    const tick = get().session?.view.tick;
-    if (tick === undefined) return;
-    const outcome = await get().send({ type: 'advance', expectedTick: tick });
-    if (outcome?.status === 'applied' && outcome.kind === 'advanced') set({ lastActivity: null });
+    if (get().advancing) return;
+    set({ advancing: true });
+    try {
+      for (let i = 0; i < ADVANCE_MONTHS; i++) {
+        const view = get().session?.view;
+        if (view?.lifeStatus !== 'alive' || view.pendingEvent) break;
+        const outcome = await get().send({ type: 'advance', expectedTick: view.tick });
+        if (outcome?.status !== 'applied' || outcome.kind !== 'advanced') break;
+        set({ lastActivity: null });
+      }
+    } finally {
+      set({ advancing: false });
+    }
   },
 
   async choose(instanceId, choiceId) {

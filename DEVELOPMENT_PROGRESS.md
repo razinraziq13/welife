@@ -85,6 +85,11 @@ Built together on branch `milestone-7-8` (from `milestone-6`) at the user's requ
 9. **Firefox e2e** is still blocked locally by Windows policy (it runs in CI).
 10. Not clicked through by hand in the in-app browser (the pane was hidden); the browser tests drive the new screens in four profiles.
 
+### Change after review: four months per click (2026-11-19, decision D11)
+
+- One click of Advance now plays up to four months, each still its own command and monthly snapshot; it stops early for a decision, the end of a life or a refused month, and the button stays locked for the whole run. The label shows the month four months ahead, with a note that it stops early for decisions.
+- Browser tests updated to wait for the whole run (the shared `advanceOnce` helper, the decision test and the Milestone 5 month loop).
+
 ### Next: Milestone 9, integration, balance and release (awaiting approval)
 
 ---

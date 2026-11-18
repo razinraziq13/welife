@@ -33,15 +33,25 @@ export async function createLife(page: Page, options: LifeOptions = {}): Promise
 export async function advanceOnce(page: Page): Promise<void> {
   const dialog = page.getByRole('dialog');
   if (await dialog.isVisible()) {
-    await dialog.getByRole('group', { name: 'Choices' }).getByRole('button').first().click();
+    await dialog
+      .getByRole('group', { name: 'Choices' })
+      .getByRole('button', { disabled: false })
+      .first()
+      .click();
     await expect(dialog).toBeHidden();
     return;
   }
   const button = page.getByTestId('advance-month').locator('visible=true').first();
   const before = await button.textContent();
   await button.click();
-  // Either the month moved on, or a decision dialog opened.
+  // One click plays up to four months: wait until the run has finished (Advance usable again
+  // with a new month) or a decision dialog opened.
   await expect
-    .poll(async () => (await dialog.isVisible()) || (await button.textContent()) !== before)
+    .poll(
+      async () =>
+        (await dialog.isVisible()) ||
+        ((await button.textContent()) !== before && (await button.isEnabled())),
+      { timeout: 30_000 },
+    )
     .toBe(true);
 }

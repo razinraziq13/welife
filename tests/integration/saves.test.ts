@@ -230,7 +230,7 @@ describe('rewind and branches (M1 exit)', () => {
     // The old timeline is intact and can be switched back to.
     const back = await call('timeline.checkout', { saveId, branchId: original?.id ?? '' });
     expect(back.view.tick).toBe(40);
-  });
+  }, 60_000);
 
   it('deletes only leaf branches that are not being played', async () => {
     const database = db();

@@ -3,10 +3,13 @@ import { CalendarArrowUp, Loader2 } from 'lucide-react';
 import { Button } from '@app/components/ui/button';
 import { formatMonth } from '@app/i18n/format';
 import { addMonths } from '@engine/core/clock';
-import { useGameStore } from '@app/stores/gameStore';
+import { ADVANCE_MONTHS, useGameStore } from '@app/stores/gameStore';
 import { cn } from '@app/lib/cn';
 
-/** The monthly Advance control. When it cannot be used, it says why (no silent disabled buttons). */
+/**
+ * The Advance control: plays up to four months, stopping early for a decision. When it cannot
+ * be used, it says why (no silent disabled buttons).
+ */
 export function AdvanceButton({
   className,
   size = 'lg',
@@ -15,7 +18,7 @@ export function AdvanceButton({
   size?: 'md' | 'lg';
 }) {
   const session = useGameStore((s) => s.session);
-  const busy = useGameStore((s) => s.busy);
+  const busy = useGameStore((s) => s.busy || s.advancing);
   const advance = useGameStore((s) => s.advance);
   const reasonId = useId();
   if (!session) return null;
@@ -40,8 +43,13 @@ export function AdvanceButton({
         ) : (
           <CalendarArrowUp aria-hidden="true" className="size-5" />
         )}
-        Advance to {formatMonth(addMonths(view.clock, 1))}
+        Advance to {formatMonth(addMonths(view.clock, ADVANCE_MONTHS))}
       </Button>
+      {!reason && (
+        <p className="text-center text-xs text-muted">
+          {ADVANCE_MONTHS} months; stops early if a decision comes up.
+        </p>
+      )}
       {reason && (
         <p id={reasonId} className="text-center text-xs text-muted">
           {reason}
