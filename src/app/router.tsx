@@ -20,6 +20,11 @@ import { FamilyTreeScreen } from '@app/play/screens/FamilyTreeScreen';
 import { CalendarScreen } from '@app/play/screens/CalendarScreen';
 import { BusinessDetailScreen, BusinessScreen } from '@app/play/screens/BusinessScreen';
 import { PropertyScreen } from '@app/play/screens/PropertyScreen';
+import { LegacyScreen } from '@app/play/screens/LegacyScreen';
+import { MediaScreen } from '@app/play/screens/MediaScreen';
+import { AchievementsScreen, BiographyScreen } from '@app/play/screens/AchievementsScreen';
+import { EditorScreen } from '@app/screens/EditorScreen';
+import { GalleryScreen } from '@app/screens/GalleryScreen';
 import {
   HealthScreen,
   LegalScreen,
@@ -38,6 +43,8 @@ export const router = createBrowserRouter([
       { index: true, element: <StartScreen /> },
       { path: 'new', element: <NewLifeScreen /> },
       { path: 'settings', element: <SettingsScreen /> },
+      { path: 'editor', element: <EditorScreen /> },
+      { path: 'gallery', element: <GalleryScreen /> },
       {
         path: 'play/:saveId',
         element: <PlayLayout />,
@@ -59,6 +66,10 @@ export const router = createBrowserRouter([
           { path: 'business/:businessId', element: <BusinessDetailScreen /> },
           { path: 'property', element: <PropertyScreen /> },
           { path: 'world', element: <WorldScreen /> },
+          { path: 'legacy', element: <LegacyScreen /> },
+          { path: 'media', element: <MediaScreen /> },
+          { path: 'achievements', element: <AchievementsScreen /> },
+          { path: 'biography/:personId', element: <BiographyScreen /> },
           { path: 'health', element: <HealthScreen /> },
           { path: 'legal', element: <LegalScreen /> },
           { path: 'religion', element: <ReligionScreen /> },

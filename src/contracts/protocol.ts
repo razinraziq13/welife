@@ -2,6 +2,9 @@ import { z } from 'zod';
 import { CommandSchema, type Command } from '@engine/core/commands';
 import { NewLifeInputSchema, type NewLifeInput } from '@engine/characters/create';
 import type { FamilyTreeView, PersonDetailView } from '@engine/view';
+import type { BiographyView } from '@engine/viewLegacy';
+import type { PreviewResult } from '@engine/content/preview';
+import type { GalleryEntry, PackCheckResult, PackSaveResult, PackSummary } from './packs';
 import { AppSettingsPatchSchema, type AppSettings, type AppSettingsPatch } from './appSettings';
 import {
   DashboardLayoutSchema,
@@ -19,7 +22,7 @@ import {
  * request handled by the worker, which owns the world state and IndexedDB (spec §2).
  */
 
-export const PROTOCOL_VERSION = 3;
+export const PROTOCOL_VERSION = 4;
 
 export interface SystemStatus {
   engineVersion: string;
@@ -58,6 +61,17 @@ export interface RpcMethods {
   'timeline.rewind': { params: SaveRef & { snapshotId: string }; result: GameSessionView };
   'timeline.checkout': { params: SaveRef & { branchId: string }; result: GameSessionView };
   'timeline.deleteBranch': { params: SaveRef & { branchId: string }; result: TimelineData };
+  'game.biography': { params: SaveRef & { personId: string }; result: BiographyView | null };
+  'achievements.gallery': { params: undefined; result: GalleryEntry[] };
+  'packs.list': { params: undefined; result: PackSummary[] };
+  'packs.get': { params: { id: string }; result: { json: string } | null };
+  'packs.save': { params: { json: string }; result: PackSaveResult };
+  'packs.validate': { params: { json: string }; result: PackCheckResult };
+  'packs.delete': { params: { id: string }; result: null };
+  'packs.preview': {
+    params: { json: string; eventId: string; countryCode: string; ageYears: number; seed: string };
+    result: PreviewResult;
+  };
 }
 
 export type RpcMethod = keyof RpcMethods;
@@ -68,6 +82,12 @@ const RequestIdSchema = z.string().min(1).max(64);
 const SaveId = z.string().min(1).max(80);
 const DisplayName = z.string().trim().min(1).max(80);
 const MAX_IMPORT_CHARS = 64 * 1024 * 1024;
+const PackId = z.string().regex(/^[a-z][a-z0-9-]{2,39}$/);
+/** Pack files are capped at 2 MB (content/packs.ts); a little headroom for formatting. */
+const PackJson = z
+  .string()
+  .min(2)
+  .max(3 * 1024 * 1024);
 
 const bare = <M extends string>(method: M) =>
   z.object({ id: RequestIdSchema, method: z.literal(method) }).strict();
@@ -109,6 +129,28 @@ export const RpcRequestSchema = z.discriminatedUnion('method', [
   request(
     'timeline.deleteBranch',
     z.object({ saveId: SaveId, branchId: z.string().min(1).max(80) }).strict(),
+  ),
+  request(
+    'game.biography',
+    z.object({ saveId: SaveId, personId: z.string().min(1).max(80) }).strict(),
+  ),
+  bare('achievements.gallery'),
+  bare('packs.list'),
+  request('packs.get', z.object({ id: PackId }).strict()),
+  request('packs.save', z.object({ json: PackJson }).strict()),
+  request('packs.validate', z.object({ json: PackJson }).strict()),
+  request('packs.delete', z.object({ id: PackId }).strict()),
+  request(
+    'packs.preview',
+    z
+      .object({
+        json: PackJson,
+        eventId: z.string().min(1).max(60),
+        countryCode: z.string().length(2),
+        ageYears: z.number().int().min(0).max(110),
+        seed: z.string().min(1).max(64),
+      })
+      .strict(),
   ),
 ]);
 

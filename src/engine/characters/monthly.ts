@@ -9,6 +9,8 @@ import { getCountry } from '../world/countries';
 import { displayName } from './names';
 import { monthlyMortalityPpm } from './mortality';
 import { changeHabit, changeNeed, changeStat, lifeStage } from './stats';
+import { settleEstate } from '../legacy/inheritance';
+import { beginSuccession } from '../legacy/legacy';
 import {
   HABIT_KEYS,
   NEED_KEYS,
@@ -185,12 +187,15 @@ export function processMortality(world: World): string[] {
     if (!c || !player) continue;
     const age = ageOf(c.birth, world.clock).years;
     if (id === player.id) {
-      world.lifeStatus = 'ended';
-      world.events.pendingInstanceId = null;
       addBiography(world, id, 'life', 'bio.died', { age, cause: c.deathCause ?? 'natural' });
       addNotification(world, 'life', 'ntf.lifeEnded', { age }, 'life');
+      // An heir takes over (or the life ends when there is nobody).
+      beginSuccession(world, c);
       continue;
     }
+    // Former players keep their own life story to the end (family records, spec §4 Legacy).
+    if (world.legacy.lineage.some((l) => l.characterId === id))
+      addBiography(world, id, 'life', 'bio.died', { age, cause: c.deathCause ?? 'natural' });
     if (!isAlive(player)) continue;
     const relation = Object.values(world.relationships).find(
       (r) => r.aId === player.id && r.bId === id,
@@ -231,6 +236,8 @@ function settleDeath(world: World, c: Character): void {
   if (c.employmentId) endEmployment(world, c, 'died');
   if (c.id === world.activeCharacterId) payLifeInsurance(world, c);
   onDeath(world, c);
+  // Inheritance: the estate pays debts and tax and passes to the heirs (Milestone 7).
+  settleEstate(world, c);
   const home = world.households[c.householdId];
   if (home?.finance?.headId === c.id) {
     const next = home.memberIds

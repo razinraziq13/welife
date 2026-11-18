@@ -9,6 +9,7 @@ import {
   monthlyInterest,
 } from '../core/money';
 import { addBiography, addNotification, ageYears, nextId, withRng } from '../core/world';
+import { convertCurrency } from '../economy/fx';
 import { convert, medianWage } from '../economy/economy';
 import { payExpense, receiveIncome } from '../economy/finance';
 import { balanceOf, categoryAccount, openAccount, post } from '../economy/ledger';
@@ -269,11 +270,12 @@ export function revalueStakes(world: World, business: Business): void {
     const account = world.ledger.accounts[owner.stakeAccountId];
     const person = world.characters[owner.ownerId];
     if (!account || !person || account.closedTick !== null) continue;
-    const target = convert(
+    // Valued in the stake account's own currency (owners may live abroad or have inherited).
+    const target = convertCurrency(
       world,
       applyBp(equity, owner.sharesBp),
-      business.countryCode,
-      person.countryCode,
+      business.currency,
+      account.currency,
     );
     const change = target - account.balance;
     if (change > 0n) {

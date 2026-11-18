@@ -10,7 +10,7 @@ import { openCase } from '@engine/civics/law';
 import { birthCivic, majorityCitizenship, workRights } from '@engine/civics/status';
 import { foreignRules } from '@engine/property/property';
 import { jobEligibility } from '@engine/career/jobs';
-import { upgradeWorldV3 } from '@engine/state/upgrade';
+import { upgradeWorldV3, upgradeWorldV4 } from '@engine/state/upgrade';
 import { WorldSchema, type Character, type World } from '@engine/state/schema';
 import type { SimState } from '@engine/core/commands';
 import { getInstitutions, INSTITUTIONS } from '@engine/world/institutions';
@@ -598,7 +598,7 @@ describe('save upgrade', () => {
     for (const c of Object.values(world.characters as Record<string, Record<string, unknown>>))
       Reflect.deleteProperty(c, 'civic');
     world.schemaVersion = 3;
-    const upgraded = upgradeWorldV3(world) as World;
+    const upgraded = upgradeWorldV4(upgradeWorldV3(world)) as World;
     expect(WorldSchema.safeParse(upgraded).success).toBe(true);
     expect(checkInvariants(upgraded)).toEqual([]);
     const parents = Object.values(upgraded.characters).filter(

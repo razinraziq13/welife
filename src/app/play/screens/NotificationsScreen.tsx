@@ -34,6 +34,10 @@ const TARGET_ROUTE: Record<Notification['target'], string> = {
   military: 'military',
   legal: 'legal',
   religion: 'religion',
+  legacy: 'legacy',
+  media: 'media',
+  achievements: 'achievements',
+  biography: 'legacy',
 };
 
 function routeFor(n: Notification): string {

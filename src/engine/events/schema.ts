@@ -19,7 +19,7 @@ import {
  */
 
 const FACT_PATTERN =
-  /^(age\.(years|totalMonths)|month|isBirthMonth|stage|country|scenario|wealth|gender|difficulty|(stats|needs|skills|traits|habits)\.[a-zA-Z]+|flags\.[a-zA-Z0-9._-]+|school\.(stage|grade|final|private)|clubs\.[a-z-]+|job\.(employed|industry|level|performance|tenure)|money\.(savingsMonths|inDebt)|social\.(friends|partnered|married|children)|home\.own|memory\.[a-zA-Z0-9-]+|economy\.cycle|business\.(count|types)|property\.(count|rentals)|civic\.(citizen|newcomer|religion|participation|serving|veteran|office|candidate|duty|custody|voter|calledUp)|law\.(juries|drinkingAge)|health\.conditions)$/;
+  /^(age\.(years|totalMonths)|month|isBirthMonth|stage|country|scenario|wealth|gender|difficulty|(stats|needs|skills|traits|habits)\.[a-zA-Z]+|flags\.[a-zA-Z0-9._-]+|school\.(stage|grade|final|private)|clubs\.[a-z-]+|job\.(employed|industry|level|performance|tenure)|money\.(savingsMonths|inDebt)|social\.(friends|partnered|married|children)|home\.own|memory\.[a-zA-Z0-9-]+|economy\.cycle|business\.(count|types)|property\.(count|rentals)|civic\.(citizen|newcomer|religion|participation|serving|veteran|office|candidate|duty|custody|voter|calledUp)|law\.(juries|drinkingAge)|health\.conditions|money\.netWorthMonths|media\.(followers|profiles)|legacy\.(generation|inherited|hasWill)|civic\.(citizenships|countriesLived)|career\.jobs|education\.degree|social\.grandchildren|achievements\.count)$/;
 
 export const FactSchema = z.string().regex(FACT_PATTERN, 'Unknown fact name');
 

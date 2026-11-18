@@ -3,6 +3,8 @@ import { lifeStage } from '../characters/stats';
 import { medianWage } from '../economy/economy';
 import { getRules } from '../world/rules';
 import { getInstitutions } from '../world/institutions';
+import { currencyFor } from '../economy/finance';
+import { netWorthIn } from '../economy/fx';
 import { hasMemory } from '../social/memories';
 import { childrenOf } from '../social/relationships';
 import type { Character, World } from '../state/schema';
@@ -184,6 +186,50 @@ export function factValue(world: World, character: Character, fact: string): Fac
       return getInstitutions(character.countryCode).law.juries;
     case 'law.drinkingAge':
       return getInstitutions(character.countryCode).law.drinkingAge ?? 0;
+    // Milestone 7 facts.
+    case 'money.netWorthMonths': {
+      const median = medianWage(world, character.countryCode);
+      if (median <= 0n) return 0;
+      return Number(netWorthIn(world, character.id, currencyFor(character.countryCode)) / median);
+    }
+    case 'media.followers':
+      return Object.values(world.media.profiles)
+        .filter((p) => p.characterId === character.id && p.closedTick === null)
+        .reduce((s, p) => s + p.followers, 0);
+    case 'media.profiles':
+      return Object.values(world.media.profiles).filter(
+        (p) => p.characterId === character.id && p.closedTick === null,
+      ).length;
+    case 'legacy.generation':
+      return (
+        world.legacy.lineage.find((l) => l.characterId === character.id)?.generation ??
+        world.legacy.generation
+      );
+    case 'legacy.inherited':
+      return world.legacy.estates.filter((e) => e.heirs.some((h) => h.characterId === character.id))
+        .length;
+    case 'legacy.hasWill':
+      return world.legacy.wills[character.id] !== undefined;
+    case 'civic.citizenships':
+      return character.civic.citizenships.length;
+    case 'civic.countriesLived':
+      return Object.keys(character.civic.residedMonths).length;
+    case 'career.jobs':
+      return Object.values(world.employment).filter((e) => e.characterId === character.id).length;
+    case 'education.degree': {
+      const q = character.education.qualifications;
+      if (q.some((x) => x.startsWith('master:'))) return 'master';
+      if (q.some((x) => x.startsWith('bachelor:'))) return 'bachelor';
+      if (q.some((x) => x.startsWith('diploma:'))) return 'diploma';
+      return q.includes('upperSecondary') ? 'upperSecondary' : 'none';
+    }
+    case 'social.grandchildren':
+      return childrenOf(world, character.id).reduce(
+        (s, child) => s + childrenOf(world, child).length,
+        0,
+      );
+    case 'achievements.count':
+      return Object.keys(world.achievements).length;
     case 'health.conditions':
       return Object.values(world.civics.conditions).filter(
         (h) => h.characterId === character.id && h.status !== 'resolved',

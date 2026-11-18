@@ -19,6 +19,7 @@ import { IntegrityError } from '@persistence/codec';
 import { DB_SCHEMA_VERSION, type WeLifeDatabase } from '@persistence/db';
 import { MigrationError } from '@persistence/migrations';
 import {
+  achievementGallery,
   checkoutBranch,
   commitCommand,
   createSave,
@@ -36,6 +37,15 @@ import {
   type Session,
 } from '@persistence/saves';
 import { loadAppSettings, updateAppSettings } from '@persistence/settingsRepository';
+import {
+  checkPackJson,
+  deletePack,
+  getPackJson,
+  listPacks,
+  savePack,
+} from '@persistence/packRepository';
+import { previewEvent } from '@engine/content/preview';
+import { projectBiography } from '@engine/viewLegacy';
 
 export interface EngineHost {
   /** Handles one raw message from the UI thread. Never throws; errors become error responses. */
@@ -207,6 +217,47 @@ export function createEngineHost(db: WeLifeDatabase): EngineHost {
       case 'timeline.deleteBranch':
         await deleteBranch(db, request.params.saveId, request.params.branchId);
         return getTimeline(db, request.params.saveId);
+
+      case 'game.biography':
+        return projectBiography(
+          (await ensure(request.params.saveId)).state.world,
+          request.params.personId,
+        );
+      case 'achievements.gallery':
+        return (await achievementGallery(db)).map((r) => ({
+          saveId: r.saveId,
+          branchId: r.branchId,
+          achievementId: r.achievementId,
+          saveName: r.saveName,
+          branchName: r.branchName,
+          characterName: r.characterName,
+          generation: r.generation,
+          year: r.year,
+          month: r.month,
+        }));
+      case 'packs.list':
+        return listPacks(db);
+      case 'packs.get': {
+        const json = await getPackJson(db, request.params.id);
+        return json === null ? null : { json };
+      }
+      case 'packs.save':
+        return savePack(db, request.params.json);
+      case 'packs.validate': {
+        const checked = checkPackJson(request.params.json);
+        return { ok: checked.ok, issues: checked.issues };
+      }
+      case 'packs.delete':
+        await deletePack(db, request.params.id);
+        return null;
+      case 'packs.preview': {
+        const checked = checkPackJson(request.params.json);
+        return previewEvent(checked.raw, request.params.eventId, {
+          countryCode: request.params.countryCode,
+          ageYears: request.params.ageYears,
+          seed: request.params.seed,
+        });
+      }
     }
   }
 

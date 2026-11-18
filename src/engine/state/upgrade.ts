@@ -4,6 +4,7 @@ import { initializeSystems } from '../core/setup';
 import { emptyEducation } from '../characters/factory';
 import { randomInterests } from '../social/relationships';
 import { birthCivic, defaultCivic, parentsOf, religionFor } from '../civics/status';
+import { currencyFor } from '../economy/finance';
 import { RNG_STREAMS, SKILL_KEYS, type World } from './schema';
 
 /**
@@ -162,6 +163,47 @@ export function upgradeWorldV3(raw: Record<string, unknown>): Record<string, unk
   for (const stream of RNG_STREAMS)
     rng[stream] ??= Rng.fromSeed(`${world.seed}::${stream}::v4`).state();
   addCivics(world);
-  world.schemaVersion = 4;
+  (world as { schemaVersion: number }).schemaVersion = 4;
+  return world;
+}
+
+/**
+ * Upgrades a version-4 world (Milestone 6) to version 5 (Milestones 7-8): the lineage
+ * starts with the current player as generation 1, and wills, estates, social media,
+ * achievements and content packs start empty. A new random stream is seeded.
+ */
+export function upgradeWorldV4(raw: Record<string, unknown>): Record<string, unknown> {
+  const world = raw as unknown as World & Record<string, unknown>;
+  const rng = world.rng as Record<string, unknown>;
+  for (const stream of RNG_STREAMS)
+    rng[stream] ??= Rng.fromSeed(`${world.seed}::${stream}::v5`).state();
+  const stored = world as unknown as Record<string, unknown>;
+  stored.media ??= { profiles: {}, trends: {} };
+  stored.achievements ??= {};
+  stored.contentPacks ??= [];
+  const status = stored.lifeStatus;
+  if (stored.legacy === undefined) {
+    const player = world.characters[world.activeCharacterId];
+    stored.legacy = {
+      generation: 1,
+      lineage: player
+        ? [
+            {
+              characterId: player.id,
+              generation: 1,
+              fromTick: 0,
+              toTick: status === 'ended' ? world.tick : null,
+              reason: 'start',
+              peakNetWorthMinor: 0n,
+              currency: currencyFor(player.countryCode),
+            },
+          ]
+        : [],
+      wills: {},
+      estates: [],
+      succession: null,
+    };
+  }
+  world.schemaVersion = 5;
   return world;
 }

@@ -185,7 +185,8 @@ describe('monthly turn', () => {
     let state = newState({ seed: 'mortal', difficulty: 'challenging' });
     const result = scriptedCommands(state, 1300, 'mortal');
     state = result.state;
-    if (state.world.lifeStatus === 'ended') {
+    // With an heir the game moves to succession; with none the life has ended.
+    if (state.world.lifeStatus !== 'alive') {
       const r = execute(state, {
         type: 'advance',
         id: 'adv-after-death',

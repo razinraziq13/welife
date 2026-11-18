@@ -7,6 +7,11 @@ import { adultSaveJson } from './adultSave';
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 async function expectAccessible(page: Page) {
+  // Scan from the top: on phones the fixed bottom tab bar otherwise covers whatever control
+  // happens to sit under it at the current scroll position, which axe reports as too small.
+  await page.evaluate(() => {
+    window.scrollTo(0, 0);
+  });
   const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
   expect(
     results.violations.map(
@@ -260,5 +265,97 @@ test.describe('institutions and civic life (M6)', () => {
       await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
       await expectAccessible(page);
     }
+  });
+});
+
+test.describe('legacy, media, achievements and the event creator (M7-M8)', () => {
+  test.describe.configure({ timeout: 150_000 });
+  let json = '';
+  test.beforeAll(async () => {
+    json = await adultSaveJson('e2e-legacy');
+  });
+
+  test('social media, a will, achievements and biography; screens are accessible', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'legacy.welife.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(json),
+    });
+    await expect(page).toHaveURL(/\/play\/[^/]+\/life$/);
+    const saveId = /\/play\/([^/]+)\//.exec(page.url())?.[1] ?? '';
+
+    await page.goto(`/play/${saveId}/media`);
+    await expect(page.getByRole('heading', { level: 1, name: 'Social media' })).toBeVisible();
+    await expectAccessible(page);
+    await page.getByLabel('Handle').fill('robin_e2e');
+    await page.getByRole('button', { name: 'Create account' }).click();
+    await expect(page.getByText('Account created.')).toBeVisible();
+    await page.getByRole('button', { name: 'Informative', exact: true }).first().click();
+    await expect(page.getByText(/Posted\.|backfired/)).toBeVisible();
+    await expectAccessible(page);
+
+    await page.goto(`/play/${saveId}/legacy`);
+    await expect(page.getByRole('heading', { level: 1, name: 'Legacy' })).toBeVisible();
+    await expect(page.getByRole('table', { name: 'The family line' })).toBeVisible();
+    const share = page
+      .getByRole('group', { name: 'Shares (percent)' })
+      .getByRole('spinbutton')
+      .first();
+    await share.fill('100');
+    await page.getByRole('button', { name: 'Save will' }).click();
+    await expect(page.getByText('Your will has been saved.')).toBeVisible();
+    await expectAccessible(page);
+
+    await page.goto(`/play/${saveId}/achievements`);
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Achievements and biography' }),
+    ).toBeVisible();
+    await expect(page.getByText('Coming of age', { exact: false }).first()).toBeVisible();
+    await expectAccessible(page);
+    await page.getByRole('region', { name: 'Life stories' }).getByRole('link').first().click();
+    await expect(page.getByRole('region', { name: 'At a glance' })).toBeVisible();
+    await expectAccessible(page);
+  });
+
+  test('make a pack in the event creator, then enable it for a life', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'packs.welife.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(json),
+    });
+    await expect(page).toHaveURL(/\/play\/[^/]+\/life$/);
+    const saveId = /\/play\/([^/]+)\//.exec(page.url())?.[1] ?? '';
+
+    await page.goto('/editor');
+    await expect(page.getByRole('heading', { level: 1, name: 'Event creator' })).toBeVisible();
+    await expectAccessible(page);
+    await page.getByRole('button', { name: 'New pack' }).click();
+    await page.getByLabel('Title').fill('A friendly neighbour');
+    await expect(page.getByText('No problems found.')).toBeVisible();
+    await page.getByRole('button', { name: 'Run test' }).click();
+    await expect(
+      page.getByRole('status').filter({ hasText: /Eligible|Not eligible/ }),
+    ).toBeVisible();
+    await expectAccessible(page);
+    await page.getByRole('button', { name: 'Save to library' }).click();
+    await expect(page.getByText(/Saved My pack 1\.0\.0/)).toBeVisible();
+    // A broken pack is refused with field paths and never stored.
+    await page.getByLabel('Event id').fill('X');
+    await expect(page.getByText(/events\.0\.id/)).toBeVisible();
+
+    await page.goto(`/play/${saveId}/rules`);
+    await page.getByRole('button', { name: 'Enable My pack 1.0.0' }).click();
+    await expect(page.getByText('My pack 1.0.0 is enabled for this life.')).toBeVisible();
+    await expectAccessible(page);
+
+    await page.goto('/gallery');
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Achievement gallery' }),
+    ).toBeVisible();
+    await expectAccessible(page);
   });
 });

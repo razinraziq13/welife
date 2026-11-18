@@ -10,7 +10,36 @@ export const DEFAULT_DATABASE_NAME = 'welife';
  * Current IndexedDB schema version. Every bump must add a `this.version(n)` block
  * below (never edit an old one) so existing installs migrate forward.
  */
-export const DB_SCHEMA_VERSION = 2;
+export const DB_SCHEMA_VERSION = 3;
+
+/** One achievement unlocked on one timeline (cross-save gallery, decision D10). */
+export interface AchievementRow {
+  saveId: string;
+  branchId: string;
+  achievementId: string;
+  saveName: string;
+  branchName: string;
+  characterName: string;
+  generation: number;
+  /** In-game month of the unlock. */
+  year: number;
+  month: number;
+  unlockedAt: string;
+}
+
+/** A content pack in the device library (spec §7). */
+export interface PackRow {
+  id: string;
+  name: string;
+  packVersion: string;
+  mode: 'player' | 'developer';
+  author: string;
+  /** The validated pack file. */
+  json: string;
+  updatedAt: string;
+  /** Earlier versions (newest first, at most 10). */
+  history: { packVersion: string; json: string; savedAt: string }[];
+}
 
 export interface MetaRow {
   key: string;
@@ -110,6 +139,8 @@ export class WeLifeDatabase extends Dexie {
   declare snapshots: EntityTable<SnapshotRow, 'id'>;
   declare heads: EntityTable<HeadRow, 'branchId'>;
   declare commands: Table<CommandRow, [string, string]>;
+  declare achievements: Table<AchievementRow, [string, string, string]>;
+  declare packs: EntityTable<PackRow, 'id'>;
 
   constructor(name: string = DEFAULT_DATABASE_NAME) {
     super(name);
@@ -124,6 +155,11 @@ export class WeLifeDatabase extends Dexie {
       snapshots: 'id, saveId, branchId, [branchId+tick]',
       heads: 'branchId, saveId',
       commands: '[branchId+commandId], saveId, branchId, [branchId+seq]',
+    });
+    // Milestones 7-8: the cross-save achievement gallery and the content-pack library.
+    this.version(3).stores({
+      achievements: '[saveId+branchId+achievementId], saveId, branchId, achievementId',
+      packs: 'id, updatedAt',
     });
   }
 }

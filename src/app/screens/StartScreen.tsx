@@ -160,6 +160,12 @@ export function StartScreen() {
             <Link to="/new" className={buttonVariants()}>
               <Plus aria-hidden="true" className="size-4" /> New life
             </Link>
+            <Link to="/editor" className={buttonVariants({ variant: 'secondary' })}>
+              Event creator
+            </Link>
+            <Link to="/gallery" className={buttonVariants({ variant: 'secondary' })}>
+              Achievement gallery
+            </Link>
             <Button
               variant="secondary"
               disabled={connection !== 'ready'}

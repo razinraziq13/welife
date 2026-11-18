@@ -100,6 +100,11 @@ import {
   type EngagementKind,
 } from '../civics/royal';
 import { inCustody } from '../civics/status';
+import { LegacyError, continueAs } from '../legacy/legacy';
+import { WillError, setWill } from '../legacy/inheritance';
+import { MediaError, answerOffer, closeProfile, createProfile, post } from '../media/media';
+import { PackError, disablePack, enablePack } from '../content/packs';
+import { checkAchievements } from '../achievements/achievements';
 import { OFFICE_LEVELS, RELIGIONS } from '../world/institutions';
 import { enforcePopulation } from '../social/population';
 import {
@@ -111,6 +116,7 @@ import {
 } from '../social/interactions';
 import {
   APPLICATION_ROUTES,
+  MEDIA_STYLES,
   DIFFICULTIES,
   FUNDS,
   HOME_SIZES,
@@ -284,6 +290,27 @@ export const CommandSchema = z.discriminatedUnion('type', [
   }),
   command('takePatronage', { cause: z.enum(PATRONAGE_CAUSES) }),
   command('dropPatronage', { cause: z.enum(PATRONAGE_CAUSES) }),
+  // Milestones 7-8: legacy, wills, social media, content packs.
+  command('continueAs', { characterId: EntityId }),
+  command('setWill', {
+    beneficiaries: z
+      .array(
+        z.object({ characterId: EntityId, sharesBp: z.number().int().min(1).max(10_000) }).strict(),
+      )
+      .min(1)
+      .max(8),
+  }),
+  command('createProfile', {
+    platformId: z.string().min(2).max(20),
+    niche: z.string().min(2).max(20),
+    handle: z.string().min(2).max(30),
+  }),
+  command('post', { profileId: EntityId, style: z.enum(MEDIA_STYLES) }),
+  command('answerSponsor', { profileId: EntityId, accept: z.boolean() }),
+  command('closeProfile', { profileId: EntityId }),
+  /** The pack file is validated in full by the engine (content/packs.ts). */
+  command('enablePack', { pack: z.unknown() }),
+  command('disablePack', { packId: z.string().min(3).max(40) }),
 ]);
 export type Command = z.infer<typeof CommandSchema>;
 
@@ -669,6 +696,38 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
     case 'dropPatronage':
       dropPatronage(world, player, cmd.cause);
       return done('out.patronageDropped', { cause: cmd.cause });
+    case 'setWill':
+      setWill(world, player, cmd.beneficiaries);
+      return done('out.will');
+    case 'createProfile':
+      createProfile(world, player, cmd.platformId, cmd.niche, cmd.handle);
+      return done('out.profileCreated');
+    case 'post': {
+      const key = `post:${cmd.profileId}`;
+      const gain = post(
+        world,
+        player,
+        cmd.profileId,
+        cmd.style,
+        (h) => spendHours(world, h),
+        repeatsThisMonth(world, key),
+      );
+      countAction(world, key);
+      return done(gain >= 0 ? 'out.posted' : 'out.postBackfired', { gain: Math.abs(gain) });
+    }
+    case 'answerSponsor':
+      answerOffer(world, player, cmd.profileId, cmd.accept);
+      return done(cmd.accept ? 'out.sponsorAccepted' : 'out.sponsorDeclined');
+    case 'closeProfile':
+      closeProfile(world, player, cmd.profileId);
+      return done('out.profileClosed');
+    case 'enablePack': {
+      const record = enablePack(world, cmd.pack);
+      return done('out.packEnabled', { name: record.name, version: record.packVersion });
+    }
+    case 'disablePack':
+      disablePack(world, cmd.packId);
+      return done('out.packDisabled');
     default:
       throw new Ineligible('Unknown action.');
   }
@@ -692,6 +751,10 @@ const DOMAIN_ERRORS = [
   MilitaryError,
   PoliticsError,
   RoyalError,
+  LegacyError,
+  WillError,
+  MediaError,
+  PackError,
 ];
 
 /**
@@ -762,6 +825,30 @@ export function execute(
       }
       throw error;
     }
+  }
+
+  if (command.type === 'continueAs') {
+    if (state.world.lifeStatus === 'ended')
+      return reject(state, 'lifeEnded', 'This life has ended.');
+    const next = deepClone(state.world);
+    try {
+      continueAs(next, command.characterId);
+      checkAchievements(next);
+    } catch (error) {
+      if (error instanceof LegacyError) return reject(state, 'ineligible', error.message);
+      throw error;
+    }
+    rememberCommand(next, command.id);
+    assertInvariants(next);
+    return {
+      state: { world: next, pending: null },
+      outcome: {
+        status: 'applied',
+        kind: 'done',
+        key: 'out.continued',
+        params: { characterId: command.characterId },
+      },
+    };
   }
 
   const world = deepClone(state.world);

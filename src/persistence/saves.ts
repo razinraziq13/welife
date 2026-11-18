@@ -1,7 +1,9 @@
+import { fromMonthIndex } from '@engine/core/clock';
 import { Dexie } from 'dexie';
 import { diff, applyPatch, type PatchOp } from '@engine/core/diff';
 import type { Command, CommandOutcome, SimState } from '@engine/core/commands';
 import { checkInvariants } from '@engine/core/invariants';
+import { storedPackIssues } from '@engine/content/packs';
 import { WorldSchema, type World } from '@engine/state/schema';
 import { CONTENT_VERSION, ENGINE_VERSION } from '@engine/version';
 import { summarizeWorld } from '@engine/view';
@@ -9,6 +11,7 @@ import { decodeValue, encodeValue, hashValue, IntegrityError } from './codec';
 import { migrateWorld } from './migrations';
 import type { BranchInfo, SaveListItem, SnapshotInfo, TimelineData } from '@contracts/saves';
 import type {
+  AchievementRow,
   BranchRow,
   CommandRow,
   DashboardLayoutRow,
@@ -67,6 +70,12 @@ export function validateHeadState(raw: unknown): SimState {
       throw new PersistenceError(
         'CORRUPTED',
         `Saved ${label} is inconsistent: ${violations[0] ?? ''}`,
+      );
+    const packIssues = storedPackIssues(parsed.data);
+    if (packIssues.length > 0)
+      throw new PersistenceError(
+        'CORRUPTED',
+        `Saved ${label} has an invalid content pack: ${packIssues[0] ?? ''}`,
       );
     return parsed.data;
   };
@@ -246,6 +255,35 @@ export async function findCommand(
  * when a month was committed, the monthly snapshot (spec §4 step 12). Returns the updated
  * session. Fails with CONFLICT if another tab changed this timeline meanwhile.
  */
+/** New achievement unlocks in a committed world, as gallery rows (with provenance). */
+function achievementRows(session: Session, world: World): AchievementRow[] {
+  const before = session.state.world.achievements;
+  const rows: AchievementRow[] = [];
+  for (const unlock of Object.values(world.achievements)) {
+    if (before[unlock.achievementId]) continue;
+    const c = world.characters[unlock.characterId];
+    const ym = fromMonthIndex(world.startIndex + unlock.tick);
+    rows.push({
+      saveId: session.save.id,
+      branchId: session.branch.id,
+      achievementId: unlock.achievementId,
+      saveName: session.save.displayName,
+      branchName: session.branch.name,
+      characterName: c ? `${c.identity.firstName} ${c.identity.lastName}` : unlock.characterId,
+      generation: unlock.generation,
+      year: ym.year,
+      month: ym.month,
+      unlockedAt: nowIso(),
+    });
+  }
+  return rows;
+}
+
+/** Every achievement unlocked anywhere on this device, with where it happened. */
+export async function achievementGallery(db: WeLifeDatabase): Promise<AchievementRow[]> {
+  return db.achievements.toArray();
+}
+
 export async function commitCommand(
   db: WeLifeDatabase,
   session: Session,
@@ -289,9 +327,10 @@ export async function commitCommand(
     outcome,
   };
 
+  const unlocks = achievementRows(session, next.world);
   await db.transaction(
     'rw',
-    [db.saves, db.branches, db.snapshots, db.heads, db.commands],
+    [db.saves, db.branches, db.snapshots, db.heads, db.commands, db.achievements],
     async () => {
       const current = await db.heads.get(branchId);
       if (current?.hash !== session.headHash) {
@@ -310,6 +349,7 @@ export async function commitCommand(
       await db.heads.put(headRow);
       await db.commands.add(commandRow);
       await db.saves.put(save);
+      if (unlocks.length > 0) await db.achievements.bulkPut(unlocks);
     },
   );
 
@@ -382,8 +422,9 @@ export async function setLayout(
 export async function deleteSave(db: WeLifeDatabase, saveId: string): Promise<void> {
   await db.transaction(
     'rw',
-    [db.saves, db.branches, db.snapshots, db.heads, db.commands],
+    [db.saves, db.branches, db.snapshots, db.heads, db.commands, db.achievements],
     async () => {
+      await db.achievements.where('saveId').equals(saveId).delete();
       await db.snapshots.where('saveId').equals(saveId).delete();
       await db.heads.where('saveId').equals(saveId).delete();
       await db.commands.where('saveId').equals(saveId).delete();
@@ -538,12 +579,17 @@ export async function deleteBranch(
       'Other timelines were rewound from this one, so it cannot be deleted.',
     );
   }
-  await db.transaction('rw', [db.branches, db.snapshots, db.heads, db.commands], async () => {
-    await db.snapshots.where('branchId').equals(branchId).delete();
-    await db.heads.delete(branchId);
-    await db.commands.where('branchId').equals(branchId).delete();
-    await db.branches.delete(branchId);
-  });
+  await db.transaction(
+    'rw',
+    [db.branches, db.snapshots, db.heads, db.commands, db.achievements],
+    async () => {
+      await db.achievements.where('branchId').equals(branchId).delete();
+      await db.snapshots.where('branchId').equals(branchId).delete();
+      await db.heads.delete(branchId);
+      await db.commands.where('branchId').equals(branchId).delete();
+      await db.branches.delete(branchId);
+    },
+  );
 }
 
 /** Rebuilds a damaged branch head from its latest valid monthly snapshot. */

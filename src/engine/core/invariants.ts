@@ -1,5 +1,5 @@
 import { monthIndex } from './clock';
-import { findEvent } from '../content';
+import { findEventIn } from '../content/packs';
 import { findLocation } from '../world/countries';
 import { checkLedger } from '../economy/ledger';
 import type { World } from '../state/schema';
@@ -101,11 +101,11 @@ export function checkInvariants(world: World): string[] {
   // Events: one pending decision at most, all definitions known, effects applied once.
   let pendingCount = 0;
   for (const instance of Object.values(world.events.instances)) {
-    if (!findEvent(instance.definitionId))
+    if (!findEventIn(world, instance.definitionId))
       v.push(`event instance ${instance.id} has unknown definition`);
     if (instance.status === 'pending') pendingCount += 1;
     if (instance.status === 'resolved' && instance.choiceId === null) {
-      const def = findEvent(instance.definitionId);
+      const def = findEventIn(world, instance.definitionId);
       if (def && def.choices.length > 0)
         v.push(`choice event ${instance.id} resolved without a choice`);
     }
@@ -120,7 +120,7 @@ export function checkInvariants(world: World): string[] {
     v.push('pending event without pendingInstanceId');
   }
   for (const s of world.events.scheduled) {
-    if (!findEvent(s.eventId)) v.push(`scheduled consequence ${s.id} has unknown event`);
+    if (!findEventIn(world, s.eventId)) v.push(`scheduled consequence ${s.id} has unknown event`);
     if (!world.characters[s.characterId])
       v.push(`scheduled consequence ${s.id} has unknown character`);
   }
@@ -266,6 +266,34 @@ export function checkInvariants(world: World): string[] {
   const serving = Object.values(world.civics.service).filter((s) => s.status === 'serving');
   if (new Set(serving.map((s) => s.characterId)).size !== serving.length)
     v.push('someone is serving twice');
+
+  // Legacy, media, achievements and content packs (Milestones 7-8).
+  const open = world.legacy.lineage.filter((l) => l.toTick === null);
+  if (world.lifeStatus === 'alive') {
+    if (open.length !== 1 || open[0]?.characterId !== world.activeCharacterId)
+      v.push('the lineage must have exactly one open entry, for the player');
+    if (world.characters[world.activeCharacterId]?.death !== null)
+      v.push('the game is live but the player has died');
+  }
+  if (world.lifeStatus === 'succession') {
+    const s7 = world.legacy.succession;
+    if (!s7 || s7.candidates.length === 0) v.push('succession without candidates');
+    for (const id of s7?.candidates ?? [])
+      if (world.characters[id]?.death !== null) v.push(`heir candidate ${id} is not alive`);
+  } else if (world.legacy.succession !== null) v.push('succession recorded outside succession');
+  for (const l of world.legacy.lineage)
+    if (!world.characters[l.characterId]) v.push(`lineage entry ${l.characterId} is missing`);
+  for (const u of Object.values(world.achievements))
+    if (!world.characters[u.characterId])
+      v.push(`achievement ${u.achievementId} has a missing person`);
+  for (const m of Object.values(world.media.profiles))
+    if (!world.characters[m.characterId]) v.push(`media profile ${m.id} has a missing person`);
+  const enabledPacks = world.contentPacks.filter((r) => r.enabled);
+  if (new Set(enabledPacks.map((r) => r.id)).size !== enabledPacks.length)
+    v.push('a content pack is enabled twice');
+  const packEventIds = enabledPacks.flatMap((r) => r.events.map((e) => String(e.id)));
+  if (new Set(packEventIds).size !== packEventIds.length)
+    v.push('two enabled packs define the same event');
 
   // Command ids are never applied twice.
   if (new Set(world.recentCommandIds).size !== world.recentCommandIds.length) {

@@ -4,6 +4,7 @@
  * Event texts live with their event definitions (`text.en`).
  */
 import { enCivic } from './en-civic';
+import { enLegacy } from './en-legacy';
 import { enEnterprise } from './en-enterprise';
 import { enLife } from './en-life';
 
@@ -176,7 +177,13 @@ const base: Record<string, string> = {
   'widget.country': 'Where you live',
 };
 
-export const en: Record<string, string> = { ...base, ...enLife, ...enEnterprise, ...enCivic };
+export const en: Record<string, string> = {
+  ...base,
+  ...enLife,
+  ...enEnterprise,
+  ...enCivic,
+  ...enLegacy,
+};
 
 /** Resolves a key with `{param}` placeholders. Unknown keys fall back to the key itself. */
 export function t(key: string, params: Record<string, string | number> = {}): string {

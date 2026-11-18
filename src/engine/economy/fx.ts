@@ -195,3 +195,25 @@ export function topUp(
   const pay = cost < balanceOf(world, mainId) ? cost : balanceOf(world, mainId);
   if (pay > 0n) exchange(world, ownerId, mainId, localId, pay);
 }
+
+const ASSET_TYPES_FX = new Set([
+  'checking',
+  'savings',
+  'retirement',
+  'investment',
+  'property',
+  'stake',
+]);
+const LIABILITY_TYPES_FX = new Set(['loan', 'arrears']);
+
+/** Net worth of an owner in one currency (each account converted at today's rate). */
+export function netWorthIn(world: World, ownerId: string, currency: string): bigint {
+  let total = 0n;
+  for (const a of Object.values(world.ledger.accounts)) {
+    if (a.ownerId !== ownerId || a.closedTick !== null || a.balance === 0n) continue;
+    const value = convertCurrency(world, a.balance, a.currency, currency);
+    if (ASSET_TYPES_FX.has(a.type)) total += value;
+    else if (LIABILITY_TYPES_FX.has(a.type)) total -= value;
+  }
+  return total;
+}

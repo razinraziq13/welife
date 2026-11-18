@@ -84,7 +84,15 @@ export function countryName(code: string | null): string {
   return findCountry(code)?.name ?? code;
 }
 
+/** Texts of content-pack events in the open life (set from the game view). */
+let customTexts: Record<string, { title: string; outcomes: Record<string, string> }> = {};
+export function setCustomEventTexts(texts: typeof customTexts): void {
+  customTexts = texts;
+}
+
 export function eventTitle(eventId: string): string {
+  const custom = customTexts[eventId];
+  if (custom) return custom.title;
   return findEvent(eventId)?.text.en.title ?? eventId;
 }
 
@@ -177,6 +185,8 @@ function enrich(params: Record<string, string | number>): Record<string, string 
     out.fromReligion = t(`religion.${params.from}`).toLowerCase();
   if (typeof params.to === 'string' && en[`religion.${params.to}`])
     out.toReligion = t(`religion.${params.to}`).toLowerCase();
+  if (typeof params.followers === 'number')
+    out.followers = params.followers.toLocaleString('en-GB');
   if (typeof params.product === 'string')
     out.productName = t(`loan.${params.product}`).toLowerCase();
   if (typeof params.size === 'string') out.sizeName = t(`homeSize.${params.size}`).toLowerCase();
@@ -220,6 +230,14 @@ function enrich(params: Record<string, string | number>): Record<string, string 
 
 export function biographyText(entry: BiographyEntry): string {
   if (entry.key === 'bio.event') {
+    const custom = customTexts[String(entry.params.eventId)];
+    if (custom) {
+      const choiceId = String(entry.params.choiceId ?? '');
+      return fillText(
+        custom.outcomes[choiceId === '' ? 'default' : choiceId] ?? custom.title,
+        entry.params,
+      );
+    }
     const def = findEvent(String(entry.params.eventId));
     if (!def) return String(entry.params.eventId);
     const choiceId = String(entry.params.choiceId ?? '');

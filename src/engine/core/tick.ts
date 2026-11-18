@@ -15,6 +15,9 @@ import { processEducation } from '../education/school';
 import { processBusinesses } from '../business/business';
 import { processProperties } from '../property/property';
 import { processCivicDuties, processCivicHealth, processInstitutions } from '../civics/process';
+import { processMedia } from '../media/media';
+import { checkAchievements } from '../achievements/achievements';
+import { trackLineage } from '../legacy/legacy';
 import {
   fireNextDueDecision,
   pruneEventInstances,
@@ -97,6 +100,7 @@ export function advanceMonth(committed: World): AdvanceResult {
   const markets = advanceEconomies(world);
   processFinances(world, markets);
   processCivicDuties(world);
+  processMedia(world);
 
   // 5. Companies, then property and the property market.
   processBusinesses(world);
@@ -124,6 +128,12 @@ export function advanceMonth(committed: World): AdvanceResult {
   refreshJobMarket(world);
   if (world.tick % 12 === 0 || deaths.length > 0) rebalancePopulation(world);
   else enforcePopulation(world);
+
+  // Lineage records and achievements (spec §3.18).
+  if (world.lifeStatus === 'alive') {
+    trackLineage(world);
+    checkAchievements(world);
+  }
 
   // 9. Events.
   const pendingInstanceId = runMonthlyEvents(world);

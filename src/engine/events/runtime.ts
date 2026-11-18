@@ -1,7 +1,7 @@
 import { ageOf } from '../core/clock';
 import { sortedValues } from '../core/data';
 import { addBiography, addNotification, activeCharacter, nextId, withRng } from '../core/world';
-import { EVENTS, getEvent } from '../content';
+import { eventsFor, getEventIn } from '../content/packs';
 import { holdersOf } from '../social/memories';
 import { FAMILY_TYPES, kinship } from '../social/relationships';
 import { getLocation } from '../world/countries';
@@ -252,7 +252,7 @@ export function runMonthlyEvents(world: World): string | null {
     .filter((s) => s.dueTick <= world.tick && s.characterId === world.activeCharacterId)
     .sort((a, b) => a.dueTick - b.dueTick || (a.id < b.id ? -1 : 1));
   for (const consequence of due) {
-    const def = getEvent(consequence.eventId);
+    const def = getEventIn(world, consequence.eventId);
     // Decisions come one at a time; the next due one follows when this one is answered.
     if (def.choices.length > 0 && pending !== null) continue;
     world.events.scheduled = world.events.scheduled.filter((s) => s.id !== consequence.id);
@@ -274,7 +274,7 @@ export function runMonthlyEvents(world: World): string | null {
   );
 
   // 2. Random events, in a seeded random order.
-  const eligible = EVENTS.filter((def) => isEligible(def, world));
+  const eligible = eventsFor(world).filter((def) => isEligible(def, world));
   const order = withRng(world, 'events', (rng) => rng.shuffle(eligible));
   for (const def of order) {
     if (def.exclusiveGroup !== null && groups.has(def.exclusiveGroup)) continue;
@@ -307,7 +307,7 @@ export function fireNextDueDecision(world: World): string | null {
     .filter((s) => s.dueTick <= world.tick && s.characterId === world.activeCharacterId)
     .sort((a, b) => a.dueTick - b.dueTick || (a.id < b.id ? -1 : 1));
   for (const consequence of due) {
-    const def = getEvent(consequence.eventId);
+    const def = getEventIn(world, consequence.eventId);
     if (def.choices.length === 0) continue;
     world.events.scheduled = world.events.scheduled.filter((s) => s.id !== consequence.id);
     const subjectId = pickSubject(world, def, consequence.subjectId);
@@ -335,7 +335,7 @@ export function choiceAvailability(
 ): { id: string; available: boolean }[] {
   const instance = world.events.instances[instanceId];
   if (!instance) return [];
-  const def = getEvent(instance.definitionId);
+  const def = getEventIn(world, instance.definitionId);
   const character = activeCharacter(world);
   return def.choices.map((choice) => ({
     id: choice.id,
@@ -353,7 +353,7 @@ export function resolveChoice(world: World, instanceId: string, choiceId: string
   if (instance?.status !== 'pending') {
     throw new ChoiceError('WRONG_INSTANCE', 'That decision is no longer waiting.');
   }
-  const def = getEvent(instance.definitionId);
+  const def = getEventIn(world, instance.definitionId);
   const choice = def.choices.find((c) => c.id === choiceId);
   if (!choice) throw new ChoiceError('UNKNOWN_CHOICE', `Unknown choice ${choiceId}.`);
   const character = activeCharacter(world);

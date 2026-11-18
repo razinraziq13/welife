@@ -11,10 +11,81 @@ Requirement map: [docs/TRACEABILITY.md](docs/TRACEABILITY.md)
 | M3 Social, childhood, education  | Complete (commit 98e24fb)     | `milestone-3-4` |
 | M4 Careers and household economy | Complete (commit 98e24fb)     | `milestone-3-4` |
 | M5 Business and real estate      | Complete (commit 11d2504)     | `milestone-5`   |
-| M6 Global institutions           | **Complete, awaiting review** | `milestone-6`   |
-| M7 Media, legacy, narrative      | Not started                   | —               |
-| M8 Event editor and content      | Not started                   | —               |
+| M6 Global institutions           | Complete (commit 5d35fb1)     | `milestone-6`   |
+| M7 Media, legacy, narrative      | **Complete, awaiting review** | `milestone-7-8` |
+| M8 Event editor and content      | **Complete, awaiting review** | `milestone-7-8` |
 | M9 Integration, balance, release | Not started                   | —               |
+
+---
+
+## Milestones 7 and 8: Media, legacy and narrative · Event editor and content
+
+Built together on branch `milestone-7-8` (from `milestone-6`) at the user's request ("Start Milestone 7 and milestone 8"), with a single review gate at the end.
+
+**Exit criteria (spec §9):**
+
+- M7: a 10-generation simulation with coherent family records. **Met.** `legacy.test.ts` plays about two centuries in one world: each player starts a family, hands over to their eldest child at 18, and when a player dies young the game's succession picks an heir. It checks:
+  - the lineage reaches generation 10, and each hand-over goes to a relative without gaps;
+  - every voluntary hand-over goes to a child of the previous player, one generation down;
+  - there are no ancestry cycles;
+  - every earlier player who died has a recorded death and no open accounts left (their estate was settled);
+  - the generation-10 achievement is unlocked;
+  - ledger, invariants and schema are valid, and growth stays bounded (at most 150 active people, at most 400 notifications, a 3-month journal).
+- M8: custom packs load safely and trigger deterministically. **Met.**
+  - `packs.test.ts`: malformed and dangerous packs are refused with field paths (shape, bounds, unknown facts, markup, links, unknown placeholders, clashes, missing follow-ups, scheduling cycles, player-pack limits).
+  - An enabled pack's event fires, and its follow-up fires exactly three months later. Replaying the same commands gives a byte-identical world.
+  - An invalid pack leaves the life unchanged.
+  - A tampered stored pack is refused when a save loads.
+  - `milestone78.test.ts` covers the same through the worker: the library never stores invalid files, a pack travels with an exported save, and a tampered import is refused.
+
+### Milestone 7 checklist (media, legacy, narrative)
+
+- [x] World schema v5 with a deterministic upgrade from v4; engine 0.7.0
+- [x] Succession on death (decision D7): adult descendants first, then the nearest adult relatives (siblings, nieces and nephews, parents, cousins); with nobody the life ends. Advancing waits until an heir is chosen.
+- [x] Handing over while alive to an adult child or grandchild: control passes, ownership does not; the previous character lives on as an autonomous person
+- [x] Inheritance: debts paid from the estate (the rest written off), inheritance tax by country with simplified allowances, then distribution by will or intestacy (married partner and children, then parents, then siblings). Property, mortgages and company shares pass to the main heir; heirs book the inheritance as income. Every estate is recorded.
+- [x] Wills, with forced heirship where the country reserves half for children (for example France); free disposal elsewhere (for example the UK)
+- [x] Lineage record: generation, dates played, how control passed, peak net worth
+- [x] Social media: three fictional platforms, ten topics with simulated trends, five post styles (controversial posts can backfire), diminishing returns, followers, engagement, trust, ad income, fictional brand sponsorships, fame raising reputation
+- [x] 101 achievements in 11 categories, unlocked once per timeline with provenance; a cross-save gallery
+- [x] Detailed biographies for anyone in the family line: summary (jobs, partners, children, countries, offices, companies, peak wealth) and chapters by life stage
+- [x] Screens: Legacy (succession chooser, family line, hand-over, will editor, estates), Social media, Achievements and biography, Biography, Achievement gallery
+
+### Milestone 8 checklist (event editor and content)
+
+- [x] Content packs as plain data in the built-in event schema, with optional New Life scenario presets; no code, scripts or links accepted
+- [x] Validation with field paths: shape, bounds, whitelisted facts and operators, follow-up references, scheduling cycles, clashes with built-in or other enabled content, unsafe text and placeholders; player packs have stricter limits (event count, chances, value changes, no engine actions or economic policy)
+- [x] Packs enabled for a life are copied into the world, so saves, rewinds and exports carry them and replays stay deterministic; disabling stops them firing while past events stay readable; newer versions replace older ones
+- [x] Stored packs are re-validated when a save is loaded or imported
+- [x] Device library (IndexedDB v3): import, export, delete, version history (10 earlier versions kept)
+- [x] Event creator: visual editing of conditions (age range plus comparisons on 45 facts), chance, cooldown, follow-up-only events, 0 or 2-5 choices, effects (stats, needs, skills, money, medical costs, flags, health conditions, follow-ups); JSON view; live validation; seeded simulation preview; save as a new version; developer and player modes
+- [x] Starting a new life from a pack's scenario preset (the pack is enabled for that life)
+- [x] Content packs section on each life's Rules screen
+
+### Verification results (actual runs, 2026-11-18)
+
+| Command          | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `npm run verify` | exit 0: typecheck ✔, ESLint 0 problems ✔, dependency-cruiser "no dependency violations found (179 modules, 1114 dependencies cruised)" ✔, Prettier ✔, Vitest **204/204 passed** (21 files) ✔, production build ✔                                                                                                                                                                                                                                                         |
+| `npm run e2e`    | exit 0: **198 passed, 2 skipped** (desktop Chromium, desktop WebKit, Pixel 7 Chromium, iPhone 15 WebKit); the skips are the Chromium-only offline test on WebKit. New: social media, a will, achievements and a biography in an imported adult life; making a pack in the event creator, testing it, saving it and enabling it for a life; the gallery; accessibility scans of every new screen, and Legacy, Social media and Achievements added to the per-screen sweep |
+| M7 exit          | `legacy.test.ts` 10-generation run, as above (about 12 seconds in Node)                                                                                                                                                                                                                                                                                                                                                                                                  |
+| M8 exit          | `packs.test.ts` and `milestone78.test.ts`, as above                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Performance      | a month through the worker (engine, view and storage) takes 14 ms median, 18 ms at p95 in Node                                                                                                                                                                                                                                                                                                                                                                           |
+
+### Known issues and limitations (M7 and M8)
+
+1. **Royal succession is not separate yet.** Royal duties pass to whoever is played next if they are in the royal family; there is no line of succession to a throne.
+2. **Inheritance is simplified**: allowances and tax are one rate per country; estates of NPCs who were never players are not settled (they hold no ledger accounts).
+3. **The previous character's money stays frozen when they become an NPC** (only the active player's finances run monthly) until they die and their estate is settled.
+4. **The visual editor covers common conditions and effects**; subjects (events about another person), memories, assets and multipliers are edited in the JSON view.
+5. **Achievement provenance** records the save, timeline, person, generation and month; rewinding does not copy earlier unlocks into the new timeline's gallery rows (the new timeline records its own).
+6. **Phone accessibility scans start at the top of the page.** The fixed bottom tab bar can cover a control at some scroll positions, and axe then reports it as too small.
+7. **Event content is 131 of the 400+ target** (D8); the editor makes more possible, but authoring the remaining built-in events is M9 content work.
+8. **The main bundle is 991 KB (283 KB gzip)**; code-splitting is planned for M9.
+9. **Firefox e2e** is still blocked locally by Windows policy (it runs in CI).
+10. Not clicked through by hand in the in-app browser (the pane was hidden); the browser tests drive the new screens in four profiles.
+
+### Next: Milestone 9, integration, balance and release (awaiting approval)
 
 ---
 
@@ -82,8 +153,6 @@ Easy Migration tests check that it relaxes new applications (age, qualification,
 8. **Firefox e2e** is still blocked locally by Windows policy (it runs in CI).
 9. Command rejection messages are still plain English rather than localisation keys.
 10. Not clicked through by hand in the in-app browser this milestone (the pane was hidden); the browser tests drive the new screens in four browser profiles.
-
-### Next: Milestone 7, media, legacy and narrative (awaiting approval)
 
 ---
 

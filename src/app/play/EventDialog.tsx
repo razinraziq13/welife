@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { findEvent } from '@engine/content';
 import { Button } from '@app/components/ui/button';
 import { Dialog } from '@app/components/ui/dialog';
 import { fillText, formatMonth } from '@app/i18n/format';
@@ -21,9 +20,7 @@ export function EventDialog() {
   const setOpen = (value: boolean) => {
     setDismissedId(value ? null : pending.instanceId);
   };
-  const def = findEvent(pending.definitionId);
-  if (!def) return null;
-  const text = def.text.en;
+  const text = pending.text;
 
   return (
     <>

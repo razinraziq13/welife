@@ -15,7 +15,8 @@ import { experienceMonths, jobEligibility, type JobRejection } from './career/jo
 import { findOccupation, getOccupation, industryName, jobTitle } from './career/occupations';
 import { displayName } from './characters/names';
 import { lifeStage, type LifeStage } from './characters/stats';
-import { getEvent } from './content';
+import { getEventIn } from './content/packs';
+import type { EventDefinition } from './events/schema';
 import { medianWage } from './economy/economy';
 import {
   DEFAULT_LIFESTYLE,
@@ -53,6 +54,16 @@ import { getCountry, getLocation } from './world/countries';
 import { getRules, RULES_SOURCE } from './world/rules';
 import { projectEnterprise, type EnterpriseView } from './viewEnterprise';
 import { projectCivic, type CivicView } from './viewCivic';
+import {
+  projectAchievements,
+  projectLegacy,
+  projectMedia,
+  projectPacks,
+  type AchievementsView,
+  type LegacyView,
+  type MediaView,
+  type PackSummary,
+} from './viewLegacy';
 import type { SimState } from './core/commands';
 import type {
   Account,
@@ -112,6 +123,8 @@ export interface PersonSummary extends PersonView {
 export interface PendingEventView {
   instanceId: string;
   definitionId: string;
+  /** The event text (built-in or from a content pack). */
+  text: EventDefinition['text']['en'];
   /** In-game month the decision belongs to (the month being advanced into). */
   clock: YearMonth;
   choices: { id: string; available: boolean }[];
@@ -398,6 +411,12 @@ export interface GameView {
   social: SocialView;
   enterprise: EnterpriseView;
   civic: CivicView;
+  legacy: LegacyView;
+  media: MediaView;
+  achievements: AchievementsView;
+  packs: PackSummary[];
+  /** Titles and outcomes of content-pack events (built-in texts ship with the app). */
+  customEventTexts: Record<string, { title: string; outcomes: Record<string, string> }>;
 }
 
 function relationTo(
@@ -848,10 +867,11 @@ export function projectGame(state: SimState): GameView {
   if (pendingWorld?.events.pendingInstanceId) {
     const instance = pendingWorld.events.instances[pendingWorld.events.pendingInstanceId];
     if (instance) {
-      getEvent(instance.definitionId);
+      const def = getEventIn(pendingWorld, instance.definitionId);
       pendingEvent = {
         instanceId: instance.id,
         definitionId: instance.definitionId,
+        text: def.text.en,
         clock: pendingWorld.clock,
         choices: choiceAvailability(pendingWorld, instance.id),
         params: textParams(pendingWorld, instance),
@@ -923,6 +943,10 @@ export function projectGame(state: SimState): GameView {
     social: socialView(world, player),
     enterprise: projectEnterprise(world, player),
     civic: projectCivic(world, player),
+    legacy: projectLegacy(world, player),
+    media: projectMedia(world, player),
+    achievements: projectAchievements(world),
+    ...projectPacks(world),
   };
 }
 

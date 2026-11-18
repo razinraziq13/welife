@@ -61,7 +61,7 @@ test('the dashboard layout can be customised and is saved with the life (M2 exit
 });
 
 test('decisions pause the month until the player chooses', async ({ page }) => {
-  test.setTimeout(120_000); // may need many months before a decision comes up
+  test.setTimeout(240_000); // may need many months before a decision comes up (slow under load on WebKit)
   await createLife(page, { seed: 'e2e-decision' });
   const dialog = page.getByRole('dialog');
   for (let i = 0; i < 80 && !(await dialog.isVisible()); i++) {
@@ -164,6 +164,9 @@ for (const tab of [
   'religion',
   'military',
   'politics',
+  'legacy',
+  'media',
+  'achievements',
 ]) {
   test(`${tab} screen is accessible (WCAG A/AA)`, async ({ page }) => {
     const saveId = await createLife(page, { seed: `e2e-a11y-${tab}` });

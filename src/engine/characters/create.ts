@@ -36,6 +36,7 @@ import { addCharacter as addCharacterRecord, adultSkills, npcStats, zeroRecord }
 import { initializeSystems } from '../core/setup';
 import { linkPair, randomInterests } from '../social/relationships';
 import { birthCivic, religionFor } from '../civics/status';
+import { initLegacy } from '../legacy/legacy';
 import {
   FAMILY_TRADES,
   availableConcreteScenarios,
@@ -208,6 +209,10 @@ export function createWorld(worldId: string, rawInput: unknown): World {
     properties: {},
     propertyListings: {},
     civics: { applications: {}, conditions: {}, cases: {}, service: {}, politics: {}, royal: {} },
+    legacy: { generation: 1, lineage: [], wills: {}, estates: [], succession: null },
+    media: { profiles: {}, trends: {} },
+    achievements: {},
+    contentPacks: [],
     notifications: [],
     biography: [],
     recentCommandIds: [],
@@ -508,6 +513,7 @@ export function createWorld(worldId: string, rawInput: unknown): World {
   addNotification(world, 'life', 'ntf.welcome', { name: identity.firstName }, 'life');
 
   initializeSystems(world);
+  initLegacy(world);
   assertInvariants(world);
   return world;
 }

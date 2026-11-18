@@ -7,6 +7,7 @@ import { getEngine } from '@app/bridge/engine';
 import { describeError, errorCode } from '@app/bridge/errors';
 import { outcomeText } from '@app/i18n/format';
 import type { FamilyTreeView, PersonDetailView } from '@engine/view';
+import type { BiographyView } from '@engine/viewLegacy';
 
 export type CommandBody = Command extends infer C
   ? C extends { id: string }
@@ -42,6 +43,7 @@ interface GameState {
   person: (personId: string) => Promise<PersonDetailView | null>;
   /** The family tree (Social). */
   family: () => Promise<FamilyTreeView | null>;
+  biography: (personId: string) => Promise<BiographyView | null>;
 }
 
 /** Human-readable message for an applied action (shown in the status area). */
@@ -197,6 +199,17 @@ export const useGameStore = create<GameState>()((set, get) => ({
     if (!saveId) return null;
     try {
       return await getEngine().call('game.person', { saveId, personId });
+    } catch (error) {
+      set({ message: describeError(error) });
+      return null;
+    }
+  },
+
+  async biography(personId) {
+    const { saveId } = get();
+    if (!saveId) return null;
+    try {
+      return await getEngine().call('game.biography', { saveId, personId });
     } catch (error) {
       set({ message: describeError(error) });
       return null;

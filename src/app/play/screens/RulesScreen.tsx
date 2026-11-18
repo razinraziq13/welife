@@ -6,6 +6,7 @@ import { Switch } from '@app/components/ui/switch';
 import { t } from '@app/i18n/en';
 import { formatMonth } from '@app/i18n/format';
 import { useGameStore } from '@app/stores/gameStore';
+import { PacksCard } from './PacksCard';
 import { tickToMonth } from '../widgets';
 
 /** Per-save rules (spec §5): changes apply from now on and are recorded in the timeline. */
@@ -54,6 +55,7 @@ export function RulesScreen() {
           onChange={(value) => void setEasyMigration(value)}
         />
       </Card>
+      <PacksCard view={view} />
       <Card title="Rule history">
         {view.ruleChanges.length === 0 ? (
           <p className="text-sm text-muted">No rule changes in this timeline.</p>

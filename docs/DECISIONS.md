@@ -141,3 +141,25 @@ This file records decisions that fill gaps in, or clarify, the specification.
 - Politics: salaries 30% (local), 220% (legislature), 400% (head of government) of the median; 15/60/90 hours a month; deposits 10/60/300%; campaigns of 4/6/9 months; party standing 30-49% varying by year; election share from standing, support and chance against a rival at 30-48%.
 - Royal duties: about 24 engagements a year (royal) or 6 (noble); allowance 300% of the median while approval is at least 30%.
 - Religion: 4/10/20 hours a month by participation; German church tax approximated as 1% of gross salary.
+
+## Milestone 7-8 engineering decisions
+
+| #   | Topic                             | Decision and reason                                                                                                                                                             |
+| --- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| E34 | World schema v5                   | Adds the lineage, wills, estates, succession state, social media, achievements and the packs enabled for the world; v4 saves upgrade with the current player as generation 1.   |
+| E35 | Succession state                  | A player's death puts the world in `succession` until an heir is chosen; months cannot advance meanwhile, and choosing is a normal command (so rewinds and replays include it). |
+| E36 | Estates settle at death           | The estate is settled the month someone with accounts dies, independently of who is played next (control is not ownership). Heirs without accounts get a savings account.       |
+| E37 | Category ids in a second currency | (From M6) inheritance can move money between currencies; transfers are booked per currency so every currency reconciles.                                                        |
+| E38 | Packs live in the world           | Enabled pack events are copied into the world (validated), never referenced from the library, so a save is self-contained and deterministic. Disabled packs stay for history.   |
+| E39 | Re-validation on load             | Stored packs are validated again when a save is loaded or imported; the bundle checksum is the first defence.                                                                   |
+| E40 | Achievements as data              | Achievements use the event predicate language and whitelisted facts; the gallery is a separate IndexedDB table written in the same transaction as the month.                    |
+| E41 | Pack text is plain                | Markup, links, control characters and unknown placeholders are rejected; the UI renders text, never HTML.                                                                       |
+
+## Proposed tuning values added in Milestones 7-8 (not yet user-approved)
+
+- Heirs: adult descendants (nearest generation, then oldest); otherwise siblings, nieces and nephews, parents, cousins.
+- Intestacy: married partner 50% and children 50% equally; no children: partner 100%; then parents, then siblings; none: the state.
+- Forced heirship: children together at least 50% where the country reserves a share.
+- Inheritance tax allowances (months of the median wage): TH 6,600; JP 120; KR 165; US 2,800; GB 108; FR 37; DE 100; IT 435; BR 0; ZA 390; tax at the country's top rate above it.
+- Social media: base reach 20 + 4 x the square root of followers, scaled by quality, style (casual 100%, informative 90%, funny 130%, personal 100%, controversial 180% with a 25% backlash risk) and trend; 35% diminishing returns per repeat in a month; ad income 8/12/25 bp of the median wage per 1,000 followers (Murmur/Glimpse/Streamline) from 10,000/10,000/1,000 followers; sponsorship offers (15% a month) from 5,000 followers.
+- Player packs: at most 50 events, 10% monthly chance, value changes of 20 points, 500% of the median wage.

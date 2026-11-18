@@ -16,10 +16,12 @@ import { OFFICE_LEVELS, RELIGIONS, VISA_ROUTES } from '../world/institutions';
  * and the calendar. Version 3 (Milestone 5) adds businesses, competitors, properties,
  * the property market, investment funds, exchange rates and house prices. Version 4
  * (Milestone 6) adds citizenship and residence, visa applications, health conditions,
- * legal cases, military service, political careers, royal duties and religion.
+ * legal cases, military service, political careers, royal duties and religion. Version 5
+ * (Milestones 7-8) adds the family lineage, wills and estates, succession, social media,
+ * achievements and the content packs enabled for this world.
  */
 
-export const WORLD_SCHEMA_VERSION = 4;
+export const WORLD_SCHEMA_VERSION = 5;
 
 export const STAT_KEYS = [
   'health',
@@ -131,6 +133,9 @@ export const NOTIFICATION_CATEGORIES = [
   'property',
   'world',
   'civic',
+  'legacy',
+  'media',
+  'achievement',
   'system',
 ] as const;
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
@@ -154,6 +159,10 @@ export const NOTIFICATION_TARGETS = [
   'military',
   'legal',
   'religion',
+  'legacy',
+  'media',
+  'achievements',
+  'biography',
 ] as const;
 
 export const BIOGRAPHY_CATEGORIES = [
@@ -175,6 +184,9 @@ export const BIOGRAPHY_CATEGORIES = [
   'military',
   'legal',
   'religion',
+  'legacy',
+  'media',
+  'achievement',
 ] as const;
 
 /** Relationship roles, always "what B is to A". Family roles come from family links. */
@@ -1262,6 +1274,132 @@ export const RoyalDutySchema = z
   .strict();
 export type RoyalDuty = z.infer<typeof RoyalDutySchema>;
 
+// ---------------------------------------------------------------------------------------
+// Legacy, media, achievements, content packs (Milestones 7-8; spec §4 Legacy, §3.16-3.20)
+// ---------------------------------------------------------------------------------------
+
+export const LineageEntrySchema = z
+  .object({
+    characterId: Id,
+    /** 1 for the first life; children of generation n are generation n + 1. */
+    generation: z.number().int().min(1).max(500),
+    fromTick: Tick,
+    toTick: Tick.nullable(),
+    reason: z.enum(['start', 'heir', 'switch']),
+    peakNetWorthMinor: Minor,
+    currency: z.string().length(3),
+  })
+  .strict();
+export type LineageEntry = z.infer<typeof LineageEntrySchema>;
+
+export const BeneficiarySchema = z
+  .object({ characterId: Id, sharesBp: z.number().int().min(1).max(10_000) })
+  .strict();
+
+export const EstateSchema = z
+  .object({
+    id: Id,
+    deceasedId: Id,
+    tick: Tick,
+    currency: z.string().length(3),
+    grossMinor: Minor,
+    debtsMinor: NonNegativeMinor,
+    writtenOffMinor: NonNegativeMinor,
+    taxMinor: NonNegativeMinor,
+    byWill: z.boolean(),
+    heirs: z.array(BeneficiarySchema.extend({ amountMinor: Minor })).max(12),
+  })
+  .strict();
+export type Estate = z.infer<typeof EstateSchema>;
+
+export const LegacySchema = z
+  .object({
+    generation: z.number().int().min(1).max(500),
+    lineage: z.array(LineageEntrySchema).max(500),
+    /** Each person's will (beneficiaries and shares); intestacy rules apply without one. */
+    wills: z.record(Id, z.array(BeneficiarySchema).min(1).max(8)),
+    estates: z.array(EstateSchema).max(200),
+    /** Set while the player has died and an heir must be chosen. */
+    succession: z
+      .object({ deceasedId: Id, candidates: z.array(Id).min(1).max(30) })
+      .strict()
+      .nullable(),
+  })
+  .strict();
+
+export const MEDIA_STYLES = [
+  'casual',
+  'informative',
+  'funny',
+  'personal',
+  'controversial',
+] as const;
+export type MediaStyle = (typeof MEDIA_STYLES)[number];
+
+export const MediaProfileSchema = z
+  .object({
+    id: Id,
+    characterId: Id,
+    platformId: z.string().min(2).max(20),
+    handle: z.string().min(2).max(30),
+    niche: z.string().min(2).max(20),
+    followers: z.number().int().min(0),
+    /** Engagement rate, basis points. */
+    engagementBp: z.number().int().min(0).max(3000),
+    /** Creator reputation with audiences and brands. */
+    trust: Fixed,
+    posts: z.number().int().min(0),
+    lastPostTick: Tick.nullable(),
+    earningsMinor: NonNegativeMinor,
+    sponsor: z
+      .object({ brand: z.string().max(40), monthlyMinor: NonNegativeMinor, untilTick: Tick })
+      .strict()
+      .nullable(),
+    /** A brand's offer waiting for an answer. */
+    offer: z
+      .object({
+        brand: z.string().max(40),
+        monthlyMinor: NonNegativeMinor,
+        months: z.number().int().min(1).max(24),
+        expiresTick: Tick,
+      })
+      .strict()
+      .nullable(),
+    closedTick: Tick.nullable(),
+  })
+  .strict();
+export type MediaProfile = z.infer<typeof MediaProfileSchema>;
+
+export const AchievementUnlockSchema = z
+  .object({
+    achievementId: z.string().max(60),
+    characterId: Id,
+    tick: Tick,
+    generation: z.number().int().min(1).max(500),
+  })
+  .strict();
+export type AchievementUnlock = z.infer<typeof AchievementUnlockSchema>;
+
+/**
+ * A content pack enabled for this world. Its events are stored in the world, so snapshots,
+ * rewinds and exports carry them and replays stay deterministic. Event definitions are
+ * validated by the event schema when the pack is enabled (and when a save is loaded).
+ */
+export const PackRecordSchema = z
+  .object({
+    id: z.string().regex(/^[a-z][a-z0-9-]{2,39}$/),
+    name: z.string().min(1).max(60),
+    packVersion: z.string().regex(/^\d{1,4}\.\d{1,4}\.\d{1,4}$/),
+    mode: z.enum(['player', 'developer']),
+    author: z.string().max(60),
+    /** Disabled packs stay so past events still resolve; their events no longer fire. */
+    enabled: z.boolean(),
+    enabledTick: Tick,
+    events: z.array(z.record(z.string(), z.unknown())).max(200),
+  })
+  .strict();
+export type PackRecord = z.infer<typeof PackRecordSchema>;
+
 export const FUNDS = ['stocks', 'bonds'] as const;
 export type Fund = (typeof FUNDS)[number];
 
@@ -1278,6 +1416,7 @@ export const RNG_STREAMS = [
   'business',
   'property',
   'civics',
+  'media',
 ] as const;
 export type RngStream = (typeof RNG_STREAMS)[number];
 
@@ -1309,7 +1448,8 @@ export const WorldSchema = z
         .strict(),
     ),
     activeCharacterId: Id,
-    lifeStatus: z.enum(['alive', 'ended']),
+    /** "succession": the player has died and an heir is being chosen (spec §4 Legacy). */
+    lifeStatus: z.enum(['alive', 'succession', 'ended']),
     characters: z.record(Id, CharacterSchema),
     households: z.record(Id, HouseholdSchema),
     familyLinks: z.record(Id, FamilyLinkSchema),
@@ -1365,6 +1505,16 @@ export const WorldSchema = z
         royal: z.record(Id, RoyalDutySchema),
       })
       .strict(),
+    legacy: LegacySchema,
+    media: z
+      .object({
+        profiles: z.record(Id, MediaProfileSchema),
+        /** Popularity of each niche, basis points (10000 = normal). */
+        trends: z.record(z.string(), z.number().int().min(2000).max(30_000)),
+      })
+      .strict(),
+    achievements: z.record(z.string(), AchievementUnlockSchema),
+    contentPacks: z.array(PackRecordSchema).max(20),
     notifications: z.array(NotificationSchema),
     biography: z.array(BiographyEntrySchema),
     /** Recently applied command ids (bounded); prevents double application. */

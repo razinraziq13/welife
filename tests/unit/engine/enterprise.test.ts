@@ -5,7 +5,7 @@ import { bookEquity, competitorsAt, minimumCapital, ownerShare } from '@engine/b
 import { FAILURE_MONTHS, getBusinessType } from '@engine/business/catalog';
 import { convert } from '@engine/economy/economy';
 import { monthTotals } from '@engine/economy/ledger';
-import { upgradeWorldV2, upgradeWorldV3 } from '@engine/state/upgrade';
+import { upgradeWorldV2, upgradeWorldV3, upgradeWorldV4 } from '@engine/state/upgrade';
 import { WorldSchema, type Business, type World } from '@engine/state/schema';
 import type { SimState } from '@engine/core/commands';
 import { checked, findWork, giveMoney, monthChecked } from '../../helpers/reconcile';
@@ -236,13 +236,23 @@ describe('property and investments (Milestone 5)', () => {
       Object.values(state.world.propertyListings)
         .filter((l) => l.kind !== 'commercial')
         .sort((x, y) => (x.askingMinor < y.askingMinor ? -1 : 1))[0] ?? listing;
-    const deposit = (listing.askingMinor * 70n) / 100n;
-    const bought = checked(state, {
+    // The smallest deposit (from 70%) whose repayments fit the player's income.
+    const chosen = listing;
+    let bought = checked(state, {
       type: 'buyProperty',
-      listingId: listing.id,
-      depositMinor: deposit.toString(),
+      listingId: chosen.id,
+      depositMinor: ((chosen.askingMinor * 70n) / 100n).toString(),
       termMonths: 300,
     });
+    for (const percent of [80n, 90n, 95n]) {
+      if (bought.outcome.status !== 'rejected') break;
+      bought = checked(state, {
+        type: 'buyProperty',
+        listingId: chosen.id,
+        depositMinor: ((chosen.askingMinor * percent) / 100n).toString(),
+        termMonths: 300,
+      });
+    }
     expect(bought.outcome.status === 'rejected' ? bought.outcome.message : 'applied').toBe(
       'applied',
     );
@@ -405,7 +415,7 @@ describe('decisions and upgrades', () => {
       Reflect.deleteProperty(e, 'housePriceBp');
       Reflect.deleteProperty(e, 'bondIndexBp');
     }
-    const upgraded = upgradeWorldV3(upgradeWorldV2(world)) as World;
+    const upgraded = upgradeWorldV4(upgradeWorldV3(upgradeWorldV2(world))) as World;
     expect(WorldSchema.safeParse(upgraded).success).toBe(true);
     expect(checkInvariants(upgraded)).toEqual([]);
   });

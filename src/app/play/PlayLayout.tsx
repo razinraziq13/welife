@@ -13,7 +13,8 @@ import {
 import { Avatar } from '@app/components/avatar/Avatar';
 import { buttonVariants } from '@app/components/ui/button';
 import { Button } from '@app/components/ui/button';
-import { formatAge, formatMonth, setActiveCurrency } from '@app/i18n/format';
+import { formatAge, formatMonth, setActiveCurrency, setCustomEventTexts } from '@app/i18n/format';
+import { SuccessionPanel } from './screens/LegacyScreen';
 import { cn } from '@app/lib/cn';
 import { getEngine } from '@app/bridge/engine';
 import { describeError } from '@app/bridge/errors';
@@ -84,6 +85,10 @@ export function PlayLayout() {
   useEffect(() => {
     setActiveCurrency(currency ?? null);
   }, [currency]);
+  const customTexts = session?.view.customEventTexts;
+  useEffect(() => {
+    setCustomEventTexts(customTexts ?? {});
+  }, [customTexts]);
 
   useEffect(() => {
     if (!message) return;
@@ -168,8 +173,8 @@ export function PlayLayout() {
               {c.displayName}’s life has ended at the age of {c.age.years}.
             </p>
             <p className="mt-1 text-sm text-muted">
-              You can read their story, rewind to an earlier month on a new timeline, or begin a new
-              life. Continuing as an heir arrives with the legacy system.
+              There is no adult relative to carry on the family story. You can read their story,
+              rewind to an earlier month on a new timeline, or begin a new life.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Link
@@ -190,6 +195,7 @@ export function PlayLayout() {
             </div>
           </div>
         )}
+        {view.lifeStatus === 'succession' && <SuccessionPanel />}
         <EventDialog />
         <div aria-live="polite" className="min-h-0 text-sm">
           {message && <p className="rounded-xl bg-surface-2 px-3 py-2 text-fg">{message}</p>}
