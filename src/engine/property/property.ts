@@ -7,16 +7,22 @@ import {
   debtLimitPercent,
   loanPayments,
   monthlyNetIncome,
+  currencyFor,
+  inHomeCurrency,
   payExpense,
   payerFor,
+  payerIn,
   rateFor,
   receiveIncome,
   rentFor,
+  sweepAbroad,
 } from '../economy/finance';
 import { balanceOf, categoryAccount, openAccount, post } from '../economy/ledger';
 import { getCountry, getLocation } from '../world/countries';
 import { countryMarket } from '../world/markets';
 import { baseMedianWage } from '../world/rules';
+import { getInstitutions } from '../world/institutions';
+import { isSettled } from '../civics/status';
 import type { Character, Household, Listing, Property, PropertyKind, World } from '../state/schema';
 
 /**
@@ -63,7 +69,11 @@ export type PropertyRejection =
   | 'livingThere'
   | 'renovating'
   | 'noChange'
-  | 'notListed';
+  | 'notListed'
+  | 'foreignBanned'
+  | 'foreignKind'
+  | 'foreignMinPrice'
+  | 'foreignResidence';
 
 export const PROPERTY_MESSAGES: Record<PropertyRejection, string> = {
   tooYoung: 'You must be 18 or older to buy property.',
@@ -83,6 +93,11 @@ export const PROPERTY_MESSAGES: Record<PropertyRejection, string> = {
   renovating: 'Renovation work is under way.',
   noChange: 'That is already the setting.',
   notListed: 'The property is not for sale.',
+  foreignBanned: 'Buyers without citizenship or permanent residence may not buy homes here.',
+  foreignKind:
+    'Buyers without citizenship or permanent residence may not buy this kind of property here.',
+  foreignMinPrice: 'Foreign buyers here must pay at least the minimum price set by law.',
+  foreignResidence: 'Foreign buyers need to have lived here longer first.',
 };
 
 export class PropertyError extends Error {
@@ -186,7 +201,8 @@ export function mortgageQuote(
 ): MortgageQuote {
   const { country } = getLocation(listing.locationId);
   const price = listing.askingMinor;
-  const fees = transferCost(country.code, price);
+  const foreign = foreignRules(world, c, listing);
+  const fees = transferCost(country.code, price) + foreign.surcharge;
   const borrow = maxBig(0n, price - deposit);
   const rateBp = clamp(rateFor(world, c, 'personal') - 450, 50, 3000);
   const payment = borrow > 0n ? amortisedPayment(borrow, rateBp, months) : 0n;
@@ -196,6 +212,7 @@ export function mortgageQuote(
     balanceOf(world, c.finance?.savingsId ?? null);
   const income = monthlyNetIncome(world, c);
   if (ageYears(world, c) < 18) reason = 'tooYoung';
+  else if (foreign.reason) reason = foreign.reason;
   else if (!c.finance?.checkingId) reason = 'noAccount';
   else if (deposit < 0n || deposit > price || months < 60 || months > 360) reason = 'invalid';
   else if (deposit * 100n < price * BigInt(depositPercent(world))) reason = 'depositTooLow';
@@ -208,6 +225,28 @@ export function mortgageQuote(
   )
     reason = 'tooMuchDebt';
   return { price, fees, deposit, borrow, rateBp, payment, reason };
+}
+
+/**
+ * Rules for buyers who are neither citizens nor permanent residents (Milestone 6, researched
+ * per country): bans, permitted kinds, minimum prices, residence periods and surcharges.
+ */
+export function foreignRules(
+  world: World,
+  c: Character,
+  listing: Listing,
+): { foreign: boolean; reason: PropertyRejection | null; surcharge: bigint } {
+  const { country } = getLocation(listing.locationId);
+  if (isSettled(c, country.code)) return { foreign: false, reason: null, surcharge: 0n };
+  const rules = getInstitutions(country.code).property;
+  let reason: PropertyRejection | null = null;
+  if (!rules.foreignKinds.includes(listing.kind))
+    reason = rules.foreignBuyers === 'banned' ? 'foreignBanned' : 'foreignKind';
+  else if (listing.askingMinor < medianWage(world, country.code) * BigInt(rules.minPriceMonths))
+    reason = 'foreignMinPrice';
+  else if ((c.civic.residedMonths[country.code] ?? 0) < rules.minResidenceMonths)
+    reason = 'foreignResidence';
+  return { foreign: true, reason, surcharge: applyBp(listing.askingMinor, rules.surchargeBp) };
 }
 
 /** Takes money from checking first, then savings (the player has already been checked). */
@@ -425,10 +464,11 @@ export function renovate(
   if (property.tenant) throw new PropertyError('tenanted');
   const plan = RENOVATION[level];
   const cost = applyBp(property.valueMinor, plan.costBp);
-  const payer = payerFor(world, c);
-  const cash =
-    balanceOf(world, c.finance?.checkingId ?? null) +
-    balanceOf(world, c.finance?.savingsId ?? null);
+  const currency =
+    world.ledger.accounts[property.owners.find((o) => o.ownerId === c.id)?.stakeAccountId ?? '']
+      ?.currency;
+  const payer = currency ? payerIn(world, c, currency, cost) : payerFor(world, c);
+  const cash = payer ? balanceOf(world, payer.checkingId) + balanceOf(world, payer.savingsId) : 0n;
   if (!payer || cash < cost) throw new PropertyError('insufficientFunds');
   payExpense(
     world,
@@ -506,7 +546,8 @@ function completeSale(
   for (const owner of property.owners) {
     const person = world.characters[owner.ownerId];
     const asset = owner.stakeAccountId ? world.ledger.accounts[owner.stakeAccountId] : undefined;
-    const checking = person?.finance?.checkingId;
+    const checking =
+      person && asset ? payerIn(world, person, asset.currency)?.checkingId : undefined;
     if (!person || !asset || !checking) continue;
     const share = applyBp(price, owner.sharesBp);
     const ownerFees = applyBp(fees, owner.sharesBp);
@@ -529,7 +570,7 @@ function completeSale(
       params: { kind: property.kind },
     });
     asset.closedTick = world.tick;
-    const payer = payerFor(world, person);
+    const payer = payerIn(world, person, asset.currency, ownerFees);
     if (payer && ownerFees > 0n)
       payExpense(world, payer, 'propertyFees', ownerFees, 'tx.propertyFees');
     // The mortgage is repaid from the proceeds as far as possible.
@@ -617,7 +658,8 @@ export function processProperties(world: World): void {
     if (property?.status !== 'owned') continue;
     const owner = world.characters[property.owners[0]?.ownerId ?? ''];
     if (owner?.death !== null) continue;
-    const payer = payerFor(world, owner);
+    const { country } = getLocation(property.locationId);
+    const cur = currencyFor(country.code);
     if (property.renovation && property.renovation.endTick <= world.tick) {
       property.premiumBp = Math.min(
         2500,
@@ -636,19 +678,20 @@ export function processProperties(world: World): void {
     }
     property.condition = clamp(property.condition - (property.tenant ? 4 : 2), 0, 1000);
     revalue(world, property);
+    const upkeep = divRound(applyBp(property.valueMinor, UPKEEP_BP), 12n);
+    const payer = payerIn(world, owner, cur, upkeep);
     if (payer)
       payExpense(
         world,
         payer,
         'propertyUpkeep',
-        divRound(applyBp(property.valueMinor, UPKEEP_BP), 12n),
+        upkeep,
         'tx.propertyUpkeep',
         { kind: property.kind },
         property.id,
       );
 
     // Tenants.
-    const { country } = getLocation(property.locationId);
     const unemployment = world.economy[country.code]?.unemploymentBp ?? 500;
     if (property.use === 'rental' && property.tenant) {
       const tenant = property.tenant;
@@ -666,17 +709,17 @@ export function processProperties(world: World): void {
             'property',
             property.id,
           );
-      } else if (owner.finance?.checkingId) {
+      } else if (owner.finance && payer) {
         receiveIncome(
           world,
           owner.id,
-          owner.finance.checkingId,
+          payer.checkingId,
           'rent',
           tenant.rentMinor,
           'tx.rentReceived',
           { tenant: tenant.name },
         );
-        owner.finance.taxYear.gross += tenant.rentMinor;
+        owner.finance.taxYear.gross += inHomeCurrency(world, owner, tenant.rentMinor, cur);
       }
       if (world.tick >= tenant.leaseEndTick || tenant.missedPayments >= 3) {
         const renews =
@@ -760,6 +803,8 @@ export function processProperties(world: World): void {
       }
     }
   }
+  const player = world.characters[world.activeCharacterId];
+  if (player) sweepAbroad(world, player);
   refreshListings(world);
 }
 

@@ -1,6 +1,7 @@
 import type { Rng } from '../core/rng';
 import { nextId } from '../core/world';
 import type { Location } from '../world/countrySchema';
+import { defaultCivic, religionFor } from '../civics/status';
 import {
   HABIT_KEYS,
   NEED_KEYS,
@@ -128,6 +129,11 @@ export function addCharacter(world: World, input: NewCharacterInput): Character 
     employmentId: null,
     finance: null,
     statLog: [],
+    civic: defaultCivic(
+      input.countryCode,
+      religionFor(input.householdId, input.countryCode),
+      world.tick,
+    ),
   };
   world.characters[character.id] = character;
   return character;

@@ -151,11 +151,29 @@ test.describe('companies and property (M5)', () => {
     await expectAccessible(page);
 
     // A month of trading produces an operating statement.
-    await page.getByTestId('advance-month').locator('visible=true').first().click();
+    const advance = page.getByTestId('advance-month').locator('visible=true').first();
+    const before = await advance.textContent();
+    await advance.click();
+    // The month is committed when the Advance button moves on; until then, answer any
+    // decision (several can fall in one month) with an available choice.
     const dialog = page.getByRole('dialog');
-    for (let i = 0; i < 3 && (await dialog.isVisible()); i++) {
-      await dialog.getByRole('group', { name: 'Choices' }).getByRole('button').first().click();
-    }
+    await expect
+      .poll(
+        async () => {
+          if (await dialog.isVisible()) {
+            const choice = dialog
+              .getByRole('group', { name: 'Choices' })
+              .getByRole('button', { disabled: false })
+              .first();
+            if ((await choice.count()) > 0)
+              await choice.click({ timeout: 2_000 }).catch(() => null);
+            return 'deciding';
+          }
+          return (await advance.textContent()) === before ? 'waiting' : 'done';
+        },
+        { timeout: 60_000, intervals: [300] },
+      )
+      .toBe('done');
     await expect(page.getByRole('table', { name: 'Operating statement' })).toBeVisible();
 
     await page.goto(`/play/${saveId}/property`);
@@ -167,5 +185,80 @@ test.describe('companies and property (M5)', () => {
     await page.getByRole('textbox', { name: /^Invest [(]/ }).fill('500');
     await page.getByRole('button', { name: 'Buy', exact: true }).click();
     await expect(page.getByText('Investment bought.')).toBeVisible();
+  });
+});
+
+test.describe('institutions and civic life (M6)', () => {
+  test.describe.configure({ timeout: 120_000 });
+  let json = '';
+  test.beforeAll(async () => {
+    json = await adultSaveJson('e2e-civic');
+  });
+
+  test('apply for a visa, join a party, choose a belief; civic screens are accessible', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'civic.welife.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(json),
+    });
+    await expect(page).toHaveURL(/\/play\/[^/]+\/life$/);
+    const saveId = /\/play\/([^/]+)\//.exec(page.url())?.[1] ?? '';
+
+    // World and migration: country rules, a visa application.
+    await page.goto(`/play/${saveId}/world`);
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'World and migration' }),
+    ).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Your status' })).toContainText('United Kingdom');
+    await expectAccessible(page);
+    await page
+      .getByLabel('Country', { exact: true })
+      .selectOption({ label: 'United Arab Emirates' });
+    await expect(
+      page.getByText('Citizenship is by descent; naturalisation is by nomination only.', {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await page
+      .getByRole('button', { name: 'Apply: Employment residence visa, United Arab Emirates' })
+      .click();
+    await expect(page.getByText(/Application sent/)).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Applications' })).toContainText(
+      'Waiting for a decision',
+    );
+    await expectAccessible(page);
+
+    // Politics: join a fictional party.
+    await page.goto(`/play/${saveId}/politics`);
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Politics and public life' }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Join', exact: true }).click();
+    await expect(page.getByText('You joined the party.')).toBeVisible();
+    await expectAccessible(page);
+
+    // Religion: choose a belief.
+    await page.goto(`/play/${saveId}/religion`);
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Religion and belief' }),
+    ).toBeVisible();
+    const belief = page.getByLabel('Belief', { exact: true });
+    const next = (await belief.inputValue()) === 'buddhism' ? 'Sikhism' : 'Buddhism';
+    await belief.selectOption({ label: next });
+    await expect(page.getByText('Belief updated.')).toBeVisible();
+    await expectAccessible(page);
+
+    for (const [path, heading] of [
+      ['health', 'Health care'],
+      ['legal', 'Law'],
+      ['military', 'Military service'],
+    ] as const) {
+      await page.goto(`/play/${saveId}/${path}`);
+      await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
+      await expectAccessible(page);
+    }
   });
 });

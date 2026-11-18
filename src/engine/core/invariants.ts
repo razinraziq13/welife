@@ -233,6 +233,40 @@ export function checkInvariants(world: World): string[] {
     if (!world.characters[a.characterId]) v.push(`application ${a.id} has a missing character`);
   }
 
+  // Citizenship, residence and civic records (Milestone 6).
+  for (const c of Object.values(world.characters)) {
+    const cits = c.civic.citizenships;
+    if (cits.length === 0 || new Set(cits).size !== cits.length)
+      v.push(`${c.id} has invalid citizenships`);
+    const r = c.civic.residence;
+    if (cits.includes(r.countryCode) && r.status !== 'citizen')
+      v.push(`${c.id} is a citizen but not recorded as one`);
+    if (!cits.includes(r.countryCode) && r.status === 'citizen')
+      v.push(`${c.id} is recorded as a citizen without citizenship`);
+    if (r.status === 'visa' && (r.route === null || r.expiresTick === null))
+      v.push(`${c.id} has a visa without a route or expiry`);
+  }
+  const current = world.characters[world.activeCharacterId];
+  if (current?.death === null && current.civic.residence.countryCode !== current.countryCode)
+    v.push('the player lives somewhere other than their residence country');
+  const civicRecords = [
+    ...Object.values(world.civics.applications),
+    ...Object.values(world.civics.conditions),
+    ...Object.values(world.civics.cases),
+    ...Object.values(world.civics.service),
+    ...Object.values(world.civics.politics),
+  ];
+  for (const record of civicRecords) {
+    if (!world.characters[record.characterId])
+      v.push(`civic record ${record.id} references a missing person`);
+  }
+  for (const [key, duty] of Object.entries(world.civics.royal)) {
+    if (key !== duty.characterId || !world.characters[key]) v.push(`royal duty ${key} is invalid`);
+  }
+  const serving = Object.values(world.civics.service).filter((s) => s.status === 'serving');
+  if (new Set(serving.map((s) => s.characterId)).size !== serving.length)
+    v.push('someone is serving twice');
+
   // Command ids are never applied twice.
   if (new Set(world.recentCommandIds).size !== world.recentCommandIds.length) {
     v.push('duplicate command ids');

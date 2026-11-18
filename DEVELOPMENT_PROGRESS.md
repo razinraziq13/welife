@@ -10,11 +10,80 @@ Requirement map: [docs/TRACEABILITY.md](docs/TRACEABILITY.md)
 | M2 New Life and character        | Complete (commit 26ffa4e)     | `milestone-1-2` |
 | M3 Social, childhood, education  | Complete (commit 98e24fb)     | `milestone-3-4` |
 | M4 Careers and household economy | Complete (commit 98e24fb)     | `milestone-3-4` |
-| M5 Business and real estate      | **Complete, awaiting review** | `milestone-5`   |
-| M6 Global institutions           | Not started                   | —               |
+| M5 Business and real estate      | Complete (commit 11d2504)     | `milestone-5`   |
+| M6 Global institutions           | **Complete, awaiting review** | `milestone-6`   |
 | M7 Media, legacy, narrative      | Not started                   | —               |
 | M8 Event editor and content      | Not started                   | —               |
 | M9 Integration, balance, release | Not started                   | —               |
+
+---
+
+## Milestone 6: Global institutions
+
+Built on branch `milestone-6` (from `milestone-5`) at the user's request ("Start Milestone 6", then "start now").
+
+**Exit criterion (spec §9): country-specific eligibility tests and Easy Migration behaviour pass. Met** (`civics.test.ts`, 33 tests). Eligibility tests cover:
+
+- citizenship at birth: the United States (unconditional), Japan (none), the United Kingdom (settled parent) and France (at 18);
+- descent;
+- naturalisation and dual citizenship: Australia keeps it, Japanese citizens lose it, Singapore requires renunciation;
+- naturalisation practically unavailable in the UAE, Saudi Arabia and China;
+- routes to permanent residence (UAE no, UK yes);
+- closed routes and age limits;
+- conscription: Korean men liable, women and Germans not; Singapore permanent residents liable;
+- candidacy: US House at 25, presidency for citizens from birth, Australian MPs with one citizenship only, Saudi Arabia appointed and without parties;
+- foreign buyers: banned in New Zealand, a 60% surcharge in Singapore;
+- student work rights;
+- criminal records.
+
+Easy Migration tests check that it relaxes new applications (age, qualification, time, fee, approval), that it is per save and logged, that turning it off never removes a status already held, and that visas renew while it is on but end (with a return home) while it is off.
+
+### Checklist
+
+- [x] World schema v4 with a deterministic upgrade from v3 (tested); engine 0.6.0, content core-2026.11.4
+- [x] Researched institutions for all 20 countries (`world/institutions.ts`) with official sources, an as-of date, and spot checks of recent changes on 2026-11-18 (UK settlement, German naturalisation and military service, Canadian and Australian foreign-buyer bans, the Saudi property law, Malaysia's PLKN, the Thai draft)
+- [x] Citizenship for everyone: birthright rules, descent, immigrant families (parents permanent residents), citizenship at 18 (France, Italy)
+- [x] Migration: work, study, family and investor routes, permanent residence and naturalisation per country, with every reason shown; fees, processing time, approval, visa length, work rights; points-tested routes that grant permanent residence (Australia, New Zealand, Canada); renunciation and loss of other citizenships where the law requires it
+- [x] Moving to another city or abroad: the household moves, the job ends, insurance ends, and money converts at the simulated exchange rate. Property and mortgages left abroad keep their currency through an account abroad that is topped up and swept automatically. Every step reconciles.
+- [x] Visa expiry and renewal; time counted towards permanent residence and citizenship; notifications when eligible
+- [x] Easy Migration rules (spec §5): per save, logged, applies only to new applications, never revokes
+- [x] Health care: 10 conditions, onset by age, stress and habits, public care with waiting lists or private care, coverage by system and residence status, long-term medication, non-graphic
+- [x] Law: seven abstract case kinds, lawyers (none, legal aid, private), pleas, juries where used, fines, community service, probation and custody, records spent after each country's period; records affect jobs, visas and candidacy; custody blocks most actions
+- [x] Religion: affiliation and participation, neutral; country landscapes; restricted leaving where the law says so; German church tax
+- [x] Military: conscription (men, lottery, short programme), permanent residents where liable, call-up, study deferment, volunteer enlistment (enlisted or officer), ranks, pay, promotion, re-enlisting, leaving, veterans
+- [x] Politics: fictional parties, offices by country (ages, terms, term limits, election or appointment or party route), campaigns with diminishing returns, elections, salary, approval, policy decisions with economic effects for heads of government, resignation
+- [x] Royal and noble duties where the country supports them: engagements, patronages, approval, royal allowance
+- [x] Foreign property buyer rules (bans, permitted kinds, minimum prices, residence, surcharges)
+- [x] Inheritance rules recorded per country (used in M7)
+- [x] 31 new events (law, health, migration, religion, service, politics, royal), 131 in total
+- [x] Screens: World and migration, Health care, Law, Religion and belief, Military service, Politics and public life (with royal duties); links from More
+- [x] Sensitive-topic filter (D6) in Settings: hides explanations of sensitive laws; display only, never changes rules
+
+### Verification results (actual runs, 2026-11-18)
+
+| Command                 | Result                                                                                                                                                                                                                                                                                                                                                                                        |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run verify`        | exit 0: typecheck ✔, ESLint 0 problems ✔, dependency-cruiser "no dependency violations found (162 modules, 948 dependencies cruised)" ✔, Prettier ✔, Vitest **180/180 passed** (18 files) ✔, production build ✔                                                                                                                                                                               |
+| `npm run e2e`           | exit 0: **178 passed, 2 skipped** (desktop Chromium, desktop WebKit, Pixel 7 Chromium, iPhone 15 WebKit); the skips are the Chromium-only offline test on WebKit. New: apply for a visa, join a party and choose a belief in an imported adult life, with accessibility scans of all six new screens; the six screens are also in the per-screen accessibility and no-horizontal-scroll sweep |
+| M6 exit                 | `civics.test.ts` as above                                                                                                                                                                                                                                                                                                                                                                     |
+| Moving abroad           | Britain to Australia (approved, moved, money converted to AUD, six months reconciling) and Britain to Canada with a let property and a loan (the loan converts to CAD; the property stays in GBP; eight months reconcile)                                                                                                                                                                     |
+| Performance             | game view built in about 5 ms (median) for an adult world, including about 200 eligibility checks                                                                                                                                                                                                                                                                                             |
+| Browser-test robustness | the Milestone 5 test now answers chained decisions until the month commits and picks only available choices (it failed intermittently before); repeated 16 times across four browsers with no failures                                                                                                                                                                                        |
+
+### Known issues and limitations (M6)
+
+1. **Rules are simplified** (one route per kind of visa, typical fees and processing times, approval chances). They are recorded as researched facts with sources, but they stood in 2025-2026 and the spot checks used secondary sources (news and law-firm summaries).
+2. **Tax, wage and school figures from M2-M4 are still baseline approximations.** M6 researched the institutions; re-checking every tax band is left for M9 content review.
+3. **Only the player's institutional life is simulated in detail.** Most NPCs have citizenship and religion but no visas, cases or service records; partners and children move with the player as dependants.
+4. **Inheritance and royal succession** rules are recorded but used from M7.
+5. **The sensitive-topic filter is display-only**; it hides explanations, not events (events must stay deterministic for every player of a save).
+6. **Money moved abroad is converted at once** (pensions included), a simplification.
+7. **The main bundle is 920 KB (265 KB gzip)**; code-splitting is planned for M9.
+8. **Firefox e2e** is still blocked locally by Windows policy (it runs in CI).
+9. Command rejection messages are still plain English rather than localisation keys.
+10. Not clicked through by hand in the in-app browser this milestone (the pane was hidden); the browser tests drive the new screens in four browser profiles.
+
+### Next: Milestone 7, media, legacy and narrative (awaiting approval)
 
 ---
 
@@ -64,8 +133,6 @@ Built on branch `milestone-5` (from `milestone-3-4`) at the user's request ("Sta
 7. **Firefox e2e** is still blocked locally by Windows policy (it runs in CI).
 8. Command rejection messages are still plain English rather than localisation keys.
 9. Not manually checked in the in-app browser this milestone; the e2e test drives the new screens in four browser profiles.
-
-### Next: Milestone 6, global institutions (awaiting approval)
 
 ---
 

@@ -6,6 +6,7 @@ import { medianWage } from '../economy/economy';
 import { scaledGain } from '../education/catalog';
 import { getLocation } from '../world/countries';
 import { getRules } from '../world/rules';
+import { hasUnspentConviction, inCustody, workRights } from '../civics/status';
 import { meetPeople } from '../social/npcs';
 import { addMemory, memorySentiment } from '../social/memories';
 import { findRelationship } from '../social/relationships';
@@ -254,10 +255,18 @@ export type JobRejection =
   | 'tooYoungToRetire'
   | 'retired'
   | 'noChange'
-  | 'noPreparation';
+  | 'noPreparation'
+  | 'noWorkRights'
+  | 'limitedWorkRights'
+  | 'inCustody'
+  | 'record';
 
 export const JOB_MESSAGES: Record<JobRejection, string> = {
   tooYoung: 'You are too young to work here.',
+  noWorkRights: 'Your visa does not allow you to work here.',
+  limitedWorkRights: 'Your visa only allows part-time or casual work.',
+  inCustody: 'You cannot work while in custody.',
+  record: 'This employer does not hire people with an unspent criminal record.',
   inSchool: 'While at school you can only take part-time or casual work.',
   unknownPosting: 'That job is no longer advertised.',
   notQualified: 'You do not have the qualifications this job requires.',
@@ -291,6 +300,12 @@ export function jobEligibility(world: World, c: Character, terms: JobTerms): Job
   const age = ageYears(world, c);
   const occupation = getOccupation(terms.occupationId);
   if (age < rules.work.minWorkAge || (age < 18 && !occupation.teen)) return 'tooYoung';
+  if (inCustody(world, c)) return 'inCustody';
+  const rights = workRights(c);
+  if (rights === 'none') return 'noWorkRights';
+  if (rights === 'limited' && terms.contract !== 'partTime' && terms.contract !== 'casual')
+    return 'limitedWorkRights';
+  if (terms.level >= 2 && hasUnspentConviction(world, c.id, 'serious')) return 'record';
   const school = c.education.current;
   if (
     school &&

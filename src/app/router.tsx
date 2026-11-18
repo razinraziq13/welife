@@ -20,6 +20,14 @@ import { FamilyTreeScreen } from '@app/play/screens/FamilyTreeScreen';
 import { CalendarScreen } from '@app/play/screens/CalendarScreen';
 import { BusinessDetailScreen, BusinessScreen } from '@app/play/screens/BusinessScreen';
 import { PropertyScreen } from '@app/play/screens/PropertyScreen';
+import {
+  HealthScreen,
+  LegalScreen,
+  MilitaryScreen,
+  PoliticsScreen,
+  ReligionScreen,
+  WorldScreen,
+} from './play/screens/CivicScreens';
 
 /** Routes are added only when their screen is fully functional (no placeholder screens). */
 export const router = createBrowserRouter([
@@ -50,6 +58,12 @@ export const router = createBrowserRouter([
           { path: 'business', element: <BusinessScreen /> },
           { path: 'business/:businessId', element: <BusinessDetailScreen /> },
           { path: 'property', element: <PropertyScreen /> },
+          { path: 'world', element: <WorldScreen /> },
+          { path: 'health', element: <HealthScreen /> },
+          { path: 'legal', element: <LegalScreen /> },
+          { path: 'religion', element: <ReligionScreen /> },
+          { path: 'military', element: <MilitaryScreen /> },
+          { path: 'politics', element: <PoliticsScreen /> },
         ],
       },
       { path: '*', element: <NotFoundScreen /> },

@@ -75,6 +75,32 @@ import {
   stopLetting,
 } from '../property/property';
 import { familyHomeFor } from '../social/family';
+import { HealthError, treat } from '../civics/health';
+import { LawError, hireLawyer, setPlea } from '../civics/law';
+import { MigrationError, applyForStatus, relocate, withdrawApplication } from '../civics/migration';
+import { MilitaryError, deferService, enlist, leaveService, reenlist } from '../civics/military';
+import {
+  CAMPAIGN_ACTIONS,
+  PoliticsError,
+  campaign,
+  joinParty,
+  leaveParty,
+  resign,
+  seekOffice,
+  withdrawCampaign,
+} from '../civics/politics';
+import { ReligionError, setParticipation, setReligion } from '../civics/religion';
+import {
+  ENGAGEMENTS,
+  PATRONAGE_CAUSES,
+  RoyalError,
+  dropPatronage,
+  takePatronage,
+  undertakeEngagement,
+  type EngagementKind,
+} from '../civics/royal';
+import { inCustody } from '../civics/status';
+import { OFFICE_LEVELS, RELIGIONS } from '../world/institutions';
 import { enforcePopulation } from '../social/population';
 import {
   INTERACTION_IDS,
@@ -84,9 +110,12 @@ import {
   type InteractionResult,
 } from '../social/interactions';
 import {
+  APPLICATION_ROUTES,
   DIFFICULTIES,
   FUNDS,
   HOME_SIZES,
+  PARTICIPATION_LEVELS,
+  SERVICE_BRANCHES,
   LIFESTYLES,
   STUDY_EFFORTS,
   WORK_EFFORTS,
@@ -227,6 +256,34 @@ export const CommandSchema = z.discriminatedUnion('type', [
   command('listProperty', { propertyId: EntityId, list: z.boolean() }),
   command('buyFund', { fund: z.enum(FUNDS), amountMinor: AmountMinor }),
   command('sellFund', { fund: z.enum(FUNDS), amountMinor: AmountMinor }),
+  // Milestone 6: migration, health, law, religion, military, politics, royal duties.
+  command('applyVisa', {
+    countryCode: z.string().length(2),
+    route: z.enum(APPLICATION_ROUTES),
+    renounce: z.boolean(),
+  }),
+  command('withdrawVisa', { applicationId: EntityId }),
+  command('relocate', { locationId: EntityId }),
+  command('treatCondition', { conditionId: EntityId, care: z.enum(['public', 'private']) }),
+  command('hireLawyer', { caseId: EntityId, lawyer: z.enum(['none', 'legalAid', 'private']) }),
+  command('setPlea', { caseId: EntityId, plea: z.enum(['guilty', 'notGuilty', 'settle']) }),
+  command('setReligion', { religion: z.enum(RELIGIONS) }),
+  command('setParticipation', { level: z.enum(PARTICIPATION_LEVELS) }),
+  command('enlist', { branch: z.enum(SERVICE_BRANCHES), track: z.enum(['enlisted', 'officer']) }),
+  command('deferService', {}),
+  command('reenlist', {}),
+  command('leaveService', {}),
+  command('joinParty', { partyId: z.string().min(1).max(40) }),
+  command('leaveParty', {}),
+  command('seekOffice', { level: z.enum(OFFICE_LEVELS) }),
+  command('campaign', { action: z.enum(CAMPAIGN_ACTIONS) }),
+  command('withdrawCampaign', {}),
+  command('resignOffice', {}),
+  command('royalEngagement', {
+    kind: z.enum(Object.keys(ENGAGEMENTS) as [EngagementKind, ...EngagementKind[]]),
+  }),
+  command('takePatronage', { cause: z.enum(PATRONAGE_CAUSES) }),
+  command('dropPatronage', { cause: z.enum(PATRONAGE_CAUSES) }),
 ]);
 export type Command = z.infer<typeof CommandSchema>;
 
@@ -285,9 +342,45 @@ const done = (key: string, params: Record<string, string | number> = {}): Comman
   params,
 });
 
+/** Actions that need freedom of movement (unavailable in custody, spec §4 Law). */
+const BLOCKED_IN_CUSTODY = new Set<string>([
+  'meetPeople',
+  'joinClub',
+  'applyStudy',
+  'planActivity',
+  'scheduleItem',
+  'applyJob',
+  'moveOut',
+  'moveHome',
+  'takeLoan',
+  'startBusiness',
+  'openBranch',
+  'acquireCompetitor',
+  'buyProperty',
+  'moveIntoProperty',
+  'joinParty',
+  'campaign',
+  'royalEngagement',
+  'takePatronage',
+]);
+
+/** Repeats of an action this month (for diminishing returns on duties). */
+function repeatsThisMonth(world: World, key: string): number {
+  if (world.activity.tick !== world.tick) return 0;
+  return world.activity.counts[key] ?? 0;
+}
+
+function countAction(world: World, key: string): void {
+  if (world.activity.tick !== world.tick)
+    world.activity = { tick: world.tick, counts: {}, hoursUsed: 0 };
+  world.activity.counts[key] = (world.activity.counts[key] ?? 0) + 1;
+}
+
 /** Runs a player action on the world copy; domain errors become "ineligible" rejections. */
 function playerAction(world: World, cmd: Command): CommandOutcome {
   const player = activeCharacter(world);
+  if (BLOCKED_IN_CUSTODY.has(cmd.type) && inCustody(world, player))
+    throw new Ineligible('You cannot do this while in custody.');
   switch (cmd.type) {
     case 'interact':
       return {
@@ -498,6 +591,84 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
     case 'sellFund':
       sellFund(world, player, cmd.fund, BigInt(cmd.amountMinor));
       return done('out.fundSold', { fund: cmd.fund });
+    case 'applyVisa': {
+      const app = applyForStatus(world, player, cmd.countryCode, cmd.route, cmd.renounce);
+      return done('out.visaApplied', {
+        country: cmd.countryCode,
+        route: cmd.route,
+        months: app.decisionTick - world.tick,
+      });
+    }
+    case 'withdrawVisa':
+      withdrawApplication(world, player, cmd.applicationId);
+      return done('out.visaWithdrawn');
+    case 'relocate':
+      relocate(world, player, cmd.locationId);
+      return done('out.relocated', { locationId: cmd.locationId });
+    case 'treatCondition':
+      treat(world, player, cmd.conditionId, cmd.care);
+      return done(cmd.care === 'public' ? 'out.treatmentPublic' : 'out.treatmentPrivate');
+    case 'hireLawyer':
+      hireLawyer(world, player, cmd.caseId, cmd.lawyer);
+      return done('out.lawyer', { lawyer: cmd.lawyer });
+    case 'setPlea':
+      setPlea(world, player, cmd.caseId, cmd.plea);
+      return done('out.plea', { plea: cmd.plea });
+    case 'setReligion':
+      setReligion(world, player, cmd.religion);
+      return done('out.religion', { religion: cmd.religion });
+    case 'setParticipation':
+      setParticipation(world, player, cmd.level);
+      return done('out.participation', { level: cmd.level });
+    case 'enlist':
+      enlist(world, player, cmd.branch, cmd.track);
+      return done('out.enlisted', { branch: cmd.branch });
+    case 'deferService':
+      deferService(world, player);
+      return done('out.deferred');
+    case 'reenlist':
+      reenlist(world, player);
+      return done('out.reenlisted');
+    case 'leaveService':
+      leaveService(world, player);
+      return done('out.leftService');
+    case 'joinParty':
+      joinParty(world, player, cmd.partyId);
+      return done('out.joinedParty');
+    case 'leaveParty':
+      leaveParty(world, player);
+      return done('out.leftParty');
+    case 'seekOffice':
+      seekOffice(world, player, cmd.level);
+      return done('out.seekingOffice', { level: cmd.level });
+    case 'campaign': {
+      const gain = campaign(world, player, cmd.action, (h) => spendHours(world, h));
+      return done('out.campaigned', { action: cmd.action, gain: Math.round(gain / 10) });
+    }
+    case 'withdrawCampaign':
+      withdrawCampaign(world, player);
+      return done('out.campaignWithdrawn');
+    case 'resignOffice':
+      resign(world, player);
+      return done('out.resigned');
+    case 'royalEngagement': {
+      const key = `duty:${cmd.kind}`;
+      const gain = undertakeEngagement(
+        world,
+        player,
+        cmd.kind,
+        (h) => spendHours(world, h),
+        repeatsThisMonth(world, key),
+      );
+      countAction(world, key);
+      return done('out.engagement', { kind: cmd.kind, gain: Math.round(gain / 10) });
+    }
+    case 'takePatronage':
+      takePatronage(world, player, cmd.cause);
+      return done('out.patronage', { cause: cmd.cause });
+    case 'dropPatronage':
+      dropPatronage(world, player, cmd.cause);
+      return done('out.patronageDropped', { cause: cmd.cause });
     default:
       throw new Ineligible('Unknown action.');
   }
@@ -514,6 +685,13 @@ const DOMAIN_ERRORS = [
   BusinessError,
   PropertyError,
   InvestmentError,
+  MigrationError,
+  HealthError,
+  LawError,
+  ReligionError,
+  MilitaryError,
+  PoliticsError,
+  RoyalError,
 ];
 
 /**

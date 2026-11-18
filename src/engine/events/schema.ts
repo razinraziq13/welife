@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import { HABIT_KEYS, NEED_KEYS, SKILL_KEYS, STAT_KEYS } from '../state/schema';
+import {
+  CASE_KINDS,
+  CONDITION_KINDS,
+  HABIT_KEYS,
+  NEED_KEYS,
+  SKILL_KEYS,
+  STAT_KEYS,
+} from '../state/schema';
 
 /**
  * Declarative event schema (spec §4 Events, §7). Content is pure data: no functions,
@@ -12,7 +19,7 @@ import { HABIT_KEYS, NEED_KEYS, SKILL_KEYS, STAT_KEYS } from '../state/schema';
  */
 
 const FACT_PATTERN =
-  /^(age\.(years|totalMonths)|month|isBirthMonth|stage|country|scenario|wealth|gender|difficulty|(stats|needs|skills|traits|habits)\.[a-zA-Z]+|flags\.[a-zA-Z0-9._-]+|school\.(stage|grade|final|private)|clubs\.[a-z-]+|job\.(employed|industry|level|performance|tenure)|money\.(savingsMonths|inDebt)|social\.(friends|partnered|married|children)|home\.own|memory\.[a-zA-Z0-9-]+|economy\.cycle|business\.(count|types)|property\.(count|rentals))$/;
+  /^(age\.(years|totalMonths)|month|isBirthMonth|stage|country|scenario|wealth|gender|difficulty|(stats|needs|skills|traits|habits)\.[a-zA-Z]+|flags\.[a-zA-Z0-9._-]+|school\.(stage|grade|final|private)|clubs\.[a-z-]+|job\.(employed|industry|level|performance|tenure)|money\.(savingsMonths|inDebt)|social\.(friends|partnered|married|children)|home\.own|memory\.[a-zA-Z0-9-]+|economy\.cycle|business\.(count|types)|property\.(count|rentals)|civic\.(citizen|newcomer|religion|participation|serving|veteran|office|candidate|duty|custody|voter|calledUp)|law\.(juries|drinkingAge)|health\.conditions)$/;
 
 export const FactSchema = z.string().regex(FACT_PATTERN, 'Unknown fact name');
 
@@ -175,6 +182,28 @@ export const EffectSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('businessQuality'), delta: Small }).strict(),
   z.object({ kind: z.literal('businessBrand'), delta: Small }).strict(),
   z.object({ kind: z.literal('propertyCondition'), delta: FixedDelta }).strict(),
+  // Milestone 6: open a legal case, diagnose a condition, a policy decision in office, duties.
+  z
+    .object({
+      kind: z.literal('legalCase'),
+      caseKind: z.enum(CASE_KINDS),
+      strength: z.number().int().min(0).max(1000),
+      role: z.enum(['defendant', 'claimant']),
+    })
+    .strict(),
+  z.object({ kind: z.literal('condition'), condition: z.enum(CONDITION_KINDS) }).strict(),
+  z
+    .object({
+      kind: z.literal('policy'),
+      policyId: z.string().regex(/^[a-z][a-zA-Z0-9-]{1,39}$/),
+      approval: z.number().int().min(-200).max(200),
+      cycle: z.number().int().min(-100).max(100),
+      inflationBp: z.number().int().min(-100).max(100),
+    })
+    .strict(),
+  z
+    .object({ kind: z.literal('dutyApproval'), delta: z.number().int().min(-200).max(200) })
+    .strict(),
   z
     .object({
       kind: z.literal('propertyCost'),
@@ -229,6 +258,7 @@ export const EVENT_CATEGORIES = [
   'romance',
   'business',
   'property',
+  'civic',
 ] as const;
 
 export const EventDefinitionSchema = z

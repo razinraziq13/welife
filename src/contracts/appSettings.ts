@@ -18,6 +18,8 @@ export const AppSettingsSchema = z
     motion: z.enum(MOTION_PREFERENCES),
     contrast: z.enum(CONTRAST_PREFERENCES),
     keyboardShortcuts: z.boolean(),
+    /** Hide explanations of sensitive real-world laws (decision D6). Display only. */
+    hideSensitive: z.boolean().default(false),
   })
   .strict();
 
@@ -27,7 +29,10 @@ export type TextScale = AppSettings['textScale'];
 export type MotionPreference = AppSettings['motion'];
 export type ContrastPreference = AppSettings['contrast'];
 
-export const AppSettingsPatchSchema = AppSettingsSchema.partial().strict();
+/** Patches never fill in defaults, so a partial update cannot reset other settings. */
+export const AppSettingsPatchSchema = AppSettingsSchema.extend({ hideSensitive: z.boolean() })
+  .partial()
+  .strict();
 export type AppSettingsPatch = z.infer<typeof AppSettingsPatchSchema>;
 
 export const DEFAULT_APP_SETTINGS: Readonly<AppSettings> = Object.freeze({
@@ -36,4 +41,5 @@ export const DEFAULT_APP_SETTINGS: Readonly<AppSettings> = Object.freeze({
   motion: 'system',
   contrast: 'standard',
   keyboardShortcuts: true,
+  hideSensitive: false,
 });

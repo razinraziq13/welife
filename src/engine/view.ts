@@ -52,6 +52,7 @@ import { childrenOf, kinship, parentsOf, siblingsOf } from './social/relationshi
 import { getCountry, getLocation } from './world/countries';
 import { getRules, RULES_SOURCE } from './world/rules';
 import { projectEnterprise, type EnterpriseView } from './viewEnterprise';
+import { projectCivic, type CivicView } from './viewCivic';
 import type { SimState } from './core/commands';
 import type {
   Account,
@@ -396,6 +397,7 @@ export interface GameView {
   calendar: CalendarView;
   social: SocialView;
   enterprise: EnterpriseView;
+  civic: CivicView;
 }
 
 function relationTo(
@@ -920,6 +922,7 @@ export function projectGame(state: SimState): GameView {
     calendar: calendarView(world, player),
     social: socialView(world, player),
     enterprise: projectEnterprise(world, player),
+    civic: projectCivic(world, player),
   };
 }
 

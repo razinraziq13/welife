@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { OFFICE_LEVELS, RELIGIONS, VISA_ROUTES } from '../world/institutions';
 
 /**
  * Authoritative world-state schema. Everything the simulation knows lives in one
@@ -13,10 +14,12 @@ import { z } from 'zod';
  * Version 2 (Milestones 3-4) adds NPC populations, memories, partnerships, education,
  * employment, the job market, the double-entry ledger, insurance, the country economy
  * and the calendar. Version 3 (Milestone 5) adds businesses, competitors, properties,
- * the property market, investment funds, exchange rates and house prices.
+ * the property market, investment funds, exchange rates and house prices. Version 4
+ * (Milestone 6) adds citizenship and residence, visa applications, health conditions,
+ * legal cases, military service, political careers, royal duties and religion.
  */
 
-export const WORLD_SCHEMA_VERSION = 3;
+export const WORLD_SCHEMA_VERSION = 4;
 
 export const STAT_KEYS = [
   'health',
@@ -126,6 +129,8 @@ export const NOTIFICATION_CATEGORIES = [
   'money',
   'business',
   'property',
+  'world',
+  'civic',
   'system',
 ] as const;
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
@@ -143,6 +148,12 @@ export const NOTIFICATION_TARGETS = [
   'family',
   'business',
   'property',
+  'world',
+  'health',
+  'politics',
+  'military',
+  'legal',
+  'religion',
 ] as const;
 
 export const BIOGRAPHY_CATEGORIES = [
@@ -158,6 +169,12 @@ export const BIOGRAPHY_CATEGORIES = [
   'money',
   'business',
   'property',
+  'world',
+  'civic',
+  'politics',
+  'military',
+  'legal',
+  'religion',
 ] as const;
 
 /** Relationship roles, always "what B is to A". Family roles come from family links. */
@@ -416,6 +433,40 @@ export const CharacterFinanceSchema = z
   .strict();
 export type CharacterFinance = z.infer<typeof CharacterFinanceSchema>;
 
+export const RESIDENCE_STATUSES = ['citizen', 'permanent', 'visa'] as const;
+export type ResidenceStatus = (typeof RESIDENCE_STATUSES)[number];
+export const PARTICIPATION_LEVELS = ['none', 'occasional', 'regular', 'devout'] as const;
+export type Participation = (typeof PARTICIPATION_LEVELS)[number];
+const CountryCode = z.string().length(2);
+
+/** Citizenship, residence, belief and custody (Milestone 6). */
+export const CivicSchema = z
+  .object({
+    citizenships: z.array(CountryCode).min(1).max(6),
+    /** Legal status in the country the person lives in. */
+    residence: z
+      .object({
+        countryCode: CountryCode,
+        status: z.enum(RESIDENCE_STATUSES),
+        route: z.enum(VISA_ROUTES).nullable(),
+        sinceTick: z.number().int().min(0),
+        /** When a visa must be renewed (null for citizens and permanent residents). */
+        expiresTick: z.number().int().min(0).nullable(),
+      })
+      .strict(),
+    /** Months of legal residence per country (for permanent residence and naturalisation). */
+    residedMonths: z.record(CountryCode, z.number().int().min(0)),
+    /** Months as a permanent resident per country. */
+    permanentMonths: z.record(CountryCode, z.number().int().min(0)),
+    religion: z.enum(RELIGIONS),
+    participation: z.enum(PARTICIPATION_LEVELS),
+    /** In custody until this tick (non-graphic; most actions are unavailable meanwhile). */
+    custodyUntilTick: z.number().int().min(0).nullable(),
+    veteran: z.boolean(),
+  })
+  .strict();
+export type Civic = z.infer<typeof CivicSchema>;
+
 export const TIERS = ['close', 'relevant', 'archived'] as const;
 export type Tier = (typeof TIERS)[number];
 
@@ -450,6 +501,7 @@ export const CharacterSchema = z
     finance: CharacterFinanceSchema.nullable(),
     /** Most recent explicit stat changes with causes (bounded). */
     statLog: z.array(StatChangeSchema).max(60),
+    civic: CivicSchema,
   })
   .strict();
 export type Character = z.infer<typeof CharacterSchema>;
@@ -1018,6 +1070,198 @@ export const ListingSchema = z
   .strict();
 export type Listing = z.infer<typeof ListingSchema>;
 
+// ---------------------------------------------------------------------------------------
+// Institutions (Milestone 6; spec §4 World, Politics, Law, military, religion, §6 records)
+// ---------------------------------------------------------------------------------------
+
+export const APPLICATION_ROUTES = [...VISA_ROUTES, 'permanent', 'citizenship'] as const;
+export type ApplicationRoute = (typeof APPLICATION_ROUTES)[number];
+
+export const VisaApplicationSchema = z
+  .object({
+    id: Id,
+    characterId: Id,
+    countryCode: CountryCode,
+    route: z.enum(APPLICATION_ROUTES),
+    status: z.enum(['pending', 'approved', 'refused', 'withdrawn', 'used', 'expired']),
+    appliedTick: Tick,
+    decisionTick: Tick,
+    /** An approved visa must be used (by moving) before this tick. */
+    useByTick: Tick.nullable(),
+    /** Localisation key explaining a refusal. */
+    reason: z.string().max(80).nullable(),
+    feeMinor: NonNegativeMinor,
+    /** Give up other citizenships if the new country requires it. */
+    renounce: z.boolean(),
+    /** Easy Migration was on when the application was made. */
+    easy: z.boolean(),
+  })
+  .strict();
+export type VisaApplication = z.infer<typeof VisaApplicationSchema>;
+
+export const CONDITION_KINDS = [
+  'flu',
+  'injury',
+  'backPain',
+  'asthma',
+  'hypertension',
+  'diabetes',
+  'depression',
+  'heartDisease',
+  'seriousIllness',
+  'dental',
+] as const;
+export type ConditionKind = (typeof CONDITION_KINDS)[number];
+
+export const HealthConditionSchema = z
+  .object({
+    id: Id,
+    characterId: Id,
+    kind: z.enum(CONDITION_KINDS),
+    severity: Fixed,
+    diagnosedTick: Tick,
+    status: z.enum(['untreated', 'waiting', 'treating', 'managed', 'resolved']),
+    care: z.enum(['public', 'private']).nullable(),
+    /** Public waiting list ends at this tick. */
+    waitUntilTick: Tick.nullable(),
+    treatmentEndTick: Tick.nullable(),
+    resolvedTick: Tick.nullable(),
+  })
+  .strict();
+export type HealthCondition = z.infer<typeof HealthConditionSchema>;
+
+export const CASE_KINDS = [
+  'traffic',
+  'civilClaim',
+  'taxAudit',
+  'minorOffence',
+  'fraud',
+  'immigration',
+  'serviceEvasion',
+] as const;
+export type CaseKind = (typeof CASE_KINDS)[number];
+
+export const CASE_OUTCOMES = [
+  'dismissed',
+  'acquitted',
+  'settled',
+  'won',
+  'lost',
+  'fine',
+  'community',
+  'probation',
+  'custody',
+] as const;
+export type CaseOutcome = (typeof CASE_OUTCOMES)[number];
+
+export const LegalCaseSchema = z
+  .object({
+    id: Id,
+    characterId: Id,
+    countryCode: CountryCode,
+    kind: z.enum(CASE_KINDS),
+    role: z.enum(['defendant', 'claimant']),
+    /** How strong the case against the person is (or their claim, as claimant). */
+    strength: Fixed,
+    /** Sum in dispute or the base fine (local currency). */
+    amountMinor: NonNegativeMinor,
+    filedTick: Tick,
+    hearingTick: Tick,
+    lawyer: z.enum(['none', 'legalAid', 'private']),
+    plea: z.enum(['undecided', 'guilty', 'notGuilty', 'settle']),
+    status: z.enum(['open', 'closed']),
+    outcome: z.enum(CASE_OUTCOMES).nullable(),
+    sentenceMonths: z.number().int().min(0).max(240),
+    closedTick: Tick.nullable(),
+    convicted: z.boolean(),
+    /** When a conviction is spent (no longer shows in most checks). */
+    spentTick: Tick.nullable(),
+  })
+  .strict();
+export type LegalCase = z.infer<typeof LegalCaseSchema>;
+
+export const SERVICE_BRANCHES = ['army', 'navy', 'airForce'] as const;
+export type ServiceBranch = (typeof SERVICE_BRANCHES)[number];
+
+export const ServiceRecordSchema = z
+  .object({
+    id: Id,
+    characterId: Id,
+    countryCode: CountryCode,
+    kind: z.enum(['conscript', 'volunteer', 'programme']),
+    branch: z.enum(SERVICE_BRANCHES),
+    track: z.enum(['enlisted', 'officer']),
+    rank: z.number().int().min(0).max(6),
+    status: z.enum(['called', 'deferred', 'serving', 'completed', 'exempt', 'discharged']),
+    /** When a called-up person must report. */
+    reportTick: Tick,
+    startTick: Tick.nullable(),
+    /** Planned end of service. */
+    endTick: Tick.nullable(),
+    monthsInRank: z.number().int().min(0),
+    monthsServed: z.number().int().min(0),
+  })
+  .strict();
+export type ServiceRecord = z.infer<typeof ServiceRecordSchema>;
+
+export const PoliticalCareerSchema = z
+  .object({
+    id: Id,
+    characterId: Id,
+    countryCode: CountryCode,
+    partyId: z.string().max(40).nullable(),
+    joinedTick: Tick.nullable(),
+    status: z.enum(['none', 'candidate', 'office', 'seeking']),
+    office: z.enum(OFFICE_LEVELS).nullable(),
+    campaign: z
+      .object({
+        level: z.enum(OFFICE_LEVELS),
+        electionTick: Tick,
+        support: Fixed,
+        spentMinor: NonNegativeMinor,
+        actions: z.number().int().min(0),
+      })
+      .strict()
+      .nullable(),
+    termStartTick: Tick.nullable(),
+    termEndTick: Tick.nullable(),
+    /** Consecutive terms in the current office. */
+    termsInOffice: z.number().int().min(0),
+    approval: Fixed,
+    history: z
+      .array(
+        z
+          .object({
+            tick: Tick,
+            level: z.enum(OFFICE_LEVELS),
+            result: z.enum(['won', 'lost', 'appointed', 'notAppointed', 'leftOffice']),
+            sharePercent: z.number().int().min(0).max(100),
+          })
+          .strict(),
+      )
+      .max(40),
+    policies: z
+      .array(
+        z.object({ tick: Tick, policyId: z.string().max(40), choice: z.string().max(40) }).strict(),
+      )
+      .max(60),
+  })
+  .strict();
+export type PoliticalCareer = z.infer<typeof PoliticalCareerSchema>;
+
+export const RoyalDutySchema = z
+  .object({
+    characterId: Id,
+    kind: z.enum(['royal', 'noble']),
+    approval: Fixed,
+    /** Engagements in the current year (counted from yearStartTick). */
+    engagements: z.number().int().min(0),
+    yearStartTick: Tick,
+    patronages: z.array(z.string().max(40)).max(5),
+  })
+  .strict();
+export type RoyalDuty = z.infer<typeof RoyalDutySchema>;
+
 export const FUNDS = ['stocks', 'bonds'] as const;
 export type Fund = (typeof FUNDS)[number];
 
@@ -1033,6 +1277,7 @@ export const RNG_STREAMS = [
   'economy',
   'business',
   'property',
+  'civics',
 ] as const;
 export type RngStream = (typeof RNG_STREAMS)[number];
 
@@ -1109,6 +1354,17 @@ export const WorldSchema = z
     competitors: z.record(Id, CompetitorSchema),
     properties: z.record(Id, PropertySchema),
     propertyListings: z.record(Id, ListingSchema),
+    civics: z
+      .object({
+        applications: z.record(Id, VisaApplicationSchema),
+        conditions: z.record(Id, HealthConditionSchema),
+        cases: z.record(Id, LegalCaseSchema),
+        service: z.record(Id, ServiceRecordSchema),
+        politics: z.record(Id, PoliticalCareerSchema),
+        /** Keyed by character id. */
+        royal: z.record(Id, RoyalDutySchema),
+      })
+      .strict(),
     notifications: z.array(NotificationSchema),
     biography: z.array(BiographyEntrySchema),
     /** Recently applied command ids (bounded); prevents double application. */

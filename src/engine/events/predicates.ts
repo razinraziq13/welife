@@ -2,6 +2,7 @@ import { ageOf } from '../core/clock';
 import { lifeStage } from '../characters/stats';
 import { medianWage } from '../economy/economy';
 import { getRules } from '../world/rules';
+import { getInstitutions } from '../world/institutions';
 import { hasMemory } from '../social/memories';
 import { childrenOf } from '../social/relationships';
 import type { Character, World } from '../state/schema';
@@ -133,6 +134,60 @@ export function factValue(world: World, character: Character, fact: string): Fac
       ).length;
     case 'economy.cycle':
       return world.economy[character.countryCode]?.cycle ?? 0;
+    // Milestone 6: citizenship and institutions.
+    case 'civic.citizen':
+      return character.civic.citizenships.includes(character.civic.residence.countryCode);
+    case 'civic.newcomer':
+      return (
+        !character.civic.citizenships.includes(character.civic.residence.countryCode) &&
+        world.tick - character.civic.residence.sinceTick < 24
+      );
+    case 'civic.religion':
+      return character.civic.religion;
+    case 'civic.participation':
+      return character.civic.participation;
+    case 'civic.serving':
+      return Object.values(world.civics.service).some(
+        (s) => s.characterId === character.id && s.status === 'serving',
+      );
+    case 'civic.calledUp':
+      return Object.values(world.civics.service).some(
+        (s) => s.characterId === character.id && s.status === 'called',
+      );
+    case 'civic.veteran':
+      return character.civic.veteran;
+    case 'civic.office': {
+      const career = Object.values(world.civics.politics).find(
+        (p) => p.characterId === character.id && p.status === 'office',
+      );
+      return career?.office ?? 'none';
+    }
+    case 'civic.candidate':
+      return Object.values(world.civics.politics).some(
+        (p) => p.characterId === character.id && p.campaign !== null,
+      );
+    case 'civic.duty':
+      return world.civics.royal[character.id]?.kind ?? 'none';
+    case 'civic.custody':
+      return (
+        character.civic.custodyUntilTick !== null && character.civic.custodyUntilTick > world.tick
+      );
+    case 'civic.voter': {
+      const voteAge = getInstitutions(character.countryCode).politics.voteAge;
+      return (
+        voteAge !== null &&
+        ageOf(character.birth, world.clock).years >= voteAge &&
+        character.civic.citizenships.includes(character.countryCode)
+      );
+    }
+    case 'law.juries':
+      return getInstitutions(character.countryCode).law.juries;
+    case 'law.drinkingAge':
+      return getInstitutions(character.countryCode).law.drinkingAge ?? 0;
+    case 'health.conditions':
+      return Object.values(world.civics.conditions).filter(
+        (h) => h.characterId === character.id && h.status !== 'resolved',
+      ).length;
     default:
       break;
   }

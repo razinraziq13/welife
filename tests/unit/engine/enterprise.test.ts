@@ -5,7 +5,7 @@ import { bookEquity, competitorsAt, minimumCapital, ownerShare } from '@engine/b
 import { FAILURE_MONTHS, getBusinessType } from '@engine/business/catalog';
 import { convert } from '@engine/economy/economy';
 import { monthTotals } from '@engine/economy/ledger';
-import { upgradeWorldV2 } from '@engine/state/upgrade';
+import { upgradeWorldV2, upgradeWorldV3 } from '@engine/state/upgrade';
 import { WorldSchema, type Business, type World } from '@engine/state/schema';
 import type { SimState } from '@engine/core/commands';
 import { checked, findWork, giveMoney, monthChecked } from '../../helpers/reconcile';
@@ -395,7 +395,7 @@ describe('decisions and upgrades', () => {
     expect(r2.state.world.tick).toBe(1);
   });
 
-  it('a version-2 world upgrades to version 3', () => {
+  it('a version-2 world upgrades to version 3 (and on to 4)', () => {
     const world = structuredClone(newState().world) as unknown as Record<string, unknown>;
     for (const key of ['businesses', 'competitors', 'properties', 'propertyListings'])
       Reflect.deleteProperty(world, key);
@@ -405,7 +405,7 @@ describe('decisions and upgrades', () => {
       Reflect.deleteProperty(e, 'housePriceBp');
       Reflect.deleteProperty(e, 'bondIndexBp');
     }
-    const upgraded = upgradeWorldV2(world) as World;
+    const upgraded = upgradeWorldV3(upgradeWorldV2(world)) as World;
     expect(WorldSchema.safeParse(upgraded).success).toBe(true);
     expect(checkInvariants(upgraded)).toEqual([]);
   });

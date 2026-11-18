@@ -1,5 +1,5 @@
 import { WORLD_SCHEMA_VERSION } from '@engine/state/schema';
-import { upgradeWorldV1, upgradeWorldV2 } from '@engine/state/upgrade';
+import { upgradeWorldV1, upgradeWorldV2, upgradeWorldV3 } from '@engine/state/upgrade';
 
 /**
  * Forward migrations for stored worlds and export bundles (spec §5 "migrate older versions").
@@ -15,6 +15,7 @@ type Migration = (input: Record<string, unknown>) => Record<string, unknown>;
 const WORLD_MIGRATIONS: Record<number, Migration> = {
   1: upgradeWorldV1,
   2: upgradeWorldV2,
+  3: upgradeWorldV3,
 };
 
 export class MigrationError extends Error {

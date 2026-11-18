@@ -35,6 +35,7 @@ import { inheritAppearance, inheritTraits, randomAppearance, randomTraits } from
 import { addCharacter as addCharacterRecord, adultSkills, npcStats, zeroRecord } from './factory';
 import { initializeSystems } from '../core/setup';
 import { linkPair, randomInterests } from '../social/relationships';
+import { birthCivic, religionFor } from '../civics/status';
 import {
   FAMILY_TRADES,
   availableConcreteScenarios,
@@ -206,6 +207,7 @@ export function createWorld(worldId: string, rawInput: unknown): World {
     competitors: {},
     properties: {},
     propertyListings: {},
+    civics: { applications: {}, conditions: {}, cases: {}, service: {}, politics: {}, royal: {} },
     notifications: [],
     biography: [],
     recentCommandIds: [],
@@ -445,6 +447,27 @@ export function createWorld(worldId: string, rawInput: unknown): World {
     familyTrade,
     finance: null,
   };
+
+  // Citizenship and belief (Milestone 6): immigrant parents keep their citizenship and are
+  // permanent residents; children follow the birth country's rules.
+  if (origin) {
+    for (const parent of parents) {
+      parent.civic = {
+        ...parent.civic,
+        citizenships: [origin.code],
+        residence: {
+          countryCode: country.code,
+          status: 'permanent',
+          route: null,
+          sinceTick: 0,
+          expiresTick: null,
+        },
+        religion: religionFor(householdId, origin.code),
+      };
+      parent.civic.participation = parent.civic.religion === 'none' ? 'none' : 'occasional';
+    }
+  }
+  for (const child of [...siblings, player]) birthCivic(world, child, parents, country.code);
 
   // Family links and relationships.
   const linkType = scenario.parents === 'adoptive' ? 'adoptive' : 'biological';

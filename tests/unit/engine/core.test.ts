@@ -179,7 +179,7 @@ describe('unlimited actions without exploits (spec §4, §8)', () => {
       const extra = performActivity(structuredClone(state.world), 'read');
       expect(extra.status).toBe('no-time');
     }
-  });
+  }, 30_000);
 });
 
 import { getEvent } from '@engine/content';

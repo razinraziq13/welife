@@ -94,7 +94,11 @@ export function categoryAccount(
   category: string,
   currency: string,
 ): string {
-  const id = `${ownerId}~${type}~${category}`;
+  // The first account for a category keeps the short id; a later one in another currency
+  // (after moving abroad) gets the currency appended, so currencies never mix.
+  const base = `${ownerId}~${type}~${category}`;
+  const existing = world.ledger.accounts[base];
+  const id = !existing || existing.currency === currency ? base : `${base}~${currency}`;
   world.ledger.accounts[id] ??= {
     id,
     ownerId,

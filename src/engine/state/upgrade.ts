@@ -3,6 +3,7 @@ import { ageOf } from '../core/clock';
 import { initializeSystems } from '../core/setup';
 import { emptyEducation } from '../characters/factory';
 import { randomInterests } from '../social/relationships';
+import { birthCivic, defaultCivic, parentsOf, religionFor } from '../civics/status';
 import { RNG_STREAMS, SKILL_KEYS, type World } from './schema';
 
 /**
@@ -66,6 +67,7 @@ export function upgradeWorldV1(raw: Record<string, unknown>): Record<string, unk
   world.competitors = {};
   world.properties = {};
   world.propertyListings = {};
+  addCivics(world);
   (world as { schemaVersion: number }).schemaVersion = 2;
   initializeSystems(world);
   return world;
@@ -96,6 +98,70 @@ export function upgradeWorldV2(raw: Record<string, unknown>): Record<string, unk
     const finance = h.finance as unknown as Record<string, unknown> | null;
     if (finance) finance.propertyId ??= null;
   }
-  world.schemaVersion = 3;
+  (world as { schemaVersion: number }).schemaVersion = 3;
+  return world;
+}
+
+/** Civic records and every person's citizenship, residence and belief (idempotent). */
+function addCivics(world: World): void {
+  const stored = world as unknown as Record<string, unknown>;
+  stored.civics ??= {
+    applications: {},
+    conditions: {},
+    cases: {},
+    service: {},
+    politics: {},
+    royal: {},
+  };
+  const ids = Object.keys(world.characters).sort();
+  const missing = new Set(
+    ids.filter((id) => !(world.characters[id] as unknown as Record<string, unknown>).civic),
+  );
+  for (const id of missing) {
+    const c = world.characters[id];
+    if (!c) continue;
+    const household = world.households[c.householdId];
+    const origin = household?.flags.immigrant ? household.originCountryCode : null;
+    const bornBeforeStart = c.birth.year * 12 + c.birth.month - 1 < world.startIndex;
+    if (origin && bornBeforeStart && c.id !== world.activeCharacterId) {
+      c.civic = defaultCivic(origin, religionFor(c.householdId, origin));
+      c.civic.residence = {
+        countryCode: c.countryCode,
+        status: 'permanent',
+        route: null,
+        sinceTick: 0,
+        expiresTick: null,
+      };
+    } else {
+      c.civic = defaultCivic(c.countryCode, religionFor(c.householdId, origin ?? c.countryCode));
+    }
+  }
+  // Children follow the birth-country rules now that their parents have a status.
+  for (const id of missing) {
+    const c = world.characters[id];
+    if (!c) continue;
+    const parents = parentsOf(world, id).filter((p) => !missing.has(p.id) || p.civic);
+    const bornInWorld = c.birth.year * 12 + c.birth.month - 1 >= world.startIndex;
+    if (bornInWorld && parents.length > 0) birthCivic(world, c, parents, c.countryCode);
+    else {
+      c.flags[`bornIn.${c.countryCode}`] = true;
+      for (const code of c.civic.citizenships) c.flags[`birthCitizen.${code}`] = true;
+    }
+    if (id === world.activeCharacterId) c.civic.residedMonths[c.countryCode] = world.tick;
+  }
+}
+
+/**
+ * Upgrades a version-3 world (Milestone 5) to version 4 (Milestone 6): citizenship,
+ * residence and religion for every person (immigrant parents keep their origin citizenship
+ * as permanent residents), empty civic records and a new random stream.
+ */
+export function upgradeWorldV3(raw: Record<string, unknown>): Record<string, unknown> {
+  const world = raw as unknown as World & Record<string, unknown>;
+  const rng = world.rng as Record<string, unknown>;
+  for (const stream of RNG_STREAMS)
+    rng[stream] ??= Rng.fromSeed(`${world.seed}::${stream}::v4`).state();
+  addCivics(world);
+  world.schemaVersion = 4;
   return world;
 }

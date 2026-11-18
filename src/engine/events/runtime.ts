@@ -21,6 +21,8 @@ export const MAX_AUTOMATIC_EVENTS_PER_MONTH = 2;
 
 function bioCategory(def: EventDefinition): BiographyEntry['category'] {
   switch (def.category) {
+    case 'civic':
+      return 'civic';
     case 'health':
       return 'health';
     case 'family':
@@ -40,7 +42,10 @@ function bioCategory(def: EventDefinition): BiographyEntry['category'] {
 }
 function notificationCategory(def: EventDefinition): NotificationCategory {
   const bio = bioCategory(def);
-  return bio === 'activity' || bio === 'rules' || bio === 'life' ? 'event' : bio;
+  if (bio === 'activity' || bio === 'rules' || bio === 'life') return 'event';
+  if (bio === 'politics' || bio === 'military' || bio === 'legal' || bio === 'religion')
+    return 'civic';
+  return bio;
 }
 
 /** People who could be the subject of an event, in id order. */

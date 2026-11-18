@@ -8,6 +8,10 @@ import { medianWage } from '../economy/economy';
 import { payExpense, payMedicalCost, payerFor, receiveIncome } from '../economy/finance';
 import { addMemory } from '../social/memories';
 import { adjustPair, linkPair } from '../social/relationships';
+import { diagnose } from '../civics/health';
+import { openCase } from '../civics/law';
+import { recordPolicy } from '../civics/politics';
+import { dutyOf } from '../civics/royal';
 import type { Character, World } from '../state/schema';
 import type { Effect } from './schema';
 
@@ -130,6 +134,23 @@ export function applyEffects(
           sourceInstanceId ?? cause,
         );
         break;
+      case 'legalCase':
+        openCase(world, character, effect.caseKind, effect.strength, effect.role);
+        break;
+      case 'condition':
+        diagnose(world, character, effect.condition);
+        break;
+      case 'policy':
+        recordPolicy(world, character, effect.policyId, cause, effect.approval, {
+          cycle: effect.cycle,
+          inflationBp: effect.inflationBp,
+        });
+        break;
+      case 'dutyApproval': {
+        const duty = dutyOf(world, character);
+        if (duty) duty.approval = clamp(duty.approval + effect.delta, 0, 1000);
+        break;
+      }
       case 'grade':
         if (character.education.current) {
           character.education.current.grade = clamp(

@@ -26,6 +26,7 @@ import type {
   WealthTier,
   World,
 } from '../state/schema';
+import { birthCivic } from '../civics/status';
 import { linkPair, parentsOf, randomInterests } from './relationships';
 
 /**
@@ -123,6 +124,7 @@ export function createNpc(world: World, spec: NpcSpec): Character {
     death,
   });
   household.memberIds.push(character.id);
+  if (parents.length > 0) birthCivic(world, character, parents, country.code);
   for (const parent of parents) {
     const id = nextId(world, 'fam');
     world.familyLinks[id] = { id, parentId: parent.id, childId: character.id, type: 'biological' };

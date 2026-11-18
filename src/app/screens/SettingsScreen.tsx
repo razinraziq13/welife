@@ -156,6 +156,16 @@ export function SettingsScreen() {
         </div>
       </Card>
 
+      <Card title="Content">
+        <Switch
+          label="Hide sensitive topics"
+          description="Hides explanations of sensitive real-world laws, such as restrictions on religion or on criticising a monarch. The game's rules are not changed."
+          checked={settings.hideSensitive}
+          disabled={disabled}
+          onChange={(hideSensitive) => void updateSettings({ hideSensitive })}
+        />
+      </Card>
+
       <Card title="Keyboard">
         <div className="flex flex-col gap-4">
           <Switch

@@ -28,6 +28,12 @@ const TARGET_ROUTE: Record<Notification['target'], string> = {
   family: 'family',
   business: 'business',
   property: 'property',
+  world: 'world',
+  health: 'health',
+  politics: 'politics',
+  military: 'military',
+  legal: 'legal',
+  religion: 'religion',
 };
 
 function routeFor(n: Notification): string {

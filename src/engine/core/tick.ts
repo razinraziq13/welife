@@ -14,6 +14,7 @@ import { processFinances, rescheduleStudentLoan } from '../economy/finance';
 import { processEducation } from '../education/school';
 import { processBusinesses } from '../business/business';
 import { processProperties } from '../property/property';
+import { processCivicDuties, processCivicHealth, processInstitutions } from '../civics/process';
 import {
   fireNextDueDecision,
   pruneEventInstances,
@@ -95,6 +96,7 @@ export function advanceMonth(committed: World): AdvanceResult {
   // 4. Economy and money.
   const markets = advanceEconomies(world);
   processFinances(world, markets);
+  processCivicDuties(world);
 
   // 5. Companies, then property and the property market.
   processBusinesses(world);
@@ -103,6 +105,7 @@ export function advanceMonth(committed: World): AdvanceResult {
   // 6. Education, characters, work, calendar.
   processEducation(world);
   updateCharactersMonthly(world);
+  processCivicHealth(world);
   processEmployment(world);
   const player = world.characters[world.activeCharacterId];
   if (player) rescheduleStudentLoan(world, player);
@@ -117,6 +120,7 @@ export function advanceMonth(committed: World): AdvanceResult {
   // 8. Relationships, memories, job market, population.
   driftRelationships(world);
   if (world.tick % 12 === 0) decayMemories(world);
+  processInstitutions(world);
   refreshJobMarket(world);
   if (world.tick % 12 === 0 || deaths.length > 0) rebalancePopulation(world);
   else enforcePopulation(world);

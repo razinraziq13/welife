@@ -7,7 +7,7 @@ import { endEmployment } from '@engine/career/jobs';
 import { checkLedger, monthTotals, netWorthOf } from '@engine/economy/ledger';
 import { payMedicalCost } from '@engine/economy/finance';
 import { medianWage } from '@engine/economy/economy';
-import { upgradeWorldV1, upgradeWorldV2 } from '@engine/state/upgrade';
+import { upgradeWorldV1, upgradeWorldV2, upgradeWorldV3 } from '@engine/state/upgrade';
 import { execute, type SimState } from '@engine/core/commands';
 import { canonicalJson } from '@engine/core/data';
 import fixture from '../../fixtures/world-v1.json';
@@ -223,11 +223,11 @@ describe('careers and the household economy reconcile (M4 exit)', () => {
   }, 120_000);
 });
 
-describe('older saves are upgraded (schema 1 -> 2 -> 3)', () => {
+describe('older saves are upgraded (schema 1 -> 2 -> 3 -> 4)', () => {
   const raw = (fixture as { world: Record<string, unknown> }).world;
 
   it('the real Milestone 2 world upgrades into a valid world, keeping history and status', () => {
-    const upgraded = upgradeWorldV2(upgradeWorldV1(structuredClone(raw))) as World;
+    const upgraded = upgradeWorldV3(upgradeWorldV2(upgradeWorldV1(structuredClone(raw)))) as World;
     const parsed = WorldSchema.safeParse(upgraded);
     expect(parsed.success).toBe(true);
     expect(checkInvariants(upgraded)).toEqual([]);
@@ -244,8 +244,8 @@ describe('older saves are upgraded (schema 1 -> 2 -> 3)', () => {
   });
 
   it('is deterministic and the upgraded life plays on', () => {
-    const a = upgradeWorldV2(upgradeWorldV1(structuredClone(raw)));
-    const b = upgradeWorldV2(upgradeWorldV1(structuredClone(raw)));
+    const a = upgradeWorldV3(upgradeWorldV2(upgradeWorldV1(structuredClone(raw))));
+    const b = upgradeWorldV3(upgradeWorldV2(upgradeWorldV1(structuredClone(raw))));
     expect(canonicalJson(a)).toBe(canonicalJson(b));
     const state = advanceMonths({ world: a as World, pending: null }, 24);
     expect(state.world.tick).toBe((a as World).tick + 24);

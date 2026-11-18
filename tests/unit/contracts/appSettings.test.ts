@@ -33,6 +33,18 @@ describe('AppSettingsSchema', () => {
 });
 
 describe('AppSettingsPatchSchema', () => {
+  it('loads settings saved before the sensitive-topic filter existed (defaults to off)', () => {
+    const old = {
+      theme: 'dark',
+      textScale: 110,
+      motion: 'system',
+      contrast: 'standard',
+      keyboardShortcuts: true,
+    };
+    expect(AppSettingsSchema.parse(old).hideSensitive).toBe(false);
+    expect(AppSettingsPatchSchema.parse({ hideSensitive: true })).toEqual({ hideSensitive: true });
+  });
+
   it('accepts partial updates', () => {
     expect(AppSettingsPatchSchema.parse({ theme: 'dark' })).toEqual({ theme: 'dark' });
     expect(AppSettingsPatchSchema.parse({})).toEqual({});

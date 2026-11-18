@@ -1,6 +1,7 @@
 import { ageOf } from '../core/clock';
 import { activeCharacter } from '../core/world';
 import { findClub } from '../education/catalog';
+import { civicTimeLines } from '../civics/time';
 import type { Character, Difficulty, World } from '../state/schema';
 
 /**
@@ -79,6 +80,8 @@ export function timeBudgetFor(world: World, c: Character): TimeBudget {
     const club = findClub(id);
     if (club) lines.push({ key: 'time.club', hours: -club.hours, params: { clubId: id } });
   }
+  // Milestone 6: service, office, campaigning, worship, community orders, custody.
+  lines.push(...civicTimeLines(world, c, baseFreeHours(age)));
   for (const item of world.calendar.items) {
     if (item.tick === world.tick && item.status === 'done' && item.kind === 'vacation') {
       lines.push({ key: 'time.vacation', hours: item.hours });

@@ -38,6 +38,8 @@ import {
   recordMonthSummary,
 } from './ledger';
 import { annualIncomeTax, payslip } from './tax';
+import { abroadAccounts, convertCurrency, exchange, localAccount, topUp } from './fx';
+import { coverageShare } from '../civics/status';
 
 /**
  * Household economy (spec §4 step 4; §3.9 Finance): wages, taxes, social contributions,
@@ -167,6 +169,40 @@ export function payerFor(
 }
 
 /**
+ * The accounts that pay in a given currency: the usual ones, or (for property or loans left
+ * in another country) an account kept abroad, first topped up with `needed` from home.
+ */
+export function payerIn(
+  world: World,
+  c: Character,
+  currency: string,
+  needed = 0n,
+): { ownerId: string; checkingId: string; savingsId: string | null } | null {
+  const base = payerFor(world, c);
+  if (!base) return null;
+  if (world.ledger.accounts[base.checkingId]?.currency === currency) return base;
+  const main = c.finance?.checkingId;
+  if (!main) return null;
+  const local = localAccount(world, c.id, currency);
+  if (needed > 0n && world.tick >= 0) topUp(world, c.id, main, local, needed);
+  return { ownerId: c.id, checkingId: local, savingsId: null };
+}
+
+/** Brings money left in accounts abroad back to the main current account. */
+export function sweepAbroad(world: World, c: Character): void {
+  const main = c.finance?.checkingId;
+  if (!main) return;
+  for (const account of abroadAccounts(world, c.id)) {
+    if (account.balance > 0n) exchange(world, c.id, account.id, main, account.balance);
+  }
+}
+
+/** Converts an amount into the character's home currency (for display and tax totals). */
+export function inHomeCurrency(world: World, c: Character, amount: bigint, from: string): bigint {
+  return convertCurrency(world, amount, from, currencyFor(c.countryCode));
+}
+
+/**
  * Pays an expense from checking, then savings; anything still unpaid becomes arrears
  * (a debt) rather than a negative balance.
  */
@@ -201,7 +237,8 @@ export function payExpense(
 
 function arrearsAccount(world: World, ownerId: string, cur: string): string {
   const existing = sortedValues(world.ledger.accounts).find(
-    (a) => a.ownerId === ownerId && a.type === 'arrears' && a.closedTick === null,
+    (a) =>
+      a.ownerId === ownerId && a.type === 'arrears' && a.closedTick === null && a.currency === cur,
   );
   return existing?.id ?? openAccount(world, ownerId, 'arrears', cur);
 }
@@ -230,19 +267,23 @@ export function receiveIncome(
 
 /** Pays down arrears from available cash first each month. */
 function settleArrears(world: World, payer: { ownerId: string; checkingId: string }): void {
+  const cur = world.ledger.accounts[payer.checkingId]?.currency;
   const arrears = sortedValues(world.ledger.accounts).find(
     (a) =>
       a.ownerId === payer.ownerId &&
       a.type === 'arrears' &&
       a.closedTick === null &&
+      a.currency === cur &&
       a.balance > 0n,
   );
   if (!arrears) return;
   const fee = divRound(arrears.balance, 100n);
-  const cur = arrears.currency;
   if (fee > 0n) {
     post(world, 'tx.lateFee', [
-      { accountId: categoryAccount(world, payer.ownerId, 'expense', 'fees', cur), debit: fee },
+      {
+        accountId: categoryAccount(world, payer.ownerId, 'expense', 'fees', arrears.currency),
+        debit: fee,
+      },
       { accountId: arrears.id, credit: fee },
     ]);
   }
@@ -438,7 +479,6 @@ export function rateFor(world: World, c: Character, product: 'personal' | 'stude
 /** Loans: interest accrues monthly; scheduled payments start at firstPaymentTick. */
 function processLoans(world: World, c: Character): void {
   if (!c.finance) return;
-  const payer = payerFor(world, c);
   for (const account of sortedValues(world.ledger.accounts)) {
     if (
       account.ownerId !== c.id ||
@@ -466,6 +506,7 @@ function processLoans(world: World, c: Character): void {
         { accountId: account.id, credit: interest },
       ]);
     }
+    const payer = payerIn(world, c, cur, minBig(account.loan.paymentMinor, account.balance));
     if (world.tick < account.loan.firstPaymentTick || !payer) continue;
     if (world.tick === account.loan.firstPaymentTick && account.loan.product === 'student') {
       account.loan.paymentMinor = amortisedPayment(
@@ -1157,9 +1198,16 @@ export function cancelInsurance(world: World, c: Character, policyId: string): v
 }
 
 /** Treatment costs after public coverage and private insurance (non-graphic health events). */
-export function payMedicalCost(world: World, c: Character, gross: bigint, source: string): bigint {
+/** What a patient pays after public coverage (residence-dependent) and insurance. */
+export function medicalDue(
+  world: World,
+  c: Character,
+  gross: bigint,
+  care: 'public' | 'private' = 'public',
+): bigint {
   const rules = getRules(c.countryCode).healthcare;
-  let coverage = rules.publicCoverage;
+  let coverage =
+    care === 'public' ? Math.floor((rules.publicCoverage * coverageShare(c)) / 100) : 0;
   const job = c.employmentId ? world.employment[c.employmentId] : undefined;
   if (rules.employerInsurance && job?.status === 'active' && job.terms.contract === 'permanent')
     coverage = Math.max(coverage, 80);
@@ -1168,6 +1216,17 @@ export function payMedicalCost(world: World, c: Character, gross: bigint, source
     (p) => p.holderId === c.id && p.type === 'health' && p.status === 'active',
   );
   if (insured) due = applyPercent(due, 20);
+  return due;
+}
+
+export function payMedicalCost(
+  world: World,
+  c: Character,
+  gross: bigint,
+  source: string,
+  care: 'public' | 'private' = 'public',
+): bigint {
+  const due = medicalDue(world, c, gross, care);
   const payer = payerFor(world, c);
   if (payer && due > 0n) payExpense(world, payer, 'medical', due, 'tx.medical', {}, source);
   return due;

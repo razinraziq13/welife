@@ -4,7 +4,7 @@ import { stageName } from '@engine/education/school';
 import { findCountry } from '@engine/world/countries';
 import type { Age } from '@engine/core/clock';
 import type { BiographyEntry, EducationStage, Notification, YearMonth } from '@engine/state/schema';
-import { t } from './en';
+import { t, en } from './en';
 
 const monthFormat = new Intl.DateTimeFormat('en', {
   month: 'long',
@@ -157,6 +157,26 @@ function enrich(params: Record<string, string | number>): Record<string, string 
   if (typeof params.kind === 'string') {
     out.kindName = t(`kindName.${params.kind}`);
   }
+  // Milestone 6 names.
+  const country2 = (v: unknown) =>
+    typeof v === 'string' && v.length === 2 ? countryName(v) : null;
+  if (country2(params.country)) out.countryName = country2(params.country) ?? '';
+  if (country2(params.from)) out.fromName = country2(params.from) ?? '';
+  if (country2(params.to)) out.toName = country2(params.to) ?? '';
+  if (typeof params.route === 'string') out.routeName = t(`route.${params.route}`).toLowerCase();
+  if (typeof params.lost === 'string')
+    out.lostNames = params.lost
+      .split(', ')
+      .filter((x) => x !== '')
+      .map((x) => countryName(x))
+      .join(', ');
+  if (typeof params.outcome === 'string') out.outcomeName = t(`outcome.${params.outcome}`);
+  if (typeof params.branch === 'string')
+    out.branchName = t(`branch.${params.branch}`).toLowerCase();
+  if (typeof params.from === 'string' && en[`religion.${params.from}`])
+    out.fromReligion = t(`religion.${params.from}`).toLowerCase();
+  if (typeof params.to === 'string' && en[`religion.${params.to}`])
+    out.toReligion = t(`religion.${params.to}`).toLowerCase();
   if (typeof params.product === 'string')
     out.productName = t(`loan.${params.product}`).toLowerCase();
   if (typeof params.size === 'string') out.sizeName = t(`homeSize.${params.size}`).toLowerCase();
