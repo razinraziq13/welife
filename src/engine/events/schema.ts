@@ -12,7 +12,7 @@ import { HABIT_KEYS, NEED_KEYS, SKILL_KEYS, STAT_KEYS } from '../state/schema';
  */
 
 const FACT_PATTERN =
-  /^(age\.(years|totalMonths)|month|isBirthMonth|stage|country|scenario|wealth|gender|difficulty|(stats|needs|skills|traits|habits)\.[a-zA-Z]+|flags\.[a-zA-Z0-9._-]+|school\.(stage|grade|final|private)|clubs\.[a-z-]+|job\.(employed|industry|level|performance|tenure)|money\.(savingsMonths|inDebt)|social\.(friends|partnered|married|children)|home\.own|memory\.[a-zA-Z0-9-]+|economy\.cycle)$/;
+  /^(age\.(years|totalMonths)|month|isBirthMonth|stage|country|scenario|wealth|gender|difficulty|(stats|needs|skills|traits|habits)\.[a-zA-Z]+|flags\.[a-zA-Z0-9._-]+|school\.(stage|grade|final|private)|clubs\.[a-z-]+|job\.(employed|industry|level|performance|tenure)|money\.(savingsMonths|inDebt)|social\.(friends|partnered|married|children)|home\.own|memory\.[a-zA-Z0-9-]+|economy\.cycle|business\.(count|types)|property\.(count|rentals))$/;
 
 export const FactSchema = z.string().regex(FACT_PATTERN, 'Unknown fact name');
 
@@ -98,6 +98,9 @@ export const EVENT_ACTIONS = [
   'interview.curious',
 ] as const;
 
+/** Events can be about one of the player's companies or properties (picked by the runtime). */
+export const EVENT_ASSETS = ['business', 'rentalProperty', 'property'] as const;
+
 export const EffectSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('stat'), key: z.enum(STAT_KEYS), delta: FixedDelta }).strict(),
   z.object({ kind: z.literal('need'), key: z.enum(NEED_KEYS), delta: FixedDelta }).strict(),
@@ -164,6 +167,23 @@ export const EffectSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('action'), action: z.enum(EVENT_ACTIONS) }).strict(),
   z
     .object({
+      kind: z.literal('businessCash'),
+      /** Percent of the company country's median monthly wage; negative is a cost. */
+      percent: z.number().int().min(-5000).max(5000),
+    })
+    .strict(),
+  z.object({ kind: z.literal('businessQuality'), delta: Small }).strict(),
+  z.object({ kind: z.literal('businessBrand'), delta: Small }).strict(),
+  z.object({ kind: z.literal('propertyCondition'), delta: FixedDelta }).strict(),
+  z
+    .object({
+      kind: z.literal('propertyCost'),
+      /** Repair cost, basis points of the property's value. */
+      valueBp: z.number().int().min(1).max(2000),
+    })
+    .strict(),
+  z
+    .object({
       kind: z.literal('schedule'),
       eventId: z.string().min(1).max(60),
       inMonths: z.number().int().min(1).max(240),
@@ -207,6 +227,8 @@ export const EVENT_CATEGORIES = [
   'work',
   'money',
   'romance',
+  'business',
+  'property',
 ] as const;
 
 export const EventDefinitionSchema = z
@@ -218,6 +240,7 @@ export const EventDefinitionSchema = z
     scheduledOnly: z.boolean(),
     when: PredicateSchema,
     subject: SubjectSchema.nullable(),
+    asset: z.enum(EVENT_ASSETS).nullable(),
     /** Base probability per eligible month, in parts per million. */
     chancePpm: z.number().int().min(0).max(1_000_000),
     multipliers: z
@@ -286,6 +309,16 @@ export const EventDefinitionSchema = z
         code: 'custom',
         path: ['subject'],
         message: 'Effects refer to a subject but the event has none.',
+      });
+    }
+    const needsAsset = allEffects.some(
+      (e) => e.kind.startsWith('business') || e.kind.startsWith('property'),
+    );
+    if (needsAsset && def.asset === null) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['asset'],
+        message: 'Effects refer to a company or property but the event has none.',
       });
     }
     if (def.subject && def.subject.minAge > def.subject.maxAge) {

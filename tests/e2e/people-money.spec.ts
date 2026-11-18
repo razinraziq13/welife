@@ -8,7 +8,11 @@ const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 async function expectAccessible(page: Page) {
   const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
-  expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+  expect(
+    results.violations.map(
+      (v) => `${v.id}: ${v.help} @ ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`,
+    ),
+  ).toEqual([]);
 }
 
 test('family, people, the family tree and the calendar work from birth (M3)', async ({ page }) => {
@@ -110,5 +114,58 @@ test.describe('an adult life', () => {
         .first(),
     ).toBeVisible();
     await expectAccessible(page);
+  });
+});
+
+test.describe('companies and property (M5)', () => {
+  test.describe.configure({ timeout: 120_000 });
+  let json = '';
+  test.beforeAll(async () => {
+    json = await adultSaveJson('e2e-tycoon');
+  });
+
+  test('start and run a company, buy property and invest; screens are accessible', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'tycoon.welife.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(json),
+    });
+    await expect(page).toHaveURL(/\/play\/[^/]+\/life$/);
+    const saveId = /\/play\/([^/]+)\//.exec(page.url())?.[1] ?? '';
+
+    await page.goto(`/play/${saveId}/business`);
+    await expect(page.getByRole('heading', { level: 1, name: 'Business' })).toBeVisible();
+    await expectAccessible(page);
+    await page.getByLabel('Kind of business').selectOption({ label: 'Consultancy' });
+    await page.getByLabel('Company name').fill('Robin Advisory');
+    await page.getByLabel(/^Your investment/).fill('200000');
+    await page.getByRole('button', { name: 'Start the company' }).click();
+    await expect(page.getByText('Robin Advisory is open for business.')).toBeVisible();
+    await page.getByRole('link', { name: /Robin Advisory/ }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Robin Advisory' })).toBeVisible();
+    await page.getByRole('button', { name: /^Hire one person at/ }).click();
+    await expect(page.getByText(/Staff set to/)).toBeVisible();
+    await expectAccessible(page);
+
+    // A month of trading produces an operating statement.
+    await page.getByTestId('advance-month').locator('visible=true').first().click();
+    const dialog = page.getByRole('dialog');
+    for (let i = 0; i < 3 && (await dialog.isVisible()); i++) {
+      await dialog.getByRole('group', { name: 'Choices' }).getByRole('button').first().click();
+    }
+    await expect(page.getByRole('table', { name: 'Operating statement' })).toBeVisible();
+
+    await page.goto(`/play/${saveId}/property`);
+    await expect(page.getByRole('heading', { level: 1, name: 'Property' })).toBeVisible();
+    await expectAccessible(page);
+
+    await page.goto(`/play/${saveId}/finance`);
+    await expect(page.getByRole('heading', { level: 2, name: 'Investments' })).toBeVisible();
+    await page.getByRole('textbox', { name: /^Invest [(]/ }).fill('500');
+    await page.getByRole('button', { name: 'Buy', exact: true }).click();
+    await expect(page.getByText('Investment bought.')).toBeVisible();
   });
 });

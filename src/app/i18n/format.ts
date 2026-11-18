@@ -154,6 +154,9 @@ function enrich(params: Record<string, string | number>): Record<string, string 
   if (typeof params.place === 'number') out.placeName = t(`place.${String(params.place)}`);
   if (typeof params.option === 'string') out.optionName = t(`vacation.${params.option}`);
   if (typeof params.type === 'string') out.typeName = t(`policy.${params.type}`).toLowerCase();
+  if (typeof params.kind === 'string') {
+    out.kindName = t(`kindName.${params.kind}`);
+  }
   if (typeof params.product === 'string')
     out.productName = t(`loan.${params.product}`).toLowerCase();
   if (typeof params.size === 'string') out.sizeName = t(`homeSize.${params.size}`).toLowerCase();

@@ -12,10 +12,11 @@ import { z } from 'zod';
  *
  * Version 2 (Milestones 3-4) adds NPC populations, memories, partnerships, education,
  * employment, the job market, the double-entry ledger, insurance, the country economy
- * and the calendar.
+ * and the calendar. Version 3 (Milestone 5) adds businesses, competitors, properties,
+ * the property market, investment funds, exchange rates and house prices.
  */
 
-export const WORLD_SCHEMA_VERSION = 2;
+export const WORLD_SCHEMA_VERSION = 3;
 
 export const STAT_KEYS = [
   'health',
@@ -123,6 +124,8 @@ export const NOTIFICATION_CATEGORIES = [
   'school',
   'work',
   'money',
+  'business',
+  'property',
   'system',
 ] as const;
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
@@ -138,6 +141,8 @@ export const NOTIFICATION_TARGETS = [
   'calendar',
   'person',
   'family',
+  'business',
+  'property',
 ] as const;
 
 export const BIOGRAPHY_CATEGORIES = [
@@ -151,6 +156,8 @@ export const BIOGRAPHY_CATEGORIES = [
   'school',
   'work',
   'money',
+  'business',
+  'property',
 ] as const;
 
 /** Relationship roles, always "what B is to A". Family roles come from family links. */
@@ -210,6 +217,9 @@ export const ACCOUNT_TYPES = [
   'checking',
   'savings',
   'retirement',
+  'investment',
+  'property',
+  'stake',
   'expense',
   'loan',
   'arrears',
@@ -453,6 +463,8 @@ export const HouseholdFinanceSchema = z
     homeSize: z.enum(HOME_SIZES),
     /** Monthly rent while renting (0 when owned). */
     rentMinor: NonNegativeMinor,
+    /** The owned property the household lives in (its upkeep is charged there). */
+    propertyId: Id.nullable(),
     /** Who manages the household's money (the player once they run their own home). */
     headId: Id,
   })
@@ -702,7 +714,7 @@ export type Employment = z.infer<typeof EmploymentSchema>;
 
 export const LoanTermsSchema = z
   .object({
-    product: z.enum(['personal', 'student']),
+    product: z.enum(['personal', 'student', 'mortgage', 'business']),
     /** Annual interest, basis points. */
     rateBp: z.number().int().min(0).max(10_000),
     termMonths: z.number().int().min(1).max(600),
@@ -799,6 +811,12 @@ export const EconomySchema = z
     inflationBp: z.number().int().min(-2000).max(5000),
     /** Price index 12 months ago (for the inflation figure). */
     priceIndexYearAgoBp: z.number().int().min(1000).max(10_000_000),
+    /** Currency value against its start level, basis points (simulated exchange rate, R5). */
+    fxIndexBp: z.number().int().min(100).max(1_000_000),
+    /** House prices against the start level, basis points. */
+    housePriceBp: z.number().int().min(500).max(10_000_000),
+    /** Bond fund index against the start level, basis points. */
+    bondIndexBp: z.number().int().min(500).max(10_000_000),
   })
   .strict();
 export type Economy = z.infer<typeof EconomySchema>;
@@ -843,6 +861,166 @@ export const ExpectingSchema = z
   .strict();
 export type Expecting = z.infer<typeof ExpectingSchema>;
 
+// ---------------------------------------------------------------------------------------
+// Businesses, property and investments (spec §4 Business, §6 Business/BusinessBranch/Property)
+// ---------------------------------------------------------------------------------------
+
+/** Ownership share in basis points; all owners of one asset add up to 10000 (spec §6). */
+export const OwnerShareSchema = z
+  .object({
+    ownerId: Id,
+    sharesBp: z.number().int().min(1).max(10_000),
+    /** The owner's ledger account holding the stake (null for owners not tracked in the ledger). */
+    stakeAccountId: Id.nullable(),
+  })
+  .strict();
+export type OwnerShare = z.infer<typeof OwnerShareSchema>;
+
+export const StatementSchema = z
+  .object({
+    tick: Tick,
+    unitsDemanded: z.number().int().min(0),
+    unitsSold: z.number().int().min(0),
+    revenue: Minor,
+    cogs: Minor,
+    wages: Minor,
+    rent: Minor,
+    marketing: Minor,
+    other: Minor,
+    operatingProfit: Minor,
+    interest: Minor,
+    tax: Minor,
+    netProfit: Minor,
+  })
+  .strict();
+export type Statement = z.infer<typeof StatementSchema>;
+
+export const BranchSchema = z
+  .object({
+    id: Id,
+    locationId: Id,
+    staff: z.number().int().min(0).max(500),
+    /** Monthly wage per member of staff, in the business's currency. */
+    wageMinor: NonNegativeMinor,
+    /** Price as a percentage of the local reference price. */
+    pricePercent: z.number().int().min(50).max(250),
+    /** Monthly premises rent, in the business's currency. */
+    rentMinor: NonNegativeMinor,
+    /** Goods kept in stock (goods businesses only). */
+    inventory: z.number().int().min(0),
+    /** Stock level restocked to each month. */
+    stockTarget: z.number().int().min(0),
+    openedTick: Tick,
+    lastDemand: z.number().int().min(0),
+    lastSold: z.number().int().min(0),
+  })
+  .strict();
+export type Branch = z.infer<typeof BranchSchema>;
+
+export const BusinessSchema = z
+  .object({
+    id: Id,
+    name: z.string().min(1).max(60),
+    typeId: z.string().max(40),
+    countryCode: z.string().length(2),
+    currency: z.string().length(3),
+    foundedTick: Tick,
+    status: z.enum(['active', 'sold', 'closed']),
+    owners: z.array(OwnerShareSchema).min(1).max(10),
+    cashAccountId: Id,
+    quality: Fixed,
+    brand: Fixed,
+    marketingMinor: NonNegativeMinor,
+    supplier: z.enum(['budget', 'standard', 'premium']),
+    manager: z.enum(['owner', 'hired']),
+    managerSkill: Fixed,
+    branches: z.array(BranchSchema).max(20),
+    statement: StatementSchema.nullable(),
+    history: z
+      .array(z.object({ tick: Tick, revenue: Minor, netProfit: Minor, cash: Minor }).strict())
+      .max(160),
+    /** Consecutive months the business could not pay its bills. */
+    distressMonths: z.number().int().min(0),
+    closedTick: Tick.nullable(),
+  })
+  .strict();
+export type Business = z.infer<typeof BusinessSchema>;
+
+/** Background competitors (aggregate firms the player competes with and can acquire). */
+export const CompetitorSchema = z
+  .object({
+    id: Id,
+    name: z.string().max(60),
+    typeId: z.string().max(40),
+    locationId: Id,
+    quality: Fixed,
+    brand: Fixed,
+    pricePercent: z.number().int().min(50).max(250),
+    /** Relative size (number of outlets). */
+    size: z.number().int().min(1).max(10),
+    status: z.enum(['active', 'closed', 'acquired']),
+    sinceTick: Tick,
+  })
+  .strict();
+export type Competitor = z.infer<typeof CompetitorSchema>;
+
+export const PROPERTY_KINDS = ['apartment', 'house', 'commercial'] as const;
+export type PropertyKind = (typeof PROPERTY_KINDS)[number];
+
+export const PropertySchema = z
+  .object({
+    id: Id,
+    locationId: Id,
+    kind: z.enum(PROPERTY_KINDS),
+    /** Current market value (revalued monthly; the owners' ledger follows it). */
+    valueMinor: NonNegativeMinor,
+    purchasePriceMinor: NonNegativeMinor,
+    purchaseTick: Tick,
+    owners: z.array(OwnerShareSchema).min(1).max(4),
+    mortgageAccountId: Id.nullable(),
+    condition: Fixed,
+    use: z.enum(['home', 'rental', 'vacant']),
+    /** Asking rent when letting. */
+    rentMinor: NonNegativeMinor,
+    tenant: z
+      .object({
+        name: z.string().max(80),
+        sinceTick: Tick,
+        leaseEndTick: Tick,
+        rentMinor: NonNegativeMinor,
+        missedPayments: z.number().int().min(0),
+      })
+      .strict()
+      .nullable(),
+    renovation: z
+      .object({ level: z.enum(['light', 'major']), endTick: Tick })
+      .strict()
+      .nullable(),
+    /** Value premium from renovations, basis points. */
+    premiumBp: z.number().int().min(0).max(5000),
+    /** Listed for sale since this tick. */
+    listedTick: Tick.nullable(),
+    status: z.enum(['owned', 'sold', 'repossessed']),
+  })
+  .strict();
+export type Property = z.infer<typeof PropertySchema>;
+
+export const ListingSchema = z
+  .object({
+    id: Id,
+    locationId: Id,
+    kind: z.enum(PROPERTY_KINDS),
+    askingMinor: NonNegativeMinor,
+    condition: Fixed,
+    listedTick: Tick,
+    expiresTick: Tick,
+  })
+  .strict();
+export type Listing = z.infer<typeof ListingSchema>;
+
+export const FUNDS = ['stocks', 'bonds'] as const;
+export type Fund = (typeof FUNDS)[number];
+
 export const RNG_STREAMS = [
   'creation',
   'genetics',
@@ -853,6 +1031,8 @@ export const RNG_STREAMS = [
   'school',
   'career',
   'economy',
+  'business',
+  'property',
 ] as const;
 export type RngStream = (typeof RNG_STREAMS)[number];
 
@@ -925,6 +1105,10 @@ export const WorldSchema = z
       })
       .strict(),
     expecting: z.array(ExpectingSchema).max(10),
+    businesses: z.record(Id, BusinessSchema),
+    competitors: z.record(Id, CompetitorSchema),
+    properties: z.record(Id, PropertySchema),
+    propertyListings: z.record(Id, ListingSchema),
     notifications: z.array(NotificationSchema),
     biography: z.array(BiographyEntrySchema),
     /** Recently applied command ids (bounded); prevents double application. */

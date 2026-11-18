@@ -3,6 +3,7 @@
  * parameters, resolved here, so the game is ready for other languages (spec §1, P-10).
  * Event texts live with their event definitions (`text.en`).
  */
+import { enEnterprise } from './en-enterprise';
 import { enLife } from './en-life';
 
 const base: Record<string, string> = {
@@ -174,7 +175,7 @@ const base: Record<string, string> = {
   'widget.country': 'Where you live',
 };
 
-export const en: Record<string, string> = { ...base, ...enLife };
+export const en: Record<string, string> = { ...base, ...enLife, ...enEnterprise };
 
 /** Resolves a key with `{param}` placeholders. Unknown keys fall back to the key itself. */
 export function t(key: string, params: Record<string, string | number> = {}): string {

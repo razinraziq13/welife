@@ -110,6 +110,7 @@ export function trackHousehold(world: World, household: Household, headId: strin
     housing: owned ? 'owned' : 'rented',
     homeSize: size,
     rentMinor: owned ? 0n : rentFor(world, household.locationId, size),
+    propertyId: null,
     headId,
   };
   const median = medianWage(world, head.countryCode);
@@ -549,8 +550,13 @@ function growAccounts(
             credit: interest,
           },
         ]);
-    } else if (account.type === 'retirement' && market) {
-      const change = applyBp(account.balance, market.returnBp);
+    } else if ((account.type === 'retirement' || account.type === 'investment') && market) {
+      const change = applyBp(
+        account.balance,
+        account.type === 'investment' && account.category === 'bonds'
+          ? market.bondReturnBp
+          : market.returnBp,
+      );
       if (change > 0n)
         post(world, 'tx.fundReturn', [
           { accountId: account.id, debit: change },
@@ -658,7 +664,8 @@ function householdExpenses(world: World, h: Household): void {
   payExpense(world, payer, 'living', livingCosts(world, h), 'tx.living');
   if (h.finance.housing === 'rented')
     payExpense(world, payer, 'rent', h.finance.rentMinor, 'tx.rent');
-  else {
+  else if (h.finance.propertyId === null) {
+    // A family home outside the property system; owned properties pay their own upkeep.
     const { country, location } = getLocation(h.locationId);
     payExpense(
       world,
@@ -732,16 +739,26 @@ function playerAtHome(world: World, c: Character, h: Household): void {
   const payer = { ownerId: c.id, checkingId: c.finance.checkingId, savingsId: c.finance.savingsId };
   const { location } = getLocation(c.locationId);
   const median = medianWage(world, c.countryCode);
-  payExpense(
-    world,
-    payer,
-    'personal',
-    applyPercent(
-      applyPercent(applyPercent(median, 15), location.costIndex),
-      LIFESTYLE_PERCENT[h.finance.lifestyle],
-    ),
-    'tx.personal',
+  const spending = applyPercent(
+    applyPercent(applyPercent(median, 15), location.costIndex),
+    LIFESTYLE_PERCENT[h.finance.lifestyle],
   );
+  // The player pays what they can; the family covers the rest (no debt for a young adult
+  // living at home without an income).
+  const own = minBig(
+    spending,
+    maxBig(0n, balanceOf(world, c.finance.checkingId)) +
+      maxBig(0n, balanceOf(world, c.finance.savingsId)),
+  );
+  if (own > 0n) payExpense(world, payer, 'personal', own, 'tx.personal');
+  if (spending > own) {
+    const family = {
+      ownerId: h.id,
+      checkingId: h.finance.checkingId,
+      savingsId: h.finance.savingsId,
+    };
+    payExpense(world, family, 'personal', spending - own, 'tx.familyCovers');
+  }
   const e = c.employmentId ? world.employment[c.employmentId] : undefined;
   if (e?.status === 'active') {
     const board = applyPercent(e.salaryMinor, 12);
@@ -1227,6 +1244,7 @@ export function moveOut(world: World, c: Character, size: HomeSize): Household {
       housing: 'rented',
       homeSize: size,
       rentMinor: rent,
+      propertyId: null,
       headId: c.id,
     },
   };

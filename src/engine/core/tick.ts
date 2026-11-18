@@ -12,7 +12,14 @@ import {
 import { advanceEconomies } from '../economy/economy';
 import { processFinances, rescheduleStudentLoan } from '../economy/finance';
 import { processEducation } from '../education/school';
-import { pruneEventInstances, resolveChoice, runMonthlyEvents } from '../events/runtime';
+import { processBusinesses } from '../business/business';
+import { processProperties } from '../property/property';
+import {
+  fireNextDueDecision,
+  pruneEventInstances,
+  resolveChoice,
+  runMonthlyEvents,
+} from '../events/runtime';
 import { playerFamilyPlanning, processExpecting, processNpcFamilies } from '../social/family';
 import { decayMemories } from '../social/memories';
 import { enforcePopulation, rebalancePopulation } from '../social/population';
@@ -25,7 +32,8 @@ import type { World } from '../state/schema';
  *  2  scheduled commitments: recurring activity plans for the month that is ending
  *  3  advance the clock exactly once; birthdays and life stages
  *  4  economy, then household money: wages, taxes, benefits, costs, loans, insurance
- *  5  businesses and property (Milestone 5)
+ *  5  companies (sales, payroll, costs, tax, competition), property (value, upkeep,
+ *     tenants, sales), investment prices
  *  6  education, characters (needs, energy, stress, health, habits), work, calendar items
  *  7  NPC lives (partners, children, careers), births, mortality
  *  8  relationships and memories; job market; population tiers
@@ -88,6 +96,10 @@ export function advanceMonth(committed: World): AdvanceResult {
   const markets = advanceEconomies(world);
   processFinances(world, markets);
 
+  // 5. Companies, then property and the property market.
+  processBusinesses(world);
+  processProperties(world);
+
   // 6. Education, characters, work, calendar.
   processEducation(world);
   updateCharactersMonthly(world);
@@ -121,7 +133,10 @@ export function advanceMonth(committed: World): AdvanceResult {
   return { kind: 'committed', world, report };
 }
 
-/** Completes a pending month with the player's choice (steps 10-11). */
+/**
+ * Completes a pending month with the player's choice (steps 10-11). If another decision is
+ * due the same month, the returned world is still pending (pendingInstanceId is set).
+ */
 export function completePendingMonth(
   intermediate: World,
   instanceId: string,
@@ -129,6 +144,7 @@ export function completePendingMonth(
 ): World {
   const world = deepClone(intermediate);
   resolveChoice(world, instanceId, choiceId);
+  fireNextDueDecision(world);
   trimNotifications(world);
   assertInvariants(world);
   return world;

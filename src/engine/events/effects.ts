@@ -1,5 +1,6 @@
 import { clamp } from '../core/data';
-import { applyPercent } from '../core/money';
+import { applyBp, applyPercent } from '../core/money';
+import { revalueStakes } from '../business/business';
 import { nextId, withRng } from '../core/world';
 import { changeHabit, changeNeed, changeSkill, changeStat } from '../characters/stats';
 import { resolveInterview } from '../career/jobs';
@@ -149,6 +150,62 @@ export function applyEffects(
         const applicationId = ctx.context.applicationId;
         if (kind === 'interview' && typeof applicationId === 'string' && style)
           resolveInterview(world, applicationId, style);
+        break;
+      }
+      case 'businessCash': {
+        const business =
+          typeof ctx.context.businessId === 'string'
+            ? world.businesses[ctx.context.businessId]
+            : undefined;
+        if (business?.status !== 'active') break;
+        const amount = applyPercent(
+          medianWage(world, business.countryCode),
+          Math.abs(effect.percent),
+        );
+        if (amount === 0n) break;
+        const payer = { ownerId: business.id, checkingId: business.cashAccountId, savingsId: null };
+        if (effect.percent > 0)
+          receiveIncome(world, business.id, business.cashAccountId, 'other', amount, 'tx.event', {
+            cause,
+          });
+        else payExpense(world, payer, 'other', amount, 'tx.event', { cause }, sourceInstanceId);
+        revalueStakes(world, business);
+        break;
+      }
+      case 'businessQuality':
+      case 'businessBrand': {
+        const business =
+          typeof ctx.context.businessId === 'string'
+            ? world.businesses[ctx.context.businessId]
+            : undefined;
+        if (business?.status !== 'active') break;
+        if (effect.kind === 'businessQuality')
+          business.quality = clamp(business.quality + effect.delta * 10, 0, 1000);
+        else business.brand = clamp(business.brand + effect.delta * 10, 0, 1000);
+        break;
+      }
+      case 'propertyCondition':
+      case 'propertyCost': {
+        const property =
+          typeof ctx.context.propertyId === 'string'
+            ? world.properties[ctx.context.propertyId]
+            : undefined;
+        if (property?.status !== 'owned') break;
+        if (effect.kind === 'propertyCondition')
+          property.condition = clamp(property.condition + effect.delta, 0, 1000);
+        else {
+          const payer = payerFor(world, character);
+          if (payer)
+            payExpense(
+              world,
+              payer,
+              'repairs',
+              applyBp(property.valueMinor, effect.valueBp),
+              'tx.propertyRepair',
+              {},
+              sourceInstanceId,
+            );
+        }
         break;
       }
       case 'schedule': {

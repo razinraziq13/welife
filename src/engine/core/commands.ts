@@ -44,6 +44,36 @@ import {
   respondToStudyOffer,
 } from '../education/school';
 import { ChoiceError } from '../events/runtime';
+import {
+  BusinessError,
+  acquireCompetitor,
+  closeBranch,
+  closeOwnBusiness,
+  investInBusiness,
+  openBranch,
+  payDividend,
+  raiseInvestment,
+  repayBusinessLoan,
+  sellBusiness,
+  setManager,
+  setMarketing,
+  setPrice,
+  setStaff,
+  setStockTarget,
+  setSupplier,
+  startBusiness,
+  takeBusinessLoan,
+} from '../business/business';
+import { InvestmentError, buyFund, sellFund } from '../economy/investments';
+import {
+  PropertyError,
+  buyProperty,
+  letProperty,
+  listForSale,
+  moveIntoProperty,
+  renovate,
+  stopLetting,
+} from '../property/property';
 import { familyHomeFor } from '../social/family';
 import { enforcePopulation } from '../social/population';
 import {
@@ -55,6 +85,7 @@ import {
 } from '../social/interactions';
 import {
   DIFFICULTIES,
+  FUNDS,
   HOME_SIZES,
   LIFESTYLES,
   STUDY_EFFORTS,
@@ -134,6 +165,68 @@ export const CommandSchema = z.discriminatedUnion('type', [
   command('setPension', { bp: z.number().int().min(0).max(3000) }),
   command('moveOut', { size: z.enum(HOME_SIZES) }),
   command('moveHome', {}),
+  // Companies (Milestone 5)
+  command('startBusiness', {
+    typeId: z.string().min(1).max(40),
+    locationId: EntityId,
+    name: z.string().trim().min(1).max(60),
+    capitalMinor: AmountMinor,
+  }),
+  command('openBranch', { businessId: EntityId, locationId: EntityId }),
+  command('closeBranch', { businessId: EntityId, branchId: EntityId }),
+  command('setStaff', {
+    businessId: EntityId,
+    branchId: EntityId,
+    staff: z.number().int().min(0).max(500),
+  }),
+  command('setPrice', {
+    businessId: EntityId,
+    branchId: EntityId,
+    pricePercent: z.number().int().min(50).max(250),
+  }),
+  command('setStock', {
+    businessId: EntityId,
+    branchId: EntityId,
+    units: z.number().int().min(0).max(1_000_000),
+  }),
+  command('setMarketing', {
+    businessId: EntityId,
+    amountMinor: z.union([AmountMinor, z.literal('0')]),
+  }),
+  command('setSupplier', {
+    businessId: EntityId,
+    supplier: z.enum(['budget', 'standard', 'premium']),
+  }),
+  command('setManager', { businessId: EntityId, manager: z.enum(['owner', 'hired']) }),
+  command('investBusiness', { businessId: EntityId, amountMinor: AmountMinor }),
+  command('payDividend', { businessId: EntityId, amountMinor: AmountMinor }),
+  command('raiseInvestment', { businessId: EntityId, percent: z.number().int().min(5).max(49) }),
+  command('sellBusiness', { businessId: EntityId }),
+  command('closeBusiness', { businessId: EntityId }),
+  command('acquireCompetitor', { businessId: EntityId, competitorId: EntityId }),
+  command('businessLoan', {
+    businessId: EntityId,
+    amountMinor: AmountMinor,
+    termMonths: z.number().int().min(6).max(120),
+  }),
+  command('repayBusinessLoan', {
+    businessId: EntityId,
+    loanId: EntityId,
+    amountMinor: AmountMinor,
+  }),
+  // Property and investments (Milestone 5)
+  command('buyProperty', {
+    listingId: EntityId,
+    depositMinor: AmountMinor,
+    termMonths: z.number().int().min(60).max(360),
+  }),
+  command('moveIntoProperty', { propertyId: EntityId }),
+  command('letProperty', { propertyId: EntityId, rentMinor: AmountMinor }),
+  command('stopLetting', { propertyId: EntityId }),
+  command('renovate', { propertyId: EntityId, level: z.enum(['light', 'major']) }),
+  command('listProperty', { propertyId: EntityId, list: z.boolean() }),
+  command('buyFund', { fund: z.enum(FUNDS), amountMinor: AmountMinor }),
+  command('sellFund', { fund: z.enum(FUNDS), amountMinor: AmountMinor }),
 ]);
 export type Command = z.infer<typeof CommandSchema>;
 
@@ -158,6 +251,8 @@ export type CommandOutcome =
   | { status: 'applied'; kind: 'advanced'; report: TickReport }
   | { status: 'applied'; kind: 'pending'; report: TickReport; instanceId: string }
   | { status: 'applied'; kind: 'chosen' }
+  /** A decision was made and another one is due in the same month. */
+  | { status: 'applied'; kind: 'chainedChoice'; instanceId: string }
   | { status: 'applied'; kind: 'acted'; activity: ActivityResult }
   | { status: 'applied'; kind: 'rule' }
   | { status: 'applied'; kind: 'read'; count: number }
@@ -317,6 +412,92 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
       moveHome(world, player, family);
       return done('out.movedHome');
     }
+    case 'startBusiness': {
+      const business = startBusiness(world, player, {
+        typeId: cmd.typeId,
+        locationId: cmd.locationId,
+        name: cmd.name,
+        capitalMinor: BigInt(cmd.capitalMinor),
+      });
+      return done('out.businessStarted', { business: business.name, businessId: business.id });
+    }
+    case 'openBranch':
+      openBranch(world, player, cmd.businessId, cmd.locationId);
+      return done('out.branchOpened');
+    case 'closeBranch':
+      closeBranch(world, player, cmd.businessId, cmd.branchId);
+      return done('out.branchClosed');
+    case 'setStaff':
+      setStaff(world, player, cmd.businessId, cmd.branchId, cmd.staff);
+      return done('out.staffSet', { staff: cmd.staff });
+    case 'setPrice':
+      setPrice(world, player, cmd.businessId, cmd.branchId, cmd.pricePercent);
+      return done('out.priceSet', { percent: cmd.pricePercent });
+    case 'setStock':
+      setStockTarget(world, player, cmd.businessId, cmd.branchId, cmd.units);
+      return done('out.stockSet', { units: cmd.units });
+    case 'setMarketing':
+      setMarketing(world, player, cmd.businessId, BigInt(cmd.amountMinor));
+      return done('out.marketingSet');
+    case 'setSupplier':
+      setSupplier(world, player, cmd.businessId, cmd.supplier);
+      return done('out.supplierSet', { supplier: cmd.supplier });
+    case 'setManager':
+      setManager(world, player, cmd.businessId, cmd.manager);
+      return done(cmd.manager === 'hired' ? 'out.managerHired' : 'out.managerSelf');
+    case 'investBusiness':
+      investInBusiness(world, player, cmd.businessId, BigInt(cmd.amountMinor));
+      return done('out.businessInvested');
+    case 'payDividend':
+      payDividend(world, player, cmd.businessId, BigInt(cmd.amountMinor));
+      return done('out.dividendPaid');
+    case 'raiseInvestment': {
+      const investor = raiseInvestment(world, player, cmd.businessId, cmd.percent);
+      return done('out.investmentRaised', {
+        name: investor.identity.firstName,
+        percent: cmd.percent,
+      });
+    }
+    case 'sellBusiness': {
+      const price = sellBusiness(world, player, cmd.businessId);
+      return done('out.businessSold', { amount: price.toString() });
+    }
+    case 'closeBusiness':
+      closeOwnBusiness(world, player, cmd.businessId);
+      return done('out.businessClosed');
+    case 'acquireCompetitor':
+      acquireCompetitor(world, player, cmd.businessId, cmd.competitorId);
+      return done('out.acquired');
+    case 'businessLoan':
+      takeBusinessLoan(world, player, cmd.businessId, BigInt(cmd.amountMinor), cmd.termMonths);
+      return done('out.loanTaken');
+    case 'repayBusinessLoan':
+      repayBusinessLoan(world, player, cmd.businessId, cmd.loanId, BigInt(cmd.amountMinor));
+      return done('out.loanRepaid');
+    case 'buyProperty':
+      buyProperty(world, player, cmd.listingId, BigInt(cmd.depositMinor), cmd.termMonths);
+      return done('out.propertyBought');
+    case 'moveIntoProperty':
+      moveIntoProperty(world, player, cmd.propertyId);
+      return done('out.movedIntoProperty');
+    case 'letProperty':
+      letProperty(world, player, cmd.propertyId, BigInt(cmd.rentMinor));
+      return done('out.propertyLet');
+    case 'stopLetting':
+      stopLetting(world, player, cmd.propertyId);
+      return done('out.stoppedLetting');
+    case 'renovate':
+      renovate(world, player, cmd.propertyId, cmd.level);
+      return done('out.renovationStarted', { level: cmd.level });
+    case 'listProperty':
+      listForSale(world, player, cmd.propertyId, cmd.list);
+      return done(cmd.list ? 'out.propertyListed' : 'out.propertyUnlisted');
+    case 'buyFund':
+      buyFund(world, player, cmd.fund, BigInt(cmd.amountMinor));
+      return done('out.fundBought', { fund: cmd.fund });
+    case 'sellFund':
+      sellFund(world, player, cmd.fund, BigInt(cmd.amountMinor));
+      return done('out.fundSold', { fund: cmd.fund });
     default:
       throw new Ineligible('Unknown action.');
   }
@@ -330,6 +511,9 @@ const DOMAIN_ERRORS = [
   LedgerError,
   InteractionError,
   CalendarError,
+  BusinessError,
+  PropertyError,
+  InvestmentError,
 ];
 
 /**
@@ -348,6 +532,14 @@ export function execute(
     try {
       const world = completePendingMonth(state.pending, command.instanceId, command.choiceId);
       rememberCommand(world, command.id);
+      const next = world.events.pendingInstanceId;
+      if (next !== null) {
+        // Another decision is due this month: the month stays uncommitted until it is made.
+        return {
+          state: { world: state.world, pending: world },
+          outcome: { status: 'applied', kind: 'chainedChoice', instanceId: next },
+        };
+      }
       return { state: { world, pending: null }, outcome: { status: 'applied', kind: 'chosen' } };
     } catch (error) {
       if (error instanceof ChoiceError) return reject(state, 'invalidChoice', error.message);

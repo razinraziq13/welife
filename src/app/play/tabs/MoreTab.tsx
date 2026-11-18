@@ -1,7 +1,9 @@
 import { Link } from 'react-router';
 import {
   Bell,
+  Building2,
   CalendarDays,
+  Home,
   ChevronRight,
   GitBranch,
   LogOut,
@@ -31,6 +33,18 @@ export function MoreTab() {
       label: 'Calendar',
       desc: 'Your month, recurring plans, bookings and the year ahead',
       icon: CalendarDays,
+    },
+    {
+      to: `${base}/business`,
+      label: 'Business',
+      desc: 'Start, run, grow and sell companies',
+      icon: Building2,
+    },
+    {
+      to: `${base}/property`,
+      label: 'Property',
+      desc: 'Buy, let, renovate and sell homes and premises',
+      icon: Home,
     },
     {
       to: `${base}/family`,

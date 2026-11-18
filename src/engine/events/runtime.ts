@@ -4,6 +4,7 @@ import { addBiography, addNotification, activeCharacter, nextId, withRng } from 
 import { EVENTS, getEvent } from '../content';
 import { holdersOf } from '../social/memories';
 import { FAMILY_TYPES, kinship } from '../social/relationships';
+import { getLocation } from '../world/countries';
 import type {
   BiographyEntry,
   Character,
@@ -106,7 +107,47 @@ export function isEligible(def: EventDefinition, world: World): boolean {
   if (last !== undefined && def.cooldownMonths > 0 && world.tick - last < def.cooldownMonths)
     return false;
   if (!evaluate(def.when, world, activeCharacter(world))) return false;
+  if (def.asset !== null && assetCandidates(world, def.asset).length === 0) return false;
   return def.subject === null || subjectCandidates(world, def.subject).length > 0;
+}
+
+/** The player's companies or properties an event could be about, in id order. */
+export function assetCandidates(
+  world: World,
+  asset: NonNullable<EventDefinition['asset']>,
+): { id: string; name: string }[] {
+  const player = world.activeCharacterId;
+  if (asset === 'business') {
+    return sortedValues(world.businesses)
+      .filter((b) => b.status === 'active' && b.owners.some((o) => o.ownerId === player))
+      .map((b) => ({ id: b.id, name: b.name }));
+  }
+  return sortedValues(world.properties)
+    .filter(
+      (p) =>
+        p.status === 'owned' &&
+        p.owners.some((o) => o.ownerId === player) &&
+        (asset === 'property' || p.tenant !== null),
+    )
+    .map((p) => ({ id: p.id, name: getLocation(p.locationId).location.name }));
+}
+
+/** Adds the chosen company or property to an event's context (or null if none). */
+function pickAsset(
+  world: World,
+  def: EventDefinition,
+  context: EventInstance['context'],
+): EventInstance['context'] | null {
+  if (def.asset === null) return context;
+  const candidates = assetCandidates(world, def.asset);
+  // A follow-up stays about the same company or property while it is still yours.
+  const kept = def.asset === 'business' ? context.businessId : context.propertyId;
+  if (typeof kept === 'string' && candidates.some((c) => c.id === kept)) return context;
+  if (candidates.length === 0) return null;
+  const chosen = withRng(world, 'events', (rng) => rng.pick(candidates));
+  return def.asset === 'business'
+    ? { ...context, businessId: chosen.id, business: chosen.name }
+    : { ...context, propertyId: chosen.id, property: chosen.name };
 }
 
 function pickSubject(world: World, def: EventDefinition, preferred: string | null): string | null {
@@ -207,24 +248,18 @@ export function runMonthlyEvents(world: World): string | null {
     .sort((a, b) => a.dueTick - b.dueTick || (a.id < b.id ? -1 : 1));
   for (const consequence of due) {
     const def = getEvent(consequence.eventId);
-    if (def.choices.length > 0 && pending !== null) {
-      consequence.dueTick = world.tick + 1; // defer: one decision per month
-      continue;
-    }
+    // Decisions come one at a time; the next due one follows when this one is answered.
+    if (def.choices.length > 0 && pending !== null) continue;
     world.events.scheduled = world.events.scheduled.filter((s) => s.id !== consequence.id);
     const subjectId = pickSubject(world, def, consequence.subjectId);
     if (def.subject && subjectId === null) continue; // the person is gone: the follow-up lapses
+    const scheduledContext = pickAsset(world, def, consequence.context);
+    if (scheduledContext === null) continue;
     if (def.exclusiveGroup !== null) groups.add(def.exclusiveGroup);
     if (def.choices.length > 0)
-      pending = firePending(
-        world,
-        def,
-        consequence.sourceInstanceId,
-        subjectId,
-        consequence.context,
-      );
+      pending = firePending(world, def, consequence.sourceInstanceId, subjectId, scheduledContext);
     else {
-      fireAutomatic(world, def, consequence.sourceInstanceId, subjectId, consequence.context);
+      fireAutomatic(world, def, consequence.sourceInstanceId, subjectId, scheduledContext);
       automatic += 1;
     }
   }
@@ -246,14 +281,37 @@ export function runMonthlyEvents(world: World): string | null {
     if (!fires) continue;
     const subjectId = pickSubject(world, def, null);
     if (def.subject && subjectId === null) continue;
+    const context = pickAsset(world, def, {});
+    if (context === null) continue;
     if (def.exclusiveGroup !== null) groups.add(def.exclusiveGroup);
-    if (hasChoices) pending = firePending(world, def, null, subjectId, {});
+    if (hasChoices) pending = firePending(world, def, null, subjectId, context);
     else {
-      fireAutomatic(world, def, null, subjectId, {});
+      fireAutomatic(world, def, null, subjectId, context);
       automatic += 1;
     }
   }
   return pending;
+}
+
+/**
+ * After a decision is answered, the next scheduled decision due this month (e.g. a second
+ * job interview) becomes the waiting decision, so the month still commits only once.
+ */
+export function fireNextDueDecision(world: World): string | null {
+  const due = world.events.scheduled
+    .filter((s) => s.dueTick <= world.tick && s.characterId === world.activeCharacterId)
+    .sort((a, b) => a.dueTick - b.dueTick || (a.id < b.id ? -1 : 1));
+  for (const consequence of due) {
+    const def = getEvent(consequence.eventId);
+    if (def.choices.length === 0) continue;
+    world.events.scheduled = world.events.scheduled.filter((s) => s.id !== consequence.id);
+    const subjectId = pickSubject(world, def, consequence.subjectId);
+    if (def.subject && subjectId === null) continue;
+    const context = pickAsset(world, def, consequence.context);
+    if (context === null) continue;
+    return firePending(world, def, consequence.sourceInstanceId, subjectId, context);
+  }
+  return null;
 }
 
 export class ChoiceError extends Error {

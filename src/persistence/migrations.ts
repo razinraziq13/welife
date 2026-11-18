@@ -1,17 +1,20 @@
 import { WORLD_SCHEMA_VERSION } from '@engine/state/schema';
-import { upgradeWorldV1 } from '@engine/state/upgrade';
+import { upgradeWorldV1, upgradeWorldV2 } from '@engine/state/upgrade';
 
 /**
  * Forward migrations for stored worlds and export bundles (spec §5 "migrate older versions").
  * Each entry upgrades from version N to N+1:
  * - 1 -> 2 (Milestones 3-4): people, education, work, money and calendar systems are added
  *   deterministically (`@engine/state/upgrade`); existing history and status are kept.
+ * - 2 -> 3 (Milestone 5): companies, competitors, properties and new market indices start
+ *   empty or at their start level.
  */
 
 type Migration = (input: Record<string, unknown>) => Record<string, unknown>;
 
 const WORLD_MIGRATIONS: Record<number, Migration> = {
   1: upgradeWorldV1,
+  2: upgradeWorldV2,
 };
 
 export class MigrationError extends Error {

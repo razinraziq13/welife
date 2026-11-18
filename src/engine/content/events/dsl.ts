@@ -16,6 +16,7 @@ export function define(input: EventInput): EventDefinition {
     version: 1,
     scheduledOnly: false,
     subject: null,
+    asset: null,
     chancePpm: 0,
     multipliers: [],
     cooldownMonths: 0,

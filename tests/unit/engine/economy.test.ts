@@ -7,7 +7,7 @@ import { endEmployment } from '@engine/career/jobs';
 import { checkLedger, monthTotals, netWorthOf } from '@engine/economy/ledger';
 import { payMedicalCost } from '@engine/economy/finance';
 import { medianWage } from '@engine/economy/economy';
-import { upgradeWorldV1 } from '@engine/state/upgrade';
+import { upgradeWorldV1, upgradeWorldV2 } from '@engine/state/upgrade';
 import { execute, type SimState } from '@engine/core/commands';
 import { canonicalJson } from '@engine/core/data';
 import fixture from '../../fixtures/world-v1.json';
@@ -82,10 +82,13 @@ function settleChecked(state: SimState, prefer?: (id: string) => string | null):
       instanceId,
       choiceId: choice ?? firstChoice(def),
     });
-    // Choosing commits the pending month: compare with the month-start world.
-    const ids = [...new Set([...owners(before), ...owners(result.state.world)])];
-    const change = netWorth(result.state.world, ids) - netWorth(before, ids);
-    expect(change).toBe(net(result.state.world, ids));
+    // The last choice of the month commits it: compare with the month-start world. (If
+    // another decision is due the same month, nothing is committed yet.)
+    if (!result.state.pending) {
+      const ids = [...new Set([...owners(before), ...owners(result.state.world)])];
+      const change = netWorth(result.state.world, ids) - netWorth(before, ids);
+      expect(change).toBe(net(result.state.world, ids));
+    }
     current = result.state;
   }
   return current;
@@ -220,11 +223,11 @@ describe('careers and the household economy reconcile (M4 exit)', () => {
   }, 120_000);
 });
 
-describe('older saves are upgraded (schema 1 -> 2)', () => {
+describe('older saves are upgraded (schema 1 -> 2 -> 3)', () => {
   const raw = (fixture as { world: Record<string, unknown> }).world;
 
   it('the real Milestone 2 world upgrades into a valid world, keeping history and status', () => {
-    const upgraded = upgradeWorldV1(structuredClone(raw)) as World;
+    const upgraded = upgradeWorldV2(upgradeWorldV1(structuredClone(raw))) as World;
     const parsed = WorldSchema.safeParse(upgraded);
     expect(parsed.success).toBe(true);
     expect(checkInvariants(upgraded)).toEqual([]);
@@ -241,8 +244,8 @@ describe('older saves are upgraded (schema 1 -> 2)', () => {
   });
 
   it('is deterministic and the upgraded life plays on', () => {
-    const a = upgradeWorldV1(structuredClone(raw));
-    const b = upgradeWorldV1(structuredClone(raw));
+    const a = upgradeWorldV2(upgradeWorldV1(structuredClone(raw)));
+    const b = upgradeWorldV2(upgradeWorldV1(structuredClone(raw)));
     expect(canonicalJson(a)).toBe(canonicalJson(b));
     const state = advanceMonths({ world: a as World, pending: null }, 24);
     expect(state.world.tick).toBe((a as World).tick + 24);

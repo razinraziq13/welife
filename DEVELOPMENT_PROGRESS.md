@@ -1,8 +1,3 @@
-| M4 Careers and household economy | **Complete, awaiting review** | `milestone-3-4` |
-| M3 Social, childhood, education | **Complete, awaiting review** | `milestone-3-4` |
-| M2 New Life and character | Complete (commit 26ffa4e) | `milestone-1-2` |
-| M1 Deterministic core | Complete (commit 26ffa4e) | `milestone-1-2` |
-
 # WeLife — Development Progress
 
 Spec: `WeLife_Claude_Development_Specification.md` v1.0 · Decisions: [docs/DECISIONS.md](docs/DECISIONS.md) ·
@@ -11,15 +6,66 @@ Requirement map: [docs/TRACEABILITY.md](docs/TRACEABILITY.md)
 | Milestone                        | Status                        | Branch          |
 | -------------------------------- | ----------------------------- | --------------- |
 | M0 Repository and architecture   | Complete (commit e6ea3ee)     | `milestone-0`   |
-| M1 Deterministic core            | **Complete, awaiting review** | `milestone-1-2` |
-| M2 New Life and character        | **Complete, awaiting review** | `milestone-1-2` |
-| M3 Social, childhood, education  | Not started                   | —               |
-| M4 Careers and household economy | Not started                   | —               |
-| M5 Business and real estate      | Not started                   | —               |
+| M1 Deterministic core            | Complete (commit 26ffa4e)     | `milestone-1-2` |
+| M2 New Life and character        | Complete (commit 26ffa4e)     | `milestone-1-2` |
+| M3 Social, childhood, education  | Complete (commit 98e24fb)     | `milestone-3-4` |
+| M4 Careers and household economy | Complete (commit 98e24fb)     | `milestone-3-4` |
+| M5 Business and real estate      | **Complete, awaiting review** | `milestone-5`   |
 | M6 Global institutions           | Not started                   | —               |
 | M7 Media, legacy, narrative      | Not started                   | —               |
 | M8 Event editor and content      | Not started                   | —               |
 | M9 Integration, balance, release | Not started                   | —               |
+
+---
+
+## Milestone 5: Business and real estate
+
+Built on branch `milestone-5` (from `milestone-3-4`) at the user's request ("Start Milestone 5").
+
+**Exit criterion (spec §9): multi-company monthly accounting and ownership invariants pass. Met** (`enterprise.test.ts`: three companies, one with a branch in Singapore, run for 24 months through price, staff, stock, supplier, manager, loan, dividend, outside investment, an acquisition, a sale and a closure; after every command and month the change in net worth equals booked income minus expenses, the ledger balances, each company is accounted exactly once a month and ownership adds up to 100%).
+
+### Checklist
+
+- [x] World schema v3 with a deterministic upgrade from v2 (tested); engine 0.5.0, content core-2026.11.3
+- [x] 12 business types (café, restaurant, boutique, online store, consultancy, software, fitness studio, salon, contractor, workshop, delivery, guesthouse), services or goods with inventory
+- [x] Start, run, sell and close companies (at most 6); limited liability: a company that cannot pay its bills for 6 months fails and its debts are written off
+- [x] Each company has its own ledger accounts in its home currency; owners hold a stake account valued at their share of book equity
+- [x] Branches in any of the 80 locations, including abroad (international expansion with currency conversion)
+- [x] Pricing, staff, stock targets, marketing, supplier tier (budget, standard, premium), owner-managed (40 hours a month) or a hired manager
+- [x] Demand from each market's size, the economic cycle, price, quality and brand; simulated competitors that grow, shrink, close and open
+- [x] Acquisitions of competitors, business loans, dividends, the owner investing more, raising outside investment (new co-owner)
+- [x] Monthly operating statements (revenue, cost of sales, wages, rent, marketing, overheads, interest, tax, net profit) and history; corporate tax on profit (baseline rates per country, unverified)
+- [x] Property market: listings refreshed monthly (apartments, houses, commercial units) priced from local wages, costs, the house-price index and condition
+- [x] Buying with a mortgage (deposit, term, affordability check, transfer costs), moving in, letting to tenants (12-month leases, renewals, missed rent), renovating, maintaining, selling; repossession after 6 missed payments
+- [x] Investment funds (stocks and bonds) with simulated prices; simulated exchange rates for all 20 currencies
+- [x] Events: 12 about companies and 8 about property, with follow-ups (100 events in total); events can be about a specific company or property
+- [x] Decisions due in the same month are answered one after another before the month commits (fixes job interviews waiting for months)
+- [x] Screens: Business (start, companies, past companies), company detail (statement, branches, competitors, management, owners, money, sell/close), Property (owned, listings with a payment preview), Finance investments; links from Career, Finance and More
+
+### Verification results (actual runs, 2026-11-18)
+
+| Command                                    | Result                                                                                                                                                                                                                                                                                                                                          |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run verify`                           | exit 0: typecheck ✔, ESLint 0 problems ✔, dependency-cruiser "no dependency violations found (146 modules, 787 dependencies cruised)" ✔, Prettier ✔, Vitest **146/146 passed** (17 files) ✔, production build ✔                                                                                                                                 |
+| `npm run e2e`                              | exit 0: **150 passed, 2 skipped** (desktop Chromium, desktop WebKit, Pixel 7 Chromium, iPhone 15 WebKit); the skips are the Chromium-only offline test on WebKit. New: start a company, hire, trade a month and see the statement, the Property screen, buying an investment, with accessibility scans of Business, company detail and Property |
+| M5 exit                                    | `enterprise.test.ts`: multi-company accounting and ownership, as above                                                                                                                                                                                                                                                                          |
+| Other M5 tests                             | failure with write-off; ownership must total 100%; refusal without enough capital; buy with a mortgage, let, renovate and sell with every month reconciling; moving into your own home; funds; currency conversion; chained decisions; v2→v3 upgrade                                                                                            |
+| Tuning probe                               | with default settings most business types earn 5-17% net margins in their first year; the workshop is about break-even                                                                                                                                                                                                                          |
+| Accessibility fixes found by the new scans | the notification badge label now matches "99+"; competitor "Buy for …" buttons' names start with their visible text                                                                                                                                                                                                                             |
+
+### Known issues and limitations (M5)
+
+1. **Numbers are proposed tuning** (demand, costs, margins, property prices, yields, mortgage terms, exchange-rate baselines); see docs/DECISIONS.md.
+2. **Exchange rates, corporate tax and property transfer costs are baseline approximations** (about 2024-2025), labelled unverified; researched with sources in M6, along with migration.
+3. **Payroll after switching to another character** (F-05) depends on character switching in M7; companies are already accounted independently of the player each month.
+4. **Competitors are aggregate firms**, not individually simulated people; NPC co-owners exist only when you raise investment.
+5. **Charts** are still the small CSS chart and tables; no chart library was added.
+6. **The main bundle is 807 KB (237 KB gzip)**; code-splitting is planned for M9.
+7. **Firefox e2e** is still blocked locally by Windows policy (it runs in CI).
+8. Command rejection messages are still plain English rather than localisation keys.
+9. Not manually checked in the in-app browser this milestone; the e2e test drives the new screens in four browser profiles.
+
+### Next: Milestone 6, global institutions (awaiting approval)
 
 ---
 
@@ -91,8 +137,6 @@ Built together on branch `milestone-3-4` (from `milestone-1-2`) at the user's re
 7. **The main bundle is 754 KB (224 KB gzip)**; code-splitting is planned for M9.
 8. **Firefox e2e** is still blocked locally by Windows policy (it runs in CI).
 9. Many numbers are **proposed tuning** (see docs/DECISIONS.md).
-
-### Next: Milestone 5, business and real estate (awaiting approval)
 
 ---
 

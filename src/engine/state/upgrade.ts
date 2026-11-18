@@ -61,7 +61,41 @@ export function upgradeWorldV1(raw: Record<string, unknown>): Record<string, unk
   world.economy = {};
   world.calendar = { plans: [], items: [] };
   world.expecting = [];
-  world.schemaVersion = 2;
+  // Systems from later versions start empty so setup can run; their own steps fill the rest.
+  world.businesses = {};
+  world.competitors = {};
+  world.properties = {};
+  world.propertyListings = {};
+  (world as { schemaVersion: number }).schemaVersion = 2;
   initializeSystems(world);
+  return world;
+}
+
+/**
+ * Upgrades a version-2 world (Milestones 3-4) to version 3 (Milestone 5): empty company,
+ * competitor and property records, new economy indices at their start level, and new
+ * random streams seeded from the world seed. Nothing that already exists changes.
+ */
+export function upgradeWorldV2(raw: Record<string, unknown>): Record<string, unknown> {
+  const world = raw as unknown as World & Record<string, unknown>;
+  const rng = world.rng as Record<string, unknown>;
+  for (const stream of RNG_STREAMS)
+    rng[stream] ??= Rng.fromSeed(`${world.seed}::${stream}::v3`).state();
+  const stored = world as Record<string, unknown>;
+  stored.businesses ??= {};
+  stored.competitors ??= {};
+  stored.properties ??= {};
+  stored.propertyListings ??= {};
+  for (const e of Object.values(world.economy)) {
+    const economy = e as unknown as Record<string, unknown>;
+    economy.fxIndexBp ??= 10_000;
+    economy.housePriceBp ??= 10_000;
+    economy.bondIndexBp ??= 10_000;
+  }
+  for (const h of Object.values(world.households)) {
+    const finance = h.finance as unknown as Record<string, unknown> | null;
+    if (finance) finance.propertyId ??= null;
+  }
+  world.schemaVersion = 3;
   return world;
 }

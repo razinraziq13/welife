@@ -135,6 +135,39 @@ export function checkInvariants(world: World): string[] {
     if (!world.characters[h.finance.headId]) v.push(`household ${h.id} has an unknown head`);
   }
 
+  // Ownership (spec §6): shares of every company and property add up to 100%.
+  for (const b of Object.values(world.businesses)) {
+    const total = b.owners.reduce((sum, o) => sum + o.sharesBp, 0);
+    if (total !== 10_000) v.push(`business ${b.id} shares add up to ${String(total)} bp`);
+    if (new Set(b.owners.map((o) => o.ownerId)).size !== b.owners.length)
+      v.push(`business ${b.id} lists an owner twice`);
+    for (const o of b.owners) {
+      if (!world.characters[o.ownerId]) v.push(`business ${b.id} has a missing owner`);
+      if (o.stakeAccountId && !world.ledger.accounts[o.stakeAccountId])
+        v.push(`business ${b.id} has a missing stake account`);
+    }
+    if (!world.ledger.accounts[b.cashAccountId]) v.push(`business ${b.id} has no cash account`);
+    if (b.status === 'active' && b.branches.length === 0)
+      v.push(`active business ${b.id} has no branches`);
+    for (const branch of b.branches)
+      if (!findLocation(branch.locationId)) v.push(`branch ${branch.id} has an unknown location`);
+  }
+  for (const p of Object.values(world.properties)) {
+    const total = p.owners.reduce((sum, o) => sum + o.sharesBp, 0);
+    if (total !== 10_000) v.push(`property ${p.id} shares add up to ${String(total)} bp`);
+    for (const o of p.owners)
+      if (!world.characters[o.ownerId]) v.push(`property ${p.id} has a missing owner`);
+    if (p.mortgageAccountId && !world.ledger.accounts[p.mortgageAccountId])
+      v.push(`property ${p.id} has a missing mortgage`);
+    if (p.status === 'owned' && p.tenant && p.use !== 'rental')
+      v.push(`property ${p.id} has a tenant but is not let`);
+  }
+  for (const h of Object.values(world.households)) {
+    const pid = h.finance?.propertyId;
+    if (pid && world.properties[pid]?.status !== 'owned')
+      v.push(`household ${h.id} lives in a property it no longer owns`);
+  }
+
   // Partnerships are mutual and between adults.
   for (const c of Object.values(world.characters)) {
     const p = c.partnership;

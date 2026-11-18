@@ -767,6 +767,21 @@ export function CareerTab() {
       {c.age.years >= 13 && (
         <>
           <JobCard view={view} />
+          {c.age.years >= 18 && (
+            <Card title="Your own business">
+              <p className="text-sm text-fg">
+                {view.enterprise.business.companies.length === 0
+                  ? 'Rather work for yourself? Start a company and run it your way.'
+                  : `You own ${String(view.enterprise.business.companies.length)} compan${view.enterprise.business.companies.length === 1 ? 'y' : 'ies'}.`}{' '}
+                <Link
+                  to={`/play/${session.saveId}/business`}
+                  className="font-medium text-primary underline-offset-2 hover:underline"
+                >
+                  Open Business
+                </Link>
+              </p>
+            </Card>
+          )}
           <ApplicationsCard view={view} />
           <JobBoardCard view={view} />
         </>

@@ -1,6 +1,8 @@
 import { clamp, sortedKeys } from '../core/data';
 import { applyBp, divRound } from '../core/money';
 import { withRng } from '../core/world';
+import { getCountry } from '../world/countries';
+import { USD_MICRO_PER_MAJOR } from '../world/markets';
 import { baseMedianWage, getRules } from '../world/rules';
 import type { Economy, World } from '../state/schema';
 
@@ -22,6 +24,9 @@ export function initialEconomy(code: string): Economy {
     cycle: 0,
     inflationBp: rates.inflationBp,
     priceIndexYearAgoBp: 10_000,
+    fxIndexBp: 10_000,
+    housePriceBp: 10_000,
+    bondIndexBp: 10_000,
   };
 }
 
@@ -35,8 +40,19 @@ export function ensureEconomy(world: World, code: string): Economy {
 }
 
 export interface MarketMove {
-  /** Monthly fund return in basis points (can be negative). */
+  /** Monthly stock (and retirement) fund return in basis points (can be negative). */
   returnBp: number;
+  /** Monthly bond fund return, basis points. */
+  bondReturnBp: number;
+  /** Monthly change in house prices, basis points. */
+  houseReturnBp: number;
+}
+
+/** World inflation the exchange rates drift against (PROPOSED TUNING). */
+const WORLD_INFLATION_BP = 250;
+
+function grow(value: number, bp: number, min: number, max: number): number {
+  return clamp(value + Number(divRound(BigInt(value) * BigInt(bp), 10_000n)), min, max);
 }
 
 /** Step 5 (economy part): one month of every tracked country's economy. */
@@ -51,6 +67,9 @@ export function advanceEconomies(world: World): Map<string, MarketMove> {
       inflation: rng.range(-6, 6),
       unemployment: rng.range(-6, 6),
       market: rng.range(-450, 450),
+      bond: rng.range(-40, 40),
+      house: rng.range(-30, 30),
+      fx: rng.range(-60, 60),
     }));
     e.cycle = clamp(e.cycle + noise.cycle - Math.trunc(e.cycle / 10), -100, 100);
     const monthlyInflation =
@@ -101,7 +120,20 @@ export function advanceEconomies(world: World): Map<string, MarketMove> {
       );
       e.priceIndexYearAgoBp = e.priceIndexBp;
     }
-    moves.set(code, { returnBp });
+    // Bonds earn roughly the policy rate; house prices follow inflation, the cycle and rates;
+    // currencies drift against higher inflation (simulated exchange rates, decision R5).
+    const bondReturnBp = Math.trunc(e.policyRateBp / 12) + noise.bond;
+    e.bondIndexBp = grow(e.bondIndexBp, bondReturnBp, 500, 10_000_000);
+    const houseReturnBp =
+      Math.trunc(base.inflationBp / 12) +
+      10 +
+      Math.trunc(e.cycle / 10) -
+      Math.trunc((e.policyRateBp - base.policyBp) / 60) +
+      noise.house;
+    e.housePriceBp = grow(e.housePriceBp, houseReturnBp, 500, 10_000_000);
+    const fxChange = -Math.trunc((e.inflationBp - WORLD_INFLATION_BP) / 12) + noise.fx;
+    e.fxIndexBp = grow(e.fxIndexBp, fxChange, 100, 1_000_000);
+    moves.set(code, { returnBp, bondReturnBp, houseReturnBp });
   }
   return moves;
 }
@@ -123,4 +155,31 @@ export function savingsRateBp(world: World, code: string): number {
   const rules = getRules(code).rates;
   const policy = world.economy[code]?.policyRateBp ?? rules.policyBp;
   return clamp(rules.savingsBp + (policy - rules.policyBp), 0, 3000);
+}
+
+/** US dollars (millionths) per major unit of a country's currency now. */
+function usdMicro(world: World, code: string): bigint {
+  const currency = getCountry(code).currency.code;
+  const base = USD_MICRO_PER_MAJOR[currency];
+  if (base === undefined) throw new Error(`No exchange rate for ${currency}`);
+  return BigInt(base) * BigInt(world.economy[code]?.fxIndexBp ?? 10_000);
+}
+
+/**
+ * Converts an amount between two countries' currencies at the simulated exchange rate
+ * (integer maths, rounded half away from zero).
+ */
+export function convert(
+  world: World,
+  amount: bigint,
+  fromCountry: string,
+  toCountry: string,
+): bigint {
+  if (fromCountry === toCountry) return amount;
+  const from = getCountry(fromCountry).currency;
+  const to = getCountry(toCountry).currency;
+  if (from.code === to.code) return amount;
+  const numerator = amount * usdMicro(world, fromCountry) * 10n ** BigInt(to.exponent);
+  const denominator = usdMicro(world, toCountry) * 10n ** BigInt(from.exponent);
+  return divRound(numerator, denominator);
 }

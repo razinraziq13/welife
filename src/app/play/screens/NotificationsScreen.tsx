@@ -26,10 +26,13 @@ const TARGET_ROUTE: Record<Notification['target'], string> = {
   calendar: 'calendar',
   person: 'social',
   family: 'family',
+  business: 'business',
+  property: 'property',
 };
 
 function routeFor(n: Notification): string {
   if (n.target === 'person' && n.targetId) return `people/${n.targetId}`;
+  if (n.target === 'business' && n.targetId) return `business/${n.targetId}`;
   return TARGET_ROUTE[n.target];
 }
 

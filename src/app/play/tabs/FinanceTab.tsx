@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { Link } from 'react-router';
 import { amortisedPayment } from '@engine/core/money';
 import { HOME_SIZES, LIFESTYLES } from '@engine/state/schema';
 import type { GameView } from '@engine/view';
@@ -660,6 +661,101 @@ function EconomyCard({ view }: { view: GameView }) {
   );
 }
 
+function InvestmentsCard({ view }: { view: GameView }) {
+  const { send, disabled } = useAct();
+  const inv = view.enterprise.investments;
+  const cur = { ...view.finance.currency };
+  const [fund, setFund] = useState<'stocks' | 'bonds'>('stocks');
+  if (view.character.age.years < 18) return null;
+  return (
+    <Card
+      title="Investments"
+      description="Index funds whose prices are simulated each month. Values can fall as well as rise."
+    >
+      <dl className="text-sm">
+        <Row label={t('fund.stocks')}>{<Money minor={inv.stocksMinor} currency={cur} />}</Row>
+        <Row label={t('fund.bonds')}>{<Money minor={inv.bondsMinor} currency={cur} />}</Row>
+      </dl>
+      <div className="mt-3 flex flex-col gap-3">
+        <ChoiceGroup
+          legend="Fund"
+          name="fund"
+          value={fund}
+          onChange={setFund}
+          options={[
+            {
+              value: 'stocks',
+              label: t('fund.stocks'),
+              description: 'Higher growth, bigger swings.',
+            },
+            {
+              value: 'bonds',
+              label: t('fund.bonds'),
+              description: 'Steadier, follows interest rates.',
+            },
+          ]}
+        />
+        <AmountForm
+          label="Invest"
+          currency={cur}
+          submitLabel="Buy"
+          disabled={disabled}
+          onSubmit={(minor) => send({ type: 'buyFund', fund, amountMinor: minor })}
+        />
+        <AmountForm
+          label="Sell"
+          currency={cur}
+          submitLabel="Sell"
+          disabled={disabled}
+          onSubmit={(minor) => send({ type: 'sellFund', fund, amountMinor: minor })}
+        />
+      </div>
+    </Card>
+  );
+}
+
+function AssetsLinksCard({ view, base }: { view: GameView; base: string }) {
+  const e = view.enterprise;
+  const cur = view.finance.currency;
+  return (
+    <Card title="Property and companies">
+      <ul className="flex flex-col gap-2 text-sm">
+        <li>
+          <Link
+            to={`${base}/property`}
+            className="font-medium text-primary underline-offset-2 hover:underline"
+          >
+            Property
+          </Link>{' '}
+          <span className="text-muted">
+            ·{' '}
+            {e.property.owned.length === 0
+              ? 'none owned'
+              : `${String(e.property.owned.length)} owned, worth ${formatMoney(
+                  e.property.owned.reduce((s, p) => s + p.valueMinor, 0n),
+                  cur,
+                )}`}
+          </span>
+        </li>
+        <li>
+          <Link
+            to={`${base}/business`}
+            className="font-medium text-primary underline-offset-2 hover:underline"
+          >
+            Business
+          </Link>{' '}
+          <span className="text-muted">
+            ·{' '}
+            {e.business.companies.length === 0
+              ? 'no companies'
+              : `${String(e.business.companies.length)} compan${e.business.companies.length === 1 ? 'y' : 'ies'}`}
+          </span>
+        </li>
+      </ul>
+    </Card>
+  );
+}
+
 export function FinanceTab() {
   const session = useGameStore((s) => s.session);
   if (!session) return null;
@@ -680,6 +776,10 @@ export function FinanceTab() {
       <div className="grid gap-4 lg:grid-cols-2">
         <LoansCard view={view} />
         <InsuranceCard view={view} />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <InvestmentsCard view={view} />
+        <AssetsLinksCard view={view} base={`/play/${session.saveId}`} />
       </div>
       <RetirementCard view={view} />
       <TransactionsCard view={view} />

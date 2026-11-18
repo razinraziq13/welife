@@ -90,3 +90,30 @@ This file records decisions that fill gaps in, or clarify, the specification.
 - Money: lifestyle spending 70/100/150/260% of a base of 40% (adult) and 15% (child) of the median wage times local costs; rent 18/32/50% of the median wage by home size; childcare 5-35% by circumstances; family support 8% per child below 160% of the median wage; opening savings 1-1,000 months of the median wage by wealth.
 - Loans: personal = policy rate + 6% (+4% or +10% for weak credit); student = policy rate + 1%, 120 months, starting 6 months after study; repayments may take at most 40% (Casual 50%, Challenging 33%) of take-home pay.
 - Economy: monthly random walk of the cycle, inflation and unemployment around each country's baseline; fund return 0.45% a month plus cycle and noise.
+
+## Milestone 5 engineering decisions
+
+| #   | Topic                                    | Decision and reason                                                                                                                                                                    |
+| --- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| E18 | World schema v3                          | Adds companies, competitors, properties and listings, and new economy indices; v2 saves upgrade deterministically (`upgradeWorldV2`).                                                  |
+| E19 | Companies have their own books           | Each company owns accounts in its home currency; owners hold a stake account marked to their share of book equity (never below zero), so net worth reconciles without double counting. |
+| E20 | Limited liability                        | A company's debts belong to it; after 6 months unable to pay, it fails, its assets settle what they can and the rest is written off. Owners lose only their stake.                     |
+| E21 | Aggregate competitors                    | Rival firms are aggregate records (quality, brand, price, size), not NPCs, to keep the world within the 150-NPC budget.                                                                |
+| E22 | Mark-to-market                           | Funds, properties and stakes are revalued monthly through gain and loss accounts, so the ledger stays balanced and net worth matches booked income and expenses.                       |
+| E23 | Same-month decisions chain               | When several decisions are due in one month, the next is shown right after the previous choice and the month commits only after the last.                                              |
+| E24 | Family covers an adult child's shortfall | An adult living with their parents who cannot pay their share has it covered by the household, instead of falling into arrears and ruining their credit.                               |
+| E25 | Simulated exchange rates                 | Baseline USD rates for 20 currencies drift with each economy; conversions use integer maths. Baseline, unverified (M6).                                                                |
+
+## Proposed tuning values added in Milestone 5 (not yet user-approved)
+
+- Businesses: demand per outlet × outlets in the market (yours plus competitors) × economic cycle × a rural factor; share = your offer score ÷ (yours + competitors'), from quality, brand and price with a per-type price sensitivity.
+- Costs: employer on-costs 10% of wages; overheads 8% of revenue plus 5% of the median wage per outlet; supplier tiers change cost and quality; a hired manager costs two wages; owner-managed takes 40 hours a month.
+- Starting quality 500 and brand 300; quality drifts toward 380 + owner skill ÷ 3 + supplier + wage effect − overload; brand toward 250 + marketing + quality ÷ 5.
+- Minimum capital = set-up cost + 3 months of running costs; at most 6 companies; failure after 6 distressed months; 1 month's wages severance on closing.
+- Outside investment requires 6 profitable months; acquisition price from the rival's size, quality and local costs.
+- Property value = median wage × 70 (apartment), 110 (house) or 90 (commercial) months × local costs × house-price index × condition (80% + condition ÷ 50) plus renovation premium.
+- Rental yield 5.5% a year; upkeep 1% a year; selling fee 2%; transfer costs by country (baseline).
+- Mortgages: personal rate − 4.5% (policy rate + 1.5%), deposit 10% (Casual 5%, Challenging 20%), 5-30 years, affordability = the loan limit + 5%; repossession after 6 missed payments at 85% of value.
+- Tenancy: finding a tenant depends on rent versus market and condition; missed rent rises with unemployment; 12-month leases, 65% renewal.
+- Renovation: light 3% of value, 2 months, +3% value; major 10%, 5 months, +10%.
+- Markets: bond, house-price and exchange-rate indices drift monthly with the cycle and inflation; the stock fund uses the retirement-fund return.

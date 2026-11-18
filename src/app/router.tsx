@@ -18,6 +18,8 @@ import { RulesScreen } from '@app/play/screens/RulesScreen';
 import { PersonScreen } from '@app/play/screens/PersonScreen';
 import { FamilyTreeScreen } from '@app/play/screens/FamilyTreeScreen';
 import { CalendarScreen } from '@app/play/screens/CalendarScreen';
+import { BusinessDetailScreen, BusinessScreen } from '@app/play/screens/BusinessScreen';
+import { PropertyScreen } from '@app/play/screens/PropertyScreen';
 
 /** Routes are added only when their screen is fully functional (no placeholder screens). */
 export const router = createBrowserRouter([
@@ -45,6 +47,9 @@ export const router = createBrowserRouter([
           { path: 'people/:personId', element: <PersonScreen /> },
           { path: 'family', element: <FamilyTreeScreen /> },
           { path: 'calendar', element: <CalendarScreen /> },
+          { path: 'business', element: <BusinessScreen /> },
+          { path: 'business/:businessId', element: <BusinessDetailScreen /> },
+          { path: 'property', element: <PropertyScreen /> },
         ],
       },
       { path: '*', element: <NotFoundScreen /> },

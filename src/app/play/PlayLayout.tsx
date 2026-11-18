@@ -137,7 +137,7 @@ export function PlayLayout() {
         <Link
           to={`${base}/notifications`}
           className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'relative size-11')}
-          aria-label={`Notifications, ${String(view.unreadCount)} unread`}
+          aria-label={`Notifications, ${view.unreadCount > 99 ? '99+' : String(view.unreadCount)} unread`}
         >
           <Bell aria-hidden="true" className="size-5" />
           {view.unreadCount > 0 && (

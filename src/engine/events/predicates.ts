@@ -110,6 +110,27 @@ export function factValue(world: World, character: Character, fact: string): Fac
       return childrenOf(world, character.id).length;
     case 'home.own':
       return world.households[character.householdId]?.finance?.headId === character.id;
+    case 'business.count':
+      return Object.values(world.businesses).filter(
+        (b) => b.status === 'active' && b.owners.some((o) => o.ownerId === character.id),
+      ).length;
+    case 'business.types':
+      return new Set(
+        Object.values(world.businesses)
+          .filter((b) => b.status === 'active' && b.owners.some((o) => o.ownerId === character.id))
+          .map((b) => b.typeId),
+      ).size;
+    case 'property.count':
+      return Object.values(world.properties).filter(
+        (p) => p.status === 'owned' && p.owners.some((o) => o.ownerId === character.id),
+      ).length;
+    case 'property.rentals':
+      return Object.values(world.properties).filter(
+        (p) =>
+          p.status === 'owned' &&
+          p.tenant !== null &&
+          p.owners.some((o) => o.ownerId === character.id),
+      ).length;
     case 'economy.cycle':
       return world.economy[character.countryCode]?.cycle ?? 0;
     default:

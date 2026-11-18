@@ -55,6 +55,16 @@ export function timeBudgetFor(world: World, c: Character): TimeBudget {
     if (effort === 'relaxed') lines.push({ key: 'time.studyRelaxed', hours: 10 });
     if (effort === 'focused') lines.push({ key: 'time.studyFocused', hours: -12 });
   }
+  // Running your own companies takes time unless a manager is hired (Milestone 5).
+  for (const business of Object.values(world.businesses)) {
+    if (
+      business.status === 'active' &&
+      business.manager === 'owner' &&
+      business.owners.some((o) => o.ownerId === c.id)
+    ) {
+      lines.push({ key: 'time.business', hours: -40, params: { business: business.name } });
+    }
+  }
   if (working) {
     if (school || age < 18)
       lines.push({ key: 'time.partTimeWork', hours: -Math.ceil(working.terms.hours / 4) });

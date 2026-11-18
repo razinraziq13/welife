@@ -60,6 +60,25 @@ export async function adultSaveJson(seed = 'e2e-adult'): Promise<string> {
     state = month(state);
   }
   for (let m = 0; m < 12; m++) state = month(state);
+  // Fixture only: an inheritance-sized gift so business and property can be tried in the UI.
+  // It is booked against an equity account so the ledger still balances.
+  const world = state.world;
+  const adult = world.characters[world.activeCharacterId];
+  const checkingId = adult?.finance?.checkingId;
+  const checking = checkingId ? world.ledger.accounts[checkingId] : undefined;
+  if (adult && checking) {
+    const gift = 60_000_000n;
+    const equityId = `${adult.id}~equity~fixtureGift`;
+    world.ledger.accounts[equityId] = {
+      ...checking,
+      id: equityId,
+      type: 'equity',
+      category: 'fixtureGift',
+      balance: gift,
+      loan: null,
+    };
+    checking.balance += gift;
+  }
   const db = new WeLifeDatabase(`fixture-${randomUUID()}`);
   try {
     const saveId = await createSave(db, state.world, 'Robin, grown up');

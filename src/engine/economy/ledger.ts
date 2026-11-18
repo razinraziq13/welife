@@ -22,9 +22,19 @@ export const DEBIT_NORMAL: ReadonlySet<AccountType> = new Set([
   'checking',
   'savings',
   'retirement',
+  'investment',
+  'property',
+  'stake',
   'expense',
 ]);
-export const ASSET_TYPES: ReadonlySet<AccountType> = new Set(['checking', 'savings', 'retirement']);
+export const ASSET_TYPES: ReadonlySet<AccountType> = new Set([
+  'checking',
+  'savings',
+  'retirement',
+  'investment',
+  'property',
+  'stake',
+]);
 export const LIABILITY_TYPES: ReadonlySet<AccountType> = new Set(['loan', 'arrears']);
 
 /**
@@ -262,7 +272,11 @@ export function checkLedger(world: World): string[] {
     const a = world.ledger.accounts[id];
     if (!a) continue;
     if (a.id !== id) violations.push(`account key ${id} != id ${a.id}`);
-    if (!world.characters[a.ownerId] && !world.households[a.ownerId]) {
+    if (
+      !world.characters[a.ownerId] &&
+      !world.households[a.ownerId] &&
+      !world.businesses[a.ownerId]
+    ) {
       violations.push(`account ${id} has unknown owner ${a.ownerId}`);
     }
     if (a.balance < 0n && (ASSET_TYPES.has(a.type) || LIABILITY_TYPES.has(a.type))) {
