@@ -5,6 +5,7 @@ import {
   Brain,
   Briefcase,
   CalendarDays,
+  BookOpen,
   ChevronRight,
   Crown,
   GraduationCap,
@@ -20,7 +21,8 @@ import {
 import type { GameView } from '@engine/view';
 import { Avatar } from '@app/components/avatar/Avatar';
 import { t } from '@app/i18n/en';
-import { displayValue, formatAge } from '@app/i18n/format';
+import { displayValue, formatAge, formatShortMonth, storyText } from '@app/i18n/format';
+import { fromMonthIndex, monthIndex } from '@engine/core/clock';
 import { cn } from '@app/lib/cn';
 
 /** What the player is doing now: their job, their school, or their stage of life. */
@@ -246,6 +248,58 @@ export function ActionGrid({
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+/** Biography categories too routine for the headline story (they stay in the full life story). */
+const QUIET_CATEGORIES = new Set(['activity', 'rules', 'achievement']);
+
+/** The latest moments of the player's life, newest first, with a link to the whole story. */
+export function StoryFeed({
+  view,
+  base,
+  limit = 3,
+}: {
+  view: GameView;
+  base: string;
+  limit?: number;
+}) {
+  const entries = [...view.feed]
+    .reverse()
+    .filter((e) => !QUIET_CATEGORIES.has(e.category))
+    .slice(0, limit);
+  const month = (tick: number) =>
+    formatShortMonth(fromMonthIndex(monthIndex(view.clock) - (view.tick - tick)));
+  return (
+    <section
+      aria-labelledby="story-feed-title"
+      className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5"
+    >
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 id="story-feed-title" className="flex items-center gap-2 text-lg font-semibold text-fg">
+          <BookOpen aria-hidden="true" className="size-5 text-primary" />
+          Your story
+        </h2>
+        <Link
+          to={`${base}/character`}
+          className="text-sm font-medium text-primary underline-offset-2 hover:underline"
+        >
+          Whole story
+        </Link>
+      </div>
+      {entries.length === 0 ? (
+        <p className="text-sm text-muted">Your story is just beginning.</p>
+      ) : (
+        <ol className="flex flex-col gap-3">
+          {entries.map((entry) => (
+            <li key={entry.id} className="flex gap-3 text-sm">
+              <span className="w-16 shrink-0 pt-0.5 text-xs text-muted">{month(entry.tick)}</span>
+              <span className="min-w-0 text-fg">{storyText(entry)}</span>
+            </li>
+          ))}
+        </ol>
+      )}
     </section>
   );
 }

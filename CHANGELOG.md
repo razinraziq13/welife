@@ -10,6 +10,13 @@
 - **Clearer decisions:** each decision shows an icon for its kind of event, larger choice cards, and a closed choice now says why it is closed.
 - **GitHub Pages:** the game is published at https://razinraziq13.github.io/welife/.
 
+### Added
+
+- **Your story:** the Life tab shows the three latest moments of your life, with a link to the whole story.
+- **Achievement pop-ups:** a small, dismissible note when an achievement unlocks, with a link to the collection. Achievements already unlocked when a life is opened are not announced again.
+- **Life summary:** when a character dies, their life gets a title (for example "The Explorer" or "The Family Anchor"), a few facts and up to five defining moments, shown above the heir choice. Past players' titles also appear in the family line.
+- **Roadmap:** `docs/ROADMAP.md` lists what comes next.
+
 ## 0.9.0 (release candidate, 2026-11-19)
 
 Milestone 9: integration, balance and release preparation.

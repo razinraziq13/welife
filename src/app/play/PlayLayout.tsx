@@ -15,6 +15,8 @@ import { buttonVariants } from '@app/components/ui/button';
 import { Button } from '@app/components/ui/button';
 import { formatAge, formatMonth, setActiveCurrency, setCustomEventTexts } from '@app/i18n/format';
 import { SuccessionPanel } from './screens/LegacyScreen';
+import { AchievementToasts } from './AchievementToasts';
+import { LifeSummaryCard } from './LifeSummaryCard';
 import { cn } from '@app/lib/cn';
 import { getEngine } from '@app/bridge/engine';
 import { describeError } from '@app/bridge/errors';
@@ -180,6 +182,7 @@ export function PlayLayout() {
             works normally, but replaying them exactly is not guaranteed.
           </p>
         )}
+        {view.lifeStatus !== 'alive' && <LifeSummaryCard view={view} />}
         {view.lifeStatus === 'ended' && (
           <div role="status" className="rounded-2xl border border-border bg-surface-2 p-4 text-fg">
             <p className="font-semibold">
@@ -210,6 +213,7 @@ export function PlayLayout() {
         )}
         {view.lifeStatus === 'succession' && <SuccessionPanel />}
         <EventDialog />
+        <AchievementToasts saveId={saveId} view={view} base={base} />
         <div aria-live="polite" className="min-h-0 text-sm">
           {message && <p className="rounded-xl bg-surface-2 px-3 py-2 text-fg">{message}</p>}
         </div>

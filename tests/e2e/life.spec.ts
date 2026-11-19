@@ -60,6 +60,26 @@ test('the dashboard layout can be customised and is saved with the life (M2 exit
   await expect(page.locator('[data-widget="country"]')).toHaveCount(0);
 });
 
+test('an achievement shows a pop-up once, and the story feed tells the latest moments', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await createLife(page, { seed: 'e2e-toast' });
+  await expect(page.getByRole('heading', { level: 2, name: 'Your story' })).toBeVisible();
+  // Nothing is announced for a new life.
+  await expect(page.getByTestId('achievement-toast')).toHaveCount(0);
+  const toast = page.getByTestId('achievement-toast').filter({ hasText: 'First candle' });
+  for (let i = 0; i < 8 && !(await toast.isVisible()); i++) await advanceOnce(page);
+  await expect(toast).toBeVisible();
+  await expect(toast).toContainText('Achievement unlocked');
+  await toast.getByRole('button', { name: 'Dismiss First candle' }).click();
+  await expect(toast).toHaveCount(0);
+  // Already unlocked when the life is opened again: not announced a second time.
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1, name: 'Life' })).toBeVisible();
+  await expect(page.getByTestId('achievement-toast')).toHaveCount(0);
+});
+
 test('decisions pause the month until the player chooses', async ({ page }) => {
   test.setTimeout(240_000); // may need many months before a decision comes up (slow under load on WebKit)
   await createLife(page, { seed: 'e2e-decision' });

@@ -4,6 +4,29 @@ export const enLegacy: Record<string, string> = {
   'notificationCategory.media': 'Social media',
   'notificationCategory.achievement': 'Achievements',
 
+  // Life titles (end-of-life summary and the family line)
+  'lifeTitle.remembered': 'Remembered with love',
+  'lifeTitle.remembered.why': 'A short life, deeply missed by the people who loved them.',
+  'lifeTitle.publicServant': 'The Public Servant',
+  'lifeTitle.publicServant.why': 'Held public office and served their community.',
+  'lifeTitle.entrepreneur': 'The Entrepreneur',
+  'lifeTitle.entrepreneur.why': 'Founded {businessesFounded} business(es) of their own.',
+  'lifeTitle.explorer': 'The Explorer',
+  'lifeTitle.explorer.why': 'Made {countries} countries feel like home.',
+  'lifeTitle.publicFigure': 'The Public Figure',
+  'lifeTitle.publicFigure.why': 'Built an audience of {followers} followers.',
+  'lifeTitle.familyAnchor': 'The Family Anchor',
+  'lifeTitle.familyAnchor.why':
+    'At the heart of a family with {children} children and {grandchildren} grandchildren.',
+  'lifeTitle.lifelongLearner': 'The Lifelong Learner',
+  'lifeTitle.lifelongLearner.why': 'Kept learning, all the way to a {degreeName} degree.',
+  'lifeTitle.hardWorker': 'The Hard Worker',
+  'lifeTitle.hardWorker.why': 'Worked {jobs} different jobs over a lifetime.',
+  'lifeTitle.goodFriend': 'The Good Friend',
+  'lifeTitle.goodFriend.why': 'Kept {friends} close friends through the years.',
+  'lifeTitle.quietLife': 'A Life Well Lived',
+  'lifeTitle.quietLife.why': 'A steady life, shared with the people around them.',
+
   // Notifications
   'ntf.chooseHeir': 'Choose who carries on the family story ({count} can take over).',
   'ntf.noHeir': 'There is no adult relative to carry on. This life has ended.',

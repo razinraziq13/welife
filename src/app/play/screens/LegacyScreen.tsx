@@ -110,6 +110,11 @@ function LineageCard({ view }: { view: GameView }) {
                     {l.name}
                   </Link>{' '}
                   <span className="text-muted">({t(`reason.${l.reason}`)})</span>
+                  {l.title && (
+                    <span className="mt-0.5 block text-xs font-semibold text-accent-strong">
+                      {t(`lifeTitle.${l.title}`)}
+                    </span>
+                  )}
                 </td>
                 <td className="py-1 pr-3">
                   {l.born.year}–{l.died ? String(l.died.year) : ''}

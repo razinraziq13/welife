@@ -151,3 +151,15 @@
     outline-offset: 2px;
   }
 }
+
+/* Achievement toast entrance (disabled by the reduced-motion rules above). */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

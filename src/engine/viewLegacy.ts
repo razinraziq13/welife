@@ -5,6 +5,8 @@ import { ACHIEVEMENTS, ACHIEVEMENT_CATEGORIES, findAchievement } from './achieve
 import { switchCandidates } from './legacy/legacy';
 import { intestateHeirs } from './legacy/inheritance';
 import { lineOfSuccession, successionRule } from './legacy/succession';
+import { lifeSummary, type LifeSummary, type LifeTitle } from './legacy/summary';
+import { currencyFor } from './economy/finance';
 import { MEDIA_STYLES } from './state/schema';
 import { NICHES, PLATFORMS, profilesOf } from './media/media';
 import { getInstitutions } from './world/institutions';
@@ -36,8 +38,21 @@ export interface LegacyView {
     alive: boolean;
     born: { year: number; month: number };
     died: { year: number; month: number } | null;
+    /** For a life that has ended: what it was about (roadmap 30). */
+    title: LifeTitle | null;
   }[];
   succession: { deceasedName: string; candidates: PersonRef[] } | null;
+  /** When the player has died: the summary of that life (roadmap 04). */
+  lifeSummary:
+    | (LifeSummary & {
+        name: string;
+        born: { year: number; month: number };
+        died: { year: number; month: number } | null;
+        generation: number;
+        peakNetWorthMinor: bigint | null;
+        currency: { code: string; exponent: number; symbol: string };
+      })
+    | null;
   house: {
     kind: 'royal' | 'noble';
     title: string | null;
@@ -152,6 +167,19 @@ function currencyByCode(code: string): { code: string; exponent: number; symbol:
   return CURRENCIES.get(code) ?? { code, exponent: 2, symbol: code };
 }
 
+function summaryOf(world: World, c: Character): LegacyView['lifeSummary'] {
+  const entry = world.legacy.lineage.find((l) => l.characterId === c.id);
+  return {
+    ...lifeSummary(world, c),
+    name: name(world, c.id),
+    born: c.birth,
+    died: c.death,
+    generation: entry?.generation ?? world.legacy.generation,
+    peakNetWorthMinor: entry?.peakNetWorthMinor ?? null,
+    currency: currencyInfo(entry?.currency ?? currencyFor(c.countryCode)),
+  };
+}
+
 export function projectLegacy(world: World, player: Character): LegacyView {
   const s = world.legacy.succession;
   const will = world.legacy.wills[player.id];
@@ -175,8 +203,10 @@ export function projectLegacy(world: World, player: Character): LegacyView {
         alive: c?.death === null,
         born: c?.birth ?? { year: 0, month: 1 },
         died: c?.death ?? null,
+        title: c && c.death !== null ? lifeSummary(world, c).title : null,
       };
     }),
+    lifeSummary: world.lifeStatus === 'alive' ? null : summaryOf(world, player),
     succession: s
       ? {
           deceasedName: name(world, s.deceasedId),

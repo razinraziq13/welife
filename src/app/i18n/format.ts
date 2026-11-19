@@ -248,6 +248,65 @@ export function biographyText(entry: BiographyEntry): string {
   return t(entry.key, enrich(entry.params));
 }
 
+/** Past-tense verbs that open biography lines; "Moved to Penang." becomes "You moved to Penang." */
+const STORY_VERBS = new Set([
+  'Became',
+  'Moved',
+  'Left',
+  'Started',
+  'Sold',
+  'Joined',
+  'Lost',
+  'Changed',
+  'Won',
+  'Went',
+  'Welcomed',
+  'Turned',
+  'Took',
+  'Signed',
+  'Saw',
+  'Retired',
+  'Reached',
+  'Married',
+  'Made',
+  'Learned',
+  'Inherited',
+  'Graduated',
+  'Got',
+  'Founded',
+  'Finished',
+  'Entered',
+  'Completed',
+  'Closed',
+  'Broke',
+  'Bought',
+  'Began',
+  'Died',
+]);
+/** Passive openings: "Was diagnosed…" becomes "You were diagnosed…". */
+const STORY_PASSIVE: Record<string, string> = {
+  Was: 'You were',
+  Born: 'You were born',
+  Promoted: 'You were promoted',
+};
+
+/**
+ * A biography line as part of the player's story (Life tab feed). Event outcomes are already
+ * written to the player ("You took your first steps."); biography lines have no subject, so they
+ * get one. Lines that are not about the player's own action stay as they are.
+ */
+export function storyText(entry: BiographyEntry): string {
+  const text = biographyText(entry);
+  if (entry.key === 'bio.event') return text;
+  const space = text.indexOf(' ');
+  const first = space < 0 ? text.replace(/[.!]$/, '') : text.slice(0, space);
+  const rest = space < 0 ? text.slice(first.length) : text.slice(space);
+  const passive = STORY_PASSIVE[first];
+  if (passive) return `${passive}${rest}`;
+  if (STORY_VERBS.has(first)) return `You ${first.toLowerCase()}${rest}`;
+  return text;
+}
+
 const MONTHLY_CAUSES: Record<string, string> = {
   health: 'Monthly health',
   stress: 'Stress easing',

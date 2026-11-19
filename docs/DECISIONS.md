@@ -190,3 +190,16 @@ This file records decisions that fill gaps in, or clarify, the specification.
 
 - Clean-up horizon: 30 years after death (people, accounts, old jobs).
 - Difficulty and business rivals: competitor strength 85% on Casual, 100% on Realistic and 120% on Challenging.
+
+## Roadmap R1 decisions (story feed, pop-ups, life summary)
+
+| #   | Topic               | Decision and reason                                                                                                                                                                                                                |
+| --- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| E53 | Story voice         | The story feed reads in the second person ("You moved to Penang."): the 131 event outcomes already speak to the player, and biography lines get a "You". A first-person diary would need the outcomes rewritten (roadmap R6).      |
+| E54 | Pop-ups are UI-only | Achievement pop-ups compare the unlocked list before and after each update; no engine or save change. Unlocks present when a life opens are not announced; after a rewind, unlocking again on the new timeline is announced again. |
+| E55 | Life titles         | Computed from recorded facts by fixed rules in a fixed order (first match wins), so the same life always gets the same title. Titles describe what a life was about, never its worth; lives under 18 get "Remembered with love".   |
+| E56 | Defining moments    | Up to five biography lines, chosen by kind (family, legacy, business and politics first, routine activity never), one of each kind, shown in the order they happened.                                                              |
+
+## Proposed tuning values added in R1 (not yet user-approved)
+
+- Life title thresholds: public office ever held; at least one business founded; 3+ countries lived in; 10,000+ followers; 4+ children and grandchildren; a bachelor's or master's degree; 3+ jobs; 5+ friends.

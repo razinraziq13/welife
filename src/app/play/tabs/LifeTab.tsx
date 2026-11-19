@@ -7,7 +7,7 @@ import { Card } from '@app/components/ui/card';
 import { t } from '@app/i18n/en';
 import { useGameStore } from '@app/stores/gameStore';
 import { renderWidget } from '../widgets';
-import { ActionGrid, LifeHero } from '../LifeHero';
+import { ActionGrid, LifeHero, StoryFeed } from '../LifeHero';
 
 /** Shown at the top of the Life tab already, so hidden from the dashboard unless chosen. */
 const DEFAULT_HIDDEN: readonly DashboardWidget[] = ['profile', 'vitals'];
@@ -75,6 +75,7 @@ export function LifeTab() {
       </div>
 
       <LifeHero view={view} base={base} />
+      <StoryFeed view={view} base={base} />
       <ActionGrid view={view} base={base} onActivities={showActivities} />
 
       {customizing && (
