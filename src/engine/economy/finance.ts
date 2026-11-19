@@ -266,33 +266,42 @@ export function receiveIncome(
 }
 
 /** Pays down arrears from available cash first each month. */
-function settleArrears(world: World, payer: { ownerId: string; checkingId: string }): void {
+function settleArrears(
+  world: World,
+  payer: { ownerId: string; checkingId: string },
+  player?: Character,
+): void {
   const cur = world.ledger.accounts[payer.checkingId]?.currency;
-  const arrears = sortedValues(world.ledger.accounts).find(
-    (a) =>
-      a.ownerId === payer.ownerId &&
-      a.type === 'arrears' &&
-      a.closedTick === null &&
-      a.currency === cur &&
-      a.balance > 0n,
-  );
-  if (!arrears) return;
-  const fee = divRound(arrears.balance, 100n);
-  if (fee > 0n) {
-    post(world, 'tx.lateFee', [
-      {
-        accountId: categoryAccount(world, payer.ownerId, 'expense', 'fees', arrears.currency),
-        debit: fee,
-      },
-      { accountId: arrears.id, credit: fee },
-    ]);
+  for (const arrears of sortedValues(world.ledger.accounts)) {
+    if (
+      arrears.ownerId !== payer.ownerId ||
+      arrears.type !== 'arrears' ||
+      arrears.closedTick !== null ||
+      arrears.balance <= 0n
+    )
+      continue;
+    const foreign = arrears.currency !== cur;
+    if (foreign && !player) continue;
+    const fee = divRound(arrears.balance, 100n);
+    if (fee > 0n) {
+      post(world, 'tx.lateFee', [
+        {
+          accountId: categoryAccount(world, payer.ownerId, 'expense', 'fees', arrears.currency),
+          debit: fee,
+        },
+        { accountId: arrears.id, credit: fee },
+      ]);
+    }
+    const account =
+      foreign && player ? payerIn(world, player, arrears.currency, arrears.balance) : payer;
+    if (!account) continue;
+    const pay = minBig(arrears.balance, maxBig(0n, balanceOf(world, account.checkingId)));
+    if (pay > 0n)
+      post(world, 'tx.arrearsPaid', [
+        { accountId: arrears.id, debit: pay },
+        { accountId: account.checkingId, credit: pay },
+      ]);
   }
-  const pay = minBig(arrears.balance, maxBig(0n, balanceOf(world, payer.checkingId)));
-  if (pay > 0n)
-    post(world, 'tx.arrearsPaid', [
-      { accountId: arrears.id, debit: pay },
-      { accountId: payer.checkingId, credit: pay },
-    ]);
 }
 
 function payWages(
@@ -488,6 +497,7 @@ function processLoans(world: World, c: Character): void {
     )
       continue;
     if (account.balance <= 0n) {
+      if (account.loan.product === 'student' && c.education.current?.stage === 'tertiary') continue;
       account.closedTick = world.tick;
       addNotification(
         world,
@@ -506,9 +516,8 @@ function processLoans(world: World, c: Character): void {
         { accountId: account.id, credit: interest },
       ]);
     }
-    const payer = payerIn(world, c, cur, minBig(account.loan.paymentMinor, account.balance));
-    if (world.tick < account.loan.firstPaymentTick || !payer) continue;
-    if (world.tick === account.loan.firstPaymentTick && account.loan.product === 'student') {
+    if (world.tick < account.loan.firstPaymentTick) continue;
+    if (account.loan.product === 'student' && account.loan.paymentMinor === 0n) {
       account.loan.paymentMinor = amortisedPayment(
         account.balance,
         account.loan.rateBp,
@@ -516,6 +525,8 @@ function processLoans(world: World, c: Character): void {
       );
     }
     const due = minBig(account.loan.paymentMinor, account.balance);
+    const payer = payerIn(world, c, cur, due);
+    if (!payer || due <= 0n) continue;
     const available =
       maxBig(0n, balanceOf(world, payer.checkingId)) +
       maxBig(0n, balanceOf(world, payer.savingsId));
@@ -889,7 +900,7 @@ export function processFinances(world: World, markets: Map<string, MarketMove>):
     processInsurance(world, player);
     birthdayGifts(world, player);
     const payer = payerFor(world, player);
-    if (payer?.ownerId === player.id) settleArrears(world, payer);
+    if (payer?.ownerId === player.id) settleArrears(world, payer, player);
     growAccounts(world, player.id, player.countryCode, markets.get(player.countryCode));
     reconcileTaxYear(world, player);
     updateCredit(world, player);
@@ -1031,7 +1042,7 @@ export function loanPayments(world: World, c: Character): bigint {
       a.loan &&
       world.tick >= a.loan.firstPaymentTick - 1
     )
-      total += a.loan.paymentMinor;
+      total += inHomeCurrency(world, c, minBig(a.loan.paymentMinor, a.balance), a.currency);
   }
   return total;
 }
@@ -1139,10 +1150,22 @@ export function repayLoan(world: World, c: Character, loanId: string, amount: bi
   if (!checkingId) throw new FinanceError('noAccount');
   if (amount <= 0n) throw new FinanceError('invalidAmount');
   const pay = minBig(amount, loan.balance);
-  if (balanceOf(world, checkingId) < pay) throw new FinanceError('insufficientFunds');
+  if (pay === 0n) throw new FinanceError('invalidAmount');
+  const home = world.ledger.accounts[checkingId];
+  if (!home) throw new FinanceError('noAccount');
+  let paymentId = checkingId;
+  if (home.currency !== loan.currency) {
+    const foreign = abroadAccounts(world, c.id).find((a) => a.currency === loan.currency);
+    const available =
+      (foreign?.balance ?? 0n) + convertCurrency(world, home.balance, home.currency, loan.currency);
+    if (available < pay) throw new FinanceError('insufficientFunds');
+    paymentId = foreign?.id ?? localAccount(world, c.id, loan.currency);
+    topUp(world, c.id, checkingId, paymentId, pay);
+  }
+  if (balanceOf(world, paymentId) < pay) throw new FinanceError('insufficientFunds');
   post(world, 'tx.loanRepaid', [
     { accountId: loanId, debit: pay },
-    { accountId: checkingId, credit: pay },
+    { accountId: paymentId, credit: pay },
   ]);
   if (loan.balance === 0n) loan.closedTick = world.tick;
   else if (loan.loan?.product === 'personal') {

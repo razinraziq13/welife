@@ -30,7 +30,8 @@ import {
   rentFor,
   statePension,
 } from './economy/finance';
-import { assetsOf, liabilitiesOf, monthTotals, netWorthOf } from './economy/ledger';
+import { assetsOf, liabilitiesOf, monthTotals } from './economy/ledger';
+import { convertCurrency, currencyCountry, netWorthIn } from './economy/fx';
 import { CLUBS, PROGRAMS, findProgram, type ProgramLevel } from './education/catalog';
 import {
   applicationEligibility,
@@ -317,6 +318,7 @@ export interface FinanceView {
     id: string;
     product: string;
     balance: bigint;
+    currency: CurrencyView;
     rateBp: number;
     paymentMinor: bigint;
     firstPaymentTick: number;
@@ -725,11 +727,17 @@ function financeView(world: World, c: Character): FinanceView {
   const h = world.households[c.householdId];
   const isHead = h?.finance?.headId === c.id;
   const owners = isHead ? [c.id, h.id] : [c.id];
+  const homeValue = (amount: bigint, currency: string) =>
+    convertCurrency(world, amount, currency, country.currency.code);
+  const householdTotals = h?.finance ? monthTotals(world, h.id, world.tick, homeValue) : null;
   const totals = { income: new Map<string, bigint>(), expenses: new Map<string, bigint>() };
   let totalIncome = 0n;
   let totalExpenses = 0n;
   for (const owner of owners) {
-    const t = monthTotals(world, owner);
+    const t =
+      owner === h?.id && householdTotals
+        ? householdTotals
+        : monthTotals(world, owner, world.tick, homeValue);
     for (const [key, amount] of t.byCategory) {
       const [kind, category = ''] = key.split(':');
       const map = kind === 'income' ? totals.income : totals.expenses;
@@ -743,7 +751,7 @@ function financeView(world: World, c: Character): FinanceView {
   const personalAccounts = accountsOwned(c.id);
   const arrears = [...personalAccounts, ...(isHead ? accountsOwned(h.id) : [])]
     .filter((a) => a.type === 'arrears')
-    .reduce((s, a) => s + a.balance, 0n);
+    .reduce((s, a) => s + homeValue(a.balance, a.currency), 0n);
   const assetAccountIds = new Set(
     [
       c.finance?.checkingId,
@@ -785,9 +793,9 @@ function financeView(world: World, c: Character): FinanceView {
           checking: bal(c.finance.checkingId),
           savings: bal(c.finance.savingsId),
           retirement: bal(c.finance.retirementId),
-          assets: assetsOf(world, c.id),
-          liabilities: liabilitiesOf(world, c.id),
-          netWorth: netWorthOf(world, c.id),
+          assets: assetsOf(world, c.id, homeValue),
+          liabilities: liabilitiesOf(world, c.id, homeValue),
+          netWorth: netWorthIn(world, c.id, country.currency.code),
           creditScore: c.finance.creditScore,
           pensionBp: c.finance.pensionBp,
           savingsRateBp: c.finance.savingsId
@@ -805,12 +813,12 @@ function financeView(world: World, c: Character): FinanceView {
           homeSize: h.finance.homeSize,
           rentMinor: h.finance.rentMinor,
           isHead,
-          netWorth: isHead
-            ? netWorthOf(world, c.id) + netWorthOf(world, h.id)
-            : netWorthOf(world, h.id),
+          netWorth:
+            netWorthIn(world, h.id, country.currency.code) +
+            (isHead ? netWorthIn(world, c.id, country.currency.code) : 0n),
           livingCostsMinor: livingCosts(world, h),
-          monthIncome: monthTotals(world, h.id).income,
-          monthExpenses: monthTotals(world, h.id).expenses,
+          monthIncome: householdTotals?.income ?? 0n,
+          monthExpenses: householdTotals?.expenses ?? 0n,
         }
       : null,
     loans: personalAccounts
@@ -819,6 +827,7 @@ function financeView(world: World, c: Character): FinanceView {
         id: a.id,
         product: a.loan?.product ?? 'personal',
         balance: a.balance,
+        currency: getCountry(currencyCountry(a.currency)).currency,
         rateBp: a.loan?.rateBp ?? 0,
         paymentMinor: a.loan?.paymentMinor ?? 0n,
         firstPaymentTick: a.loan?.firstPaymentTick ?? 0,

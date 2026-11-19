@@ -284,11 +284,18 @@ function LoansCard({ view }: { view: GameView }) {
             <li key={l.id} className="flex flex-col gap-2 py-3 text-sm">
               <p className="font-semibold text-fg">{t(`loan.${l.product}`)}</p>
               <p className="text-muted">
-                Owed <Money minor={l.balance} currency={cur} /> · {formatBp(l.rateBp)} a year
+                {l.product === 'student' && l.balance === 0n ? (
+                  'Open for tuition'
+                ) : (
+                  <>
+                    Owed <Money minor={l.balance} currency={l.currency} />
+                  </>
+                )}{' '}
+                · {formatBp(l.rateBp)} a year
                 {l.paymentMinor > 0n && (
                   <>
                     {' · '}
-                    <Money minor={l.paymentMinor} currency={cur} /> a month
+                    <Money minor={l.paymentMinor} currency={l.currency} /> a month
                   </>
                 )}
                 {l.firstPaymentTick > view.tick &&
@@ -297,9 +304,9 @@ function LoansCard({ view }: { view: GameView }) {
               </p>
               <AmountForm
                 label="Pay off"
-                currency={cur}
+                currency={l.currency}
                 submitLabel="Repay"
-                disabled={disabled || f.personal?.checking === null}
+                disabled={disabled || f.personal?.checking === null || l.balance === 0n}
                 onSubmit={(m) => send({ type: 'repayLoan', loanId: l.id, amountMinor: m })}
               />
             </li>
