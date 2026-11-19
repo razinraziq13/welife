@@ -146,6 +146,31 @@ describe('contextual interactions (gameplay expansion, feature 2)', () => {
     ).toBe(true);
     const dating = projectGame(state).social.dating;
     expect(dating?.candidates.some((c) => c.id === id && c.interested)).toBe(true);
+    expect(dating?.profiles.map((profile) => profile.id)).toContain(id);
+
+    const passed = checked(state, {
+      type: 'respondToDatingProfile',
+      personId: id,
+      response: 'pass',
+    });
+    expect(passed.outcome.status).toBe('applied');
+    expect(projectGame(passed.state).social.dating?.profiles.map((p) => p.id)).not.toContain(id);
+    expect(
+      run(passed.state, { type: 'respondToDatingProfile', personId: id, response: 'like' }).outcome
+        .status,
+    ).toBe('rejected');
+
+    const liked = checked(state, {
+      type: 'respondToDatingProfile',
+      personId: id,
+      response: 'like',
+    });
+    expect(liked.outcome.status).toBe('applied');
+    const matched = projectGame(liked.state).social;
+    expect(matched.dating?.profiles.map((p) => p.id)).not.toContain(id);
+    expect(matched.dating?.matches.map((p) => p.id)).toContain(id);
+    expect(matched.partner).toBeNull();
+    expect(projectGame(liked.state).time).toEqual(projectGame(state).time);
   });
 
   it('says exactly how much closer you need to be to ask someone out', () => {

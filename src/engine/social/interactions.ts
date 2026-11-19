@@ -1,7 +1,7 @@
 import { clamp } from '../core/data';
 import { applyPercent } from '../core/money';
 import { addBiography, addNotification, ageYears, nextId, withRng } from '../core/world';
-import { diminishingPercent } from '../activities/activities';
+import { diminishingPercent, ensureActivityMonth } from '../activities/activities';
 import { spendHours, timeBudget } from '../calendar/time';
 import { changeNeed, changeStat } from '../characters/stats';
 import { emptyFinance, moveToHousehold } from '../characters/factory';
@@ -709,6 +709,75 @@ export function lookForLove(world: World): { personId: string | null } {
     person.id,
   );
   return { personId: person.id };
+}
+
+/** Single adults within ten years of age who are not related. */
+export function isRomanticProspectBase(
+  world: World,
+  player: Character,
+  other: Character | undefined,
+): boolean {
+  if (
+    player.death !== null ||
+    player.partnership ||
+    other?.death !== null ||
+    other.id === player.id ||
+    other.partnership ||
+    other.tier === 'archived'
+  )
+    return false;
+  const a = ageYears(world, player);
+  const b = ageYears(world, other);
+  return (
+    a >= ADULT_AGE &&
+    b >= ADULT_AGE &&
+    Math.abs(a - b) <= 10 &&
+    kinship(world, player.id, other.id) === null
+  );
+}
+
+const datingPassKey = (personId: string) => `dating:pass:${personId}`;
+
+export function datingAppStatus(
+  world: World,
+  player: Character,
+  personId: string,
+): 'match' | 'profile' | null {
+  if (memoriesAbout(world, player.id, personId).some((m) => m.key === 'datingAppMatch'))
+    return 'match';
+  if (world.activity.tick === world.tick && world.activity.counts[datingPassKey(personId)])
+    return null;
+  return memoriesAbout(world, personId, player.id).some((m) => m.key === 'interestedInYou')
+    ? 'profile'
+    : null;
+}
+
+export function respondToDatingProfile(
+  world: World,
+  personId: string,
+  response: 'like' | 'pass',
+): void {
+  const player = world.characters[world.activeCharacterId] as Character;
+  if (
+    !isRomanticProspectBase(world, player, world.characters[personId]) ||
+    !findRelationship(world, player.id, personId) ||
+    datingAppStatus(world, player, personId) !== 'profile'
+  )
+    throw new InteractionError('notNow');
+  if (response === 'pass') {
+    ensureActivityMonth(world);
+    world.activity.counts[datingPassKey(personId)] = 1;
+    return;
+  }
+  addMemory(world, {
+    ownerId: player.id,
+    subjectIds: [personId],
+    key: 'datingAppMatch',
+    source: `dating-app:${String(world.tick)}`,
+    valence: 0,
+    salience: 45,
+    decay: 'slow',
+  });
 }
 
 /** Social types that can turn into friendships. */

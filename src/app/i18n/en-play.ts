@@ -145,6 +145,9 @@ export const enPlay: Record<string, string> = {
   'memory.reportedMe': 'You reported them to the manager',
   'memory.coveredForMe': 'You covered their shift',
   // Dating
+  'out.datingAppMatch': 'You and {name} matched.',
+  'out.datingAppPass': 'You passed on {name} for this month.',
+  'memory.datingAppMatch': 'You matched on a dating app',
   'out.foundSomeone':
     'You met {name}, who seems interested in you. Spend time together to get closer.',
   'out.noOneSpecial': 'No spark this time. Try again another day.',

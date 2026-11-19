@@ -63,7 +63,9 @@ import {
   INTERACTIONS,
   INTERACTION_BLOCK_MESSAGES,
   INTERACTION_IDS,
+  datingAppStatus,
   interactionBlock,
+  isRomanticProspectBase,
   type InteractionId,
 } from './social/interactions';
 import { memoriesAbout } from './social/memories';
@@ -397,6 +399,15 @@ export interface CalendarView {
   checkupCostMinor: bigint;
 }
 
+interface DatingCandidate {
+  id: string;
+  name: string;
+  age: number;
+  closeness: number;
+  chemistry: number;
+  interested: boolean;
+}
+
 export interface SocialView {
   people: PersonSummary[];
   partner: (PersonSummary & { partnership: Partnership }) | null;
@@ -406,14 +417,9 @@ export interface SocialView {
   dating: {
     canLookForLove: boolean;
     needed: number;
-    candidates: {
-      id: string;
-      name: string;
-      age: number;
-      closeness: number;
-      chemistry: number;
-      interested: boolean;
-    }[];
+    candidates: DatingCandidate[];
+    profiles: (DatingCandidate & { interests: Character['interests'] })[];
+    matches: (DatingCandidate & { askOutReason: string | null })[];
   } | null;
 }
 
@@ -970,17 +976,29 @@ function datingView(world: World, c: Character): SocialView['dating'] {
       chemistry: r.chemistry,
       interested: memoriesAbout(world, r.bId, c.id).some((m) => m.key === 'interestedInYou'),
     }))
-    .sort((a, b) => b.closeness - a.closeness || (a.id < b.id ? -1 : 1))
-    .slice(0, 6);
-  return { canLookForLove: true, needed: DATE_CLOSENESS, candidates };
-}
-
-/** Single adult, not family, within ten years of age (any closeness). */
-function isRomanticProspectBase(world: World, c: Character, o: Character | undefined): boolean {
-  if (o?.death !== null || o.partnership || o.tier === 'archived') return false;
-  const a = ageOf(c.birth, world.clock).years;
-  const b = ageOf(o.birth, world.clock).years;
-  return b >= ADULT_AGE && Math.abs(a - b) <= 10 && kinship(world, c.id, o.id) === null;
+    .sort((a, b) => b.closeness - a.closeness || (a.id < b.id ? -1 : 1));
+  const profiles: NonNullable<SocialView['dating']>['profiles'] = [];
+  const matches: NonNullable<SocialView['dating']>['matches'] = [];
+  for (const candidate of candidates) {
+    const status = datingAppStatus(world, c, candidate.id);
+    const other = world.characters[candidate.id];
+    if (!other) continue;
+    if (status === 'profile') profiles.push({ ...candidate, interests: other.interests });
+    if (status === 'match') {
+      const block = interactionBlock(world, c, other, 'askOut');
+      matches.push({
+        ...candidate,
+        askOutReason: block ? INTERACTION_BLOCK_MESSAGES[block] : null,
+      });
+    }
+  }
+  return {
+    canLookForLove: true,
+    needed: DATE_CLOSENESS,
+    candidates: candidates.slice(0, 6),
+    profiles,
+    matches,
+  };
 }
 
 export function projectGame(state: SimState): GameView {
