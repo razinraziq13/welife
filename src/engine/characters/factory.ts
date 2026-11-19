@@ -3,6 +3,7 @@ import { nextId } from '../core/world';
 import type { Location } from '../world/countrySchema';
 import { defaultCivic, religionFor } from '../civics/status';
 import {
+  DEFAULT_CAREER,
   HABIT_KEYS,
   NEED_KEYS,
   SKILL_KEYS,
@@ -134,6 +135,8 @@ export function addCharacter(world: World, input: NewCharacterInput): Character 
       religionFor(input.householdId, input.countryCode),
       world.tick,
     ),
+    career: { ...DEFAULT_CAREER },
+    projects: {},
   };
   world.characters[character.id] = character;
   return character;

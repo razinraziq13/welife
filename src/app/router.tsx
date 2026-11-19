@@ -46,6 +46,13 @@ export const router = createBrowserRouter(
             { index: true, element: <Navigate to="life" replace /> },
             { path: 'life', element: <LifeTab /> },
             {
+              path: 'activities',
+              lazy: () =>
+                import('@app/play/screens/ActivitiesHubScreen').then((m) => ({
+                  Component: m.ActivitiesHubScreen,
+                })),
+            },
+            {
               path: 'career',
               lazy: () =>
                 import('@app/play/tabs/CareerTab').then((m) => ({ Component: m.CareerTab })),

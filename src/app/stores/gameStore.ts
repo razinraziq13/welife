@@ -57,7 +57,7 @@ function appliedMessage(outcome: CommandOutcome, view: GameSessionView['view']):
     const name =
       view.social.people.find((p) => p.id === outcome.interaction.personId)?.identity.firstName ??
       '';
-    return outcomeText(outcome.interaction.key, { name });
+    return outcomeText(outcome.interaction.key, { ...outcome.interaction.params, name });
   }
   return null;
 }

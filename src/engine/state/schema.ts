@@ -514,9 +514,29 @@ export const CharacterSchema = z
     /** Most recent explicit stat changes with causes (bounded). */
     statLog: z.array(StatChangeSchema).max(60),
     civic: CivicSchema,
+    /**
+     * Working life beyond a single job (gameplay expansion): professional reputation (0-1000),
+     * a specialism once earned, and progress towards one. Defaults keep older saves loading.
+     */
+    career: z
+      .object({
+        reputation: Fixed,
+        specialty: z.string().max(40).nullable(),
+        specialtyProgress: Percent,
+      })
+      .strict()
+      .default({ reputation: 200, specialty: null, specialtyProgress: 0 }),
+    /** Personal projects in progress (activity id -> percent complete). */
+    projects: z.record(z.string().max(40), Percent).default({}),
   })
   .strict();
 export type Character = z.infer<typeof CharacterSchema>;
+
+export const DEFAULT_CAREER: Character['career'] = {
+  reputation: 200,
+  specialty: null,
+  specialtyProgress: 0,
+};
 
 export const HouseholdFinanceSchema = z
   .object({

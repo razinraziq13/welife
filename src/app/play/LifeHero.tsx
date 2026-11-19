@@ -180,15 +180,7 @@ function Tile({ tile }: { tile: ActionTile }) {
 }
 
 /** "What do you want to do?": one tap to each part of life. */
-export function ActionGrid({
-  view,
-  base,
-  onActivities,
-}: {
-  view: GameView;
-  base: string;
-  onActivities: () => void;
-}) {
+export function ActionGrid({ view, base }: { view: GameView; base: string }) {
   // Before working age (or while studying without a job) this part of life is school.
   const studying =
     view.work.job === null && (view.education.current !== null || !view.work.canWork);
@@ -198,7 +190,7 @@ export function ActionGrid({
       hint: 'Spend your free time',
       icon: Sparkles,
       tone: 'bg-accent-soft text-accent-strong',
-      onClick: onActivities,
+      to: base + '/activities',
     },
     {
       label: studying ? 'School' : 'Work',

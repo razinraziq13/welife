@@ -11,6 +11,22 @@ import { t } from '@app/i18n/en';
 import { countryName, formatShortMonth } from '@app/i18n/format';
 import { useGameStore } from '@app/stores/gameStore';
 import { tickToMonth } from '../widgets';
+import { INTERACTION_GROUPS, type InteractionGroup } from '@engine/social/contextual';
+
+const GROUP_ORDER: readonly InteractionGroup[] = [
+  'social',
+  'friendship',
+  'family',
+  'romance',
+  'professional',
+];
+function memoryText(key: string): string {
+  const text = t(`memory.${key}`);
+  return text === `memory.${key}` ? key : text;
+}
+
+/** Unavailable reasons that would only add noise if listed one by one. */
+const QUIET_REASONS = new Set(['You are too young for this.', 'This is only for your partner.']);
 
 /** Readable memory descriptions (what one person remembers about the other). */
 const MEMORY_TEXT: Record<string, string> = {
@@ -96,7 +112,7 @@ export function PersonScreen() {
   const memoryLine = (m: PersonDetailView['theirMemories'][number]) => (
     <li key={`${m.key}-${String(m.tick)}`} className="flex justify-between gap-2">
       <span className={m.valence < 0 ? 'text-danger' : 'text-fg'}>
-        {MEMORY_TEXT[m.key] ?? m.key}
+        {MEMORY_TEXT[m.key] ?? memoryText(m.key)}
       </span>
       <span className="shrink-0 text-xs text-muted">
         {formatShortMonth(tickToMonth(view, m.tick))}
@@ -104,13 +120,16 @@ export function PersonScreen() {
     </li>
   );
   const available = person.interactions.filter((i) => i.available);
-  // Partner-only and age-gated options are summarised rather than listed one by one.
-  const unavailable = person.interactions.filter(
-    (i) =>
-      !i.available &&
-      i.reason !== 'This is only for your partner.' &&
-      i.reason !== 'You are too young for this.',
-  );
+  // Each group: what can be done now, and (collapsed) what cannot and why. Partner-only and
+  // age-gated options are left out of the "why" lists, which would otherwise be long.
+  const groups = GROUP_ORDER.map((group) => {
+    const inGroup = person.interactions.filter((i) => INTERACTION_GROUPS[i.id] === group);
+    return {
+      group,
+      open: inGroup.filter((i) => i.available),
+      closed: inGroup.filter((i) => !i.available && !QUIET_REASONS.has(i.reason ?? '')),
+    };
+  }).filter((g) => g.open.length > 0 || g.closed.length > 0);
   const nothingYet =
     available.length === 0
       ? (person.interactions.find((i) => i.reason === 'You have no free time left this month.')
@@ -230,40 +249,59 @@ export function PersonScreen() {
           }
         >
           {nothingYet && <p className="text-sm text-muted">{nothingYet}</p>}
-          <ul className="flex flex-wrap gap-2">
-            {available.map((i) => (
-              <li key={i.id}>
-                <Button
-                  size="sm"
-                  variant={
-                    i.id === 'argue' || i.id === 'breakUp' || i.id === 'endFriendship'
-                      ? 'ghost'
-                      : 'secondary'
-                  }
-                  disabled={busy}
-                  onClick={() =>
-                    void send({ type: 'interact', personId: person.id, interactionId: i.id })
-                  }
-                >
-                  {t(`interaction.${i.id}`)} · {i.hours} h
-                </Button>
-              </li>
+          <div className="flex flex-col gap-4">
+            {groups.map(({ group, open, closed }) => (
+              <section key={group} aria-labelledby={`group-${group}`}>
+                <h3 id={`group-${group}`} className="mb-2 text-sm font-semibold text-fg">
+                  {t(`interactionGroup.${group}`)}
+                </h3>
+                {open.length > 0 && (
+                  <ul className="flex flex-wrap gap-2">
+                    {open.map((i) => (
+                      <li key={i.id}>
+                        <Button
+                          size="sm"
+                          variant={
+                            i.id === 'argue' ||
+                            i.id === 'breakUp' ||
+                            i.id === 'endFriendship' ||
+                            i.id === 'gossip'
+                              ? 'ghost'
+                              : 'secondary'
+                          }
+                          disabled={busy}
+                          onClick={() =>
+                            void send({
+                              type: 'interact',
+                              personId: person.id,
+                              interactionId: i.id,
+                            })
+                          }
+                        >
+                          {t(`interaction.${i.id}`)} · {i.hours} h
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {closed.length > 0 && (
+                  <details className="mt-2 text-sm">
+                    <summary className="cursor-pointer text-primary">
+                      {open.length === 0 ? 'Not available now' : 'More options'} ({closed.length})
+                    </summary>
+                    <ul className="mt-2 flex flex-col gap-1 pl-1 text-muted">
+                      {closed.map((i) => (
+                        <li key={i.id}>
+                          <span className="font-medium text-fg">{t(`interaction.${i.id}`)}</span>:{' '}
+                          {i.reason}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </section>
             ))}
-          </ul>
-          {unavailable.length > 0 && (
-            <details className="mt-3 text-sm">
-              <summary className="cursor-pointer text-primary">
-                Why some options are not available
-              </summary>
-              <ul className="mt-2 list-disc pl-5 text-muted">
-                {unavailable.map((i) => (
-                  <li key={i.id}>
-                    {t(`interaction.${i.id}`)}: {i.reason}
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
+          </div>
         </Card>
       )}
       {view.pendingEvent && (

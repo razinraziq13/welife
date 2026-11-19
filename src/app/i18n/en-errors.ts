@@ -15,6 +15,8 @@ import { LEGACY_MESSAGES } from '@engine/legacy/legacy';
 import { MEDIA_MESSAGES } from '@engine/media/media';
 import { PROPERTY_MESSAGES } from '@engine/property/property';
 import { INTERACTION_BLOCK_MESSAGES } from '@engine/social/interactions';
+import { WORK_ACTION_MESSAGES } from '@engine/career/workActions';
+import { LIFESTYLE_MESSAGES } from '@engine/activities/lifestyle';
 
 /**
  * English text for refused commands, keyed `err.<ErrorName>.<code>` (spec P-10). The engine's
@@ -38,6 +40,8 @@ const TABLES: [string, Record<string, string>][] = [
   ['MediaError', MEDIA_MESSAGES],
   ['PropertyError', PROPERTY_MESSAGES],
   ['InteractionError', INTERACTION_BLOCK_MESSAGES],
+  ['WorkActionError', WORK_ACTION_MESSAGES],
+  ['LifestyleError', LIFESTYLE_MESSAGES],
 ];
 
 export const enErrors: Record<string, string> = Object.fromEntries(

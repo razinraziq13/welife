@@ -17,7 +17,11 @@ export function resolveLayout(layout: DashboardLayout | null): DashboardLayout {
   const order = (layout?.order ?? []).filter((id) => DASHBOARD_WIDGETS.includes(id));
   for (const id of DASHBOARD_WIDGETS) if (!order.includes(id)) order.push(id);
   const hidden = layout ? layout.hidden : [...DEFAULT_HIDDEN];
-  return { order, hidden: hidden.filter((id) => order.includes(id)) };
+  return {
+    order,
+    hidden: hidden.filter((id) => order.includes(id)),
+    ...(layout?.favourites ? { favourites: layout.favourites } : {}),
+  };
 }
 
 export function LifeTab() {
@@ -37,18 +41,6 @@ export function LifeTab() {
     if (target < 0 || target >= order.length) return;
     [order[index], order[target]] = [order[target] as DashboardWidget, id];
     void setLayout({ ...layout, order });
-  };
-  const showActivities = () => {
-    const scroll = () => {
-      document.getElementById('widget-activities')?.scrollIntoView({ block: 'start' });
-    };
-    if (layout.hidden.includes('activities')) {
-      void setLayout({ ...layout, hidden: layout.hidden.filter((h) => h !== 'activities') }).then(
-        () => {
-          requestAnimationFrame(scroll);
-        },
-      );
-    } else scroll();
   };
   const toggle = (id: DashboardWidget) => {
     const hidden = layout.hidden.includes(id)
@@ -76,7 +68,7 @@ export function LifeTab() {
 
       <LifeHero view={view} base={base} />
       <StoryFeed view={view} base={base} />
-      <ActionGrid view={view} base={base} onActivities={showActivities} />
+      <ActionGrid view={view} base={base} />
 
       {customizing && (
         <Card

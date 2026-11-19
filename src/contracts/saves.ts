@@ -25,6 +25,8 @@ export const DashboardLayoutSchema = z
   .object({
     order: z.array(z.enum(DASHBOARD_WIDGETS)).max(DASHBOARD_WIDGETS.length),
     hidden: z.array(z.enum(DASHBOARD_WIDGETS)).max(DASHBOARD_WIDGETS.length),
+    /** Activities Hub favourites (activity ids), saved with the life. Optional for older saves. */
+    favourites: z.array(z.string().min(1).max(40)).max(40).optional(),
   })
   .strict()
   .refine((layout) => new Set(layout.order).size === layout.order.length, {

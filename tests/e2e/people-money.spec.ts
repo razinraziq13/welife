@@ -67,6 +67,45 @@ test.describe('an adult life', () => {
     return /\/play\/([^/]+)\//.exec(page.url())?.[1] ?? '';
   }
 
+  test('activities hub, grouped person actions and career play work and are accessible', async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    const saveId = await openAdult(page);
+    // Activities Hub: search, do a paid activity, favourite it.
+    await page.goto(`/play/${saveId}/activities`);
+    await expect(page.getByRole('heading', { level: 1, name: 'Activities' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Suggested for you' })).toBeVisible();
+    await expectAccessible(page);
+    await page.getByRole('searchbox', { name: 'Search activities' }).fill('cinema');
+    await page.getByRole('button', { name: 'Do it: Go to the cinema' }).click();
+    await expect(page.getByText('The film was better than the trailer.')).toBeVisible();
+    await page.getByRole('button', { name: 'Add Go to the cinema to favourites' }).click();
+    await expect(
+      page.getByRole('button', { name: 'Remove Go to the cinema from favourites' }),
+    ).toBeVisible();
+    // A locked activity says why.
+    await page.getByRole('searchbox', { name: 'Search activities' }).fill('doctor');
+    await page.getByRole('button', { name: 'Do it: See a doctor' }).click();
+    await expect(page.getByText('Once a month; you have already done this.')).toBeVisible();
+
+    // Career play on the Career tab.
+    await page.goto(`/play/${saveId}/career`);
+    await expect(page.getByRole('heading', { level: 2, name: 'Your career path' })).toBeVisible();
+    await expect(page.getByText('Professional reputation')).toBeVisible();
+    await expectAccessible(page);
+
+    // A person's actions are grouped, and closed ones explain why.
+    await page.goto(`/play/${saveId}/social`);
+    await page
+      .getByRole('link', { name: /Parent · age/ })
+      .first()
+      .click();
+    await expect(page.getByRole('heading', { level: 3, name: 'Talk' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 3, name: 'Family' })).toBeVisible();
+    await expectAccessible(page);
+  });
+
   test('career, finance and people screens work for an adult (M4) and are accessible', async ({
     page,
   }) => {

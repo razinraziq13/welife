@@ -40,6 +40,18 @@ import {
   type EducationRejection,
 } from './education/school';
 import { choiceAvailability, textParams } from './events/runtime';
+import { projectHub, type HubView } from './activities/hub';
+import {
+  WORK_ACTIONS,
+  WORK_ACTION_IDS,
+  WORK_ACTION_MESSAGES,
+  careerTrack,
+  jobSatisfaction,
+  workActionBlock,
+  type CareerTrack,
+  type Satisfaction,
+  type WorkActionId,
+} from './career/workActions';
 import { familyHomeFor } from './social/family';
 import {
   INTERACTIONS,
@@ -67,6 +79,7 @@ import {
 import type { SimState } from './core/commands';
 import type {
   Account,
+  Employment,
   Appearance,
   Award,
   BiographyEntry,
@@ -204,9 +217,27 @@ export interface JobView {
   level: number;
 }
 
+export interface CareerView {
+  track: CareerTrack | null;
+  reputation: number;
+  specialty: string | null;
+  specialtyProgress: number;
+  satisfaction: Satisfaction | null;
+  actions: {
+    id: WorkActionId;
+    hours: number;
+    energy: number;
+    available: boolean;
+    reason: string | null;
+  }[];
+  ownsBusiness: boolean;
+  inPolitics: boolean;
+}
+
 export interface WorkView {
   minWorkAge: number;
   canWork: boolean;
+  career: CareerView;
   job: JobView | null;
   history: {
     id: string;
@@ -403,6 +434,8 @@ export interface GameView {
   };
   time: { totalHours: number; usedHours: number };
   activities: ActivityAvailability[];
+  /** Activities Hub: every free-time activity with category, cost and availability. */
+  hub: HubView;
   feed: BiographyEntry[];
   notifications: Notification[];
   unreadCount: number;
@@ -544,6 +577,33 @@ function educationView(world: World, c: Character): EducationView {
   };
 }
 
+function careerView(world: World, c: Character, e: Employment | undefined): CareerView {
+  const track = e ? careerTrack(e) : null;
+  return {
+    track,
+    reputation: c.career.reputation,
+    specialty: c.career.specialty,
+    specialtyProgress: c.career.specialtyProgress,
+    satisfaction: e ? jobSatisfaction(world, c, e) : null,
+    actions: track
+      ? WORK_ACTION_IDS.filter((id) => WORK_ACTIONS[id].track === track).map((id) => {
+          const block = workActionBlock(world, c, id);
+          return {
+            id,
+            hours: WORK_ACTIONS[id].hours,
+            energy: WORK_ACTIONS[id].energy,
+            available: block === null,
+            reason: block ? WORK_ACTION_MESSAGES[block] : null,
+          };
+        })
+      : [],
+    ownsBusiness: Object.values(world.businesses).some(
+      (b) => b.status === 'active' && b.owners.some((o) => o.ownerId === c.id),
+    ),
+    inPolitics: Object.values(world.civics.politics).some((p) => p.characterId === c.id),
+  };
+}
+
 function workView(world: World, c: Character): WorkView {
   const rules = getRules(c.countryCode);
   const age = ageOf(c.birth, world.clock).years;
@@ -553,6 +613,7 @@ function workView(world: World, c: Character): WorkView {
   return {
     minWorkAge: rules.work.minWorkAge,
     canWork: age >= rules.work.minWorkAge,
+    career: careerView(world, c, e?.status === 'active' ? e : undefined),
     job:
       e?.status === 'active'
         ? {
@@ -936,6 +997,7 @@ export function projectGame(state: SimState): GameView {
     },
     time: { totalHours: budget.total, usedHours: budget.used },
     activities: world.lifeStatus === 'alive' ? listActivities(world) : [],
+    hub: projectHub(world),
     feed: world.biography.filter((b) => b.characterId === player.id).slice(-FEED_LIMIT),
     notifications: world.notifications.slice(-100),
     unreadCount: world.notifications.filter((n) => !n.read).length,

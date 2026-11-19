@@ -14,6 +14,7 @@ import { HABIT_KEYS, SKILL_KEYS, STUDY_EFFORTS, WORK_EFFORTS } from '@engine/sta
 import type { GameView } from '@engine/view';
 import { ActivityList } from '../ActivityList';
 import { tickToMonth } from '../widgets';
+import { CareerPlayCard } from '../CareerPlay';
 
 function habitLevel(value: number): string {
   if (value >= 70) return 'Strong habit';
@@ -767,6 +768,7 @@ export function CareerTab() {
       {c.age.years >= 13 && (
         <>
           <JobCard view={view} />
+          <CareerPlayCard view={view} base={`/play/${session.saveId}`} />
           {c.age.years >= 18 && (
             <Card title="Your own business">
               <p className="text-sm text-fg">

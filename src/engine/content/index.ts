@@ -3,6 +3,7 @@ import { CORE_EVENTS } from './events/core';
 import { LIFE_EVENTS } from './events/life';
 import { ENTERPRISE_EVENTS } from './events/enterprise';
 import { CIVIC_EVENTS } from './events/civic';
+import { CAREER_EVENTS } from './events/career';
 
 /**
  * Built-in content registry. Content is validated when the module loads; invalid built-in
@@ -10,13 +11,14 @@ import { CIVIC_EVENTS } from './events/civic';
  */
 
 /** Version of the built-in content. Bump when event rules or numbers change. */
-export const CONTENT_VERSION = 'core-2026.11.4';
+export const CONTENT_VERSION = 'core-2026.11.5';
 
 const validated = validateEventSet([
   ...CORE_EVENTS,
   ...LIFE_EVENTS,
   ...ENTERPRISE_EVENTS,
   ...CIVIC_EVENTS,
+  ...CAREER_EVENTS,
 ]);
 if (validated.issues.length > 0) {
   throw new Error(

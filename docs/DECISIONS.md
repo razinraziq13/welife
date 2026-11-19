@@ -203,3 +203,21 @@ This file records decisions that fill gaps in, or clarify, the specification.
 ## Proposed tuning values added in R1 (not yet user-approved)
 
 - Life title thresholds: public office ever held; at least one business founded; 3+ countries lived in; 10,000+ followers; 4+ children and grandchildren; a bachelor's or master's degree; 3+ jobs; 5+ friends.
+
+## Gameplay expansion phase 1 decisions (interactions, careers, activities hub)
+
+| #   | Topic                     | Decision and reason                                                                                                                                                                                                                                                               |
+| --- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| E57 | One interaction registry  | The 15 new interactions join the existing registry (same command, eligibility check, time cost, diminishing returns and seeded `social` stream), in `social/contextual.ts`, rather than a parallel system.                                                                        |
+| E58 | Money from family         | Asking family for money moves funds from their household's account to the player's, booked as their expense and the player's income (four balanced postings). Only relatives whose household keeps a budget can give.                                                             |
+| E59 | Additive character fields | `career` (professional reputation, specialism, progress) and `projects` were added to schema 5 with defaults, not a version bump. Defaults are filled by the schema on load, by the V4 upgrade and by the save migration step (snapshots used for rewinds are not schema-parsed). |
+| E60 | Career tracks             | Teaching (education), medicine (healthcare), performing (arts) and office (everything else) get different actions. Business and politics already have full systems and are linked, not duplicated.                                                                                |
+| E61 | Satisfaction is derived   | Job satisfaction is computed each month from pay within the band, stress, the manager, performance, reputation and a specialism; it is never stored.                                                                                                                              |
+| E62 | Activities hub            | The hub lists the original personal activities and the new lifestyle activities together. Recurring plans can run either kind. Favourites are a per-life UI preference saved with the dashboard layout (optional field).                                                          |
+| E63 | Travel stays simple       | A holiday abroad is a short visit paid in the home currency; it does not change residence or need a visa in the game.                                                                                                                                                             |
+
+## Proposed tuning values added in the gameplay expansion (not yet user-approved)
+
+- Interaction chances combine closeness, trust, conflict, the other person's agreeableness and stress, and the player's social skill; money requests are 1% (under 13), 3% (13-17) or 15% (adults) of the median monthly wage, once per six months per relative.
+- Work actions: 3-8 hours, once a month each; overtime at time and a half; a paid role is 30% of the median wage; a course is 5%; a specialism needs 100 progress points.
+- Lifestyle costs: 0-25% of the median wage (holiday abroad 25%); projects advance 2-20 points a session from skills and discipline; a novel is published (25% of the median wage) at reading 45+, an app earns 35% at technology 45+.

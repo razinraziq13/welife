@@ -2,7 +2,8 @@ import { addMonths, monthIndex } from '../core/clock';
 import { sortedValues } from '../core/data';
 import { applyPercent } from '../core/money';
 import { addBiography, addNotification, ageYears, nextId } from '../core/world';
-import { ACTIVITIES, findActivity, performActivity } from '../activities/activities';
+import { ACTIVITIES } from '../activities/activities';
+import { activityHours, isPlannable, performPlanned } from '../activities/hub';
 import { changeNeed, changeStat } from '../characters/stats';
 import { medianWage } from '../economy/economy';
 import { payExpense, payMedicalCost, payerFor } from '../economy/finance';
@@ -71,7 +72,7 @@ export class CalendarError extends Error {
 }
 
 export function planActivity(world: World, activityId: string, timesPerMonth: number): void {
-  if (!findActivity(activityId)) throw new CalendarError('unknownActivity');
+  if (!isPlannable(activityId)) throw new CalendarError('unknownActivity');
   if (world.calendar.plans.some((p) => p.activityId === activityId))
     throw new CalendarError('alreadyPlanned');
   if (world.calendar.plans.length >= MAX_PLANS) throw new CalendarError('tooManyPlans');
@@ -153,9 +154,9 @@ export function runPlans(world: World): void {
   let skipped = 0;
   for (const plan of world.calendar.plans) {
     for (let i = 0; i < plan.timesPerMonth; i++) {
-      const result = performActivity(world, plan.activityId);
-      if (result.status === 'no-time') skipped += 1;
-      if (result.status !== 'done' && result.status !== 'tired') break;
+      const status = performPlanned(world, plan.activityId);
+      if (status === 'no-time') skipped += 1;
+      if (status !== 'done' && status !== 'tired') break;
     }
   }
   if (skipped > 0)
@@ -453,7 +454,7 @@ export function conflictsFor(world: World, tick: number): string[] {
 export function plannedHours(world: World): number {
   let total = 0;
   for (const plan of world.calendar.plans)
-    total += (findActivity(plan.activityId)?.hours ?? 0) * plan.timesPerMonth;
+    total += activityHours(plan.activityId) * plan.timesPerMonth;
   return total;
 }
 

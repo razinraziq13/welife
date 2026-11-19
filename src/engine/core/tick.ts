@@ -3,7 +3,8 @@ import { deepClone } from './data';
 import { assertInvariants } from './invariants';
 import { ensureActivityMonth } from '../activities/activities';
 import { processCalendarItems, runPlans } from '../calendar/calendar';
-import { processEmployment, refreshJobMarket } from '../career/jobs';
+import { activeEmployment, processEmployment, refreshJobMarket } from '../career/jobs';
+import { careerMonth } from '../career/workActions';
 import {
   driftRelationships,
   processMortality,
@@ -113,6 +114,11 @@ export function advanceMonth(committed: World): AdvanceResult {
   updateCharactersMonthly(world);
   processCivicHealth(world);
   processEmployment(world);
+  {
+    const worker = world.characters[world.activeCharacterId];
+    const job = worker ? activeEmployment(world, worker) : null;
+    if (worker && job) careerMonth(world, worker, job);
+  }
   const player = world.characters[world.activeCharacterId];
   if (player) rescheduleStudentLoan(world, player);
   processCalendarItems(world);

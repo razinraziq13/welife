@@ -1,4 +1,4 @@
-import { WORLD_SCHEMA_VERSION } from '@engine/state/schema';
+import { DEFAULT_CAREER, WORLD_SCHEMA_VERSION } from '@engine/state/schema';
 import {
   upgradeWorldV1,
   upgradeWorldV2,
@@ -51,5 +51,22 @@ export function migrateWorld(
     version += 1;
     current.schemaVersion = version;
   }
-  return current;
+  return fillAdditiveDefaults(current);
+}
+
+/**
+ * Fields added to schema 5 without a version change (they have schema defaults). Snapshots are
+ * rebuilt without a schema parse, so the defaults are filled here too; every load and rewind
+ * passes through this step. Existing values are never changed.
+ */
+function fillAdditiveDefaults(world: Record<string, unknown>): Record<string, unknown> {
+  const characters = world.characters;
+  if (typeof characters !== 'object' || characters === null) return world;
+  for (const c of Object.values(characters as Record<string, Record<string, unknown>>)) {
+    c.career ??= { ...DEFAULT_CAREER };
+    c.projects ??= {};
+  }
+  const legacy = world.legacy as Record<string, unknown> | undefined;
+  if (legacy && !('house' in legacy)) legacy.house = null;
+  return world;
 }

@@ -146,6 +146,7 @@ function enrich(params: Record<string, string | number>): Record<string, string 
         ? stageName(params.country, params.stage as EducationStage)
         : t(`stage.${params.stage}`);
   }
+  if (typeof params.projectId === 'string') out.projectName = t('activity.' + params.projectId);
   if (typeof params.activityId === 'string') out.activityName = t(`activity.${params.activityId}`);
   if (typeof params.cause === 'string') out.causeName = t(`cause.${params.cause}`);
   if (typeof params.relation === 'string')
@@ -204,6 +205,7 @@ function enrich(params: Record<string, string | number>): Record<string, string 
         ? ` (${params.exam}: ${String(params.score)}/100)`
         : '';
   }
+  if (typeof params.skill === 'string') out.skillName = t(`skill.${params.skill}`).toLowerCase();
   if (typeof params.amount === 'string' && /^-?\d+$/.test(params.amount)) {
     out.amountText = activeCurrency
       ? formatMoney(BigInt(params.amount), activeCurrency)
@@ -282,6 +284,8 @@ const STORY_VERBS = new Set([
   'Bought',
   'Began',
   'Died',
+  'Travelled',
+  'Passed',
 ]);
 /** Passive openings: "Was diagnosed…" becomes "You were diagnosed…". */
 const STORY_PASSIVE: Record<string, string> = {

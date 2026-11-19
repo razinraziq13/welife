@@ -651,6 +651,8 @@ function review(world: World, c: Character, e: Employment, isPlayer: boolean): v
   const inflation = world.economy[c.countryCode]?.inflationBp ?? 200;
   const manager = e.managerId ? findRelationship(world, c.id, e.managerId) : undefined;
   const managerBonus = manager ? Math.floor((manager.closeness - 50) / 2) : 0;
+  // Professional reputation counts at review time (gameplay expansion).
+  const reputationBonus = Math.floor((c.career.reputation - 200) / 20);
   const tenure = world.tick - e.startTick;
   if (e.performance < 300) {
     e.warnings += 1;
@@ -660,40 +662,46 @@ function review(world: World, c: Character, e: Employment, isPlayer: boolean): v
       return;
     }
   } else e.warnings = 0;
-  const promote =
-    e.performance + managerBonus >= 700 &&
+  const promoted =
+    e.performance + managerBonus + reputationBonus >= 700 &&
     tenure >= 24 &&
     e.terms.level < occupation.maxLevel &&
     withRng(world, 'career', (rng) => rng.int(100) < 55);
-  if (promote) {
-    const level = e.terms.level + 1;
-    const band = salaryBand(world, occupation, level, e.terms.locationId);
-    const fullTime = getRules(c.countryCode).work.fullTimeHours;
-    const newMin = scaleForContract(band.min, e.terms.contract, e.terms.hours, fullTime);
-    e.terms = {
-      ...e.terms,
-      level,
-      salaryMinMinor: newMin,
-      salaryMaxMinor: scaleForContract(band.max, e.terms.contract, e.terms.hours, fullTime),
-    };
-    e.salaryMinor = maxBig(newMin, applyPercent(e.salaryMinor, 115));
-    e.title = jobTitle(occupation, level);
-    e.startTick = world.tick;
-    if (isPlayer) {
-      changeStat(world, c, 'happiness', 80, 'work:promotion');
-      changeStat(world, c, 'confidence', 50, 'work:promotion');
-      addBiography(world, c.id, 'work', 'bio.promoted', {
-        title: e.title,
-        employer: e.terms.employer,
-      });
-      addNotification(world, 'work', 'ntf.promoted', { title: e.title }, 'career');
-    }
+  if (promoted) {
+    promote(world, c, e, isPlayer);
     return;
   }
   const raiseBp = clamp(Math.max(0, inflation) + (e.performance - 500), 0, 1500);
   e.salaryMinor += applyBp(e.salaryMinor, Math.floor(raiseBp));
   if (isPlayer && raiseBp > 0)
     addNotification(world, 'work', 'ntf.annualRaise', { bp: Math.floor(raiseBp) }, 'career');
+}
+
+/** Moves a job up one level: new title, pay band and a raise (reviews and asking for it). */
+export function promote(world: World, c: Character, e: Employment, isPlayer: boolean): void {
+  const occupation = getOccupation(e.terms.occupationId);
+  const level = e.terms.level + 1;
+  const band = salaryBand(world, occupation, level, e.terms.locationId);
+  const fullTime = getRules(c.countryCode).work.fullTimeHours;
+  const newMin = scaleForContract(band.min, e.terms.contract, e.terms.hours, fullTime);
+  e.terms = {
+    ...e.terms,
+    level,
+    salaryMinMinor: newMin,
+    salaryMaxMinor: scaleForContract(band.max, e.terms.contract, e.terms.hours, fullTime),
+  };
+  e.salaryMinor = maxBig(newMin, applyPercent(e.salaryMinor, 115));
+  e.title = jobTitle(occupation, level);
+  e.startTick = world.tick;
+  if (isPlayer) {
+    changeStat(world, c, 'happiness', 80, 'work:promotion');
+    changeStat(world, c, 'confidence', 50, 'work:promotion');
+    addBiography(world, c.id, 'work', 'bio.promoted', {
+      title: e.title,
+      employer: e.terms.employer,
+    });
+    addNotification(world, 'work', 'ntf.promoted', { title: e.title }, 'career');
+  }
 }
 
 /** Step 4-6 (work part): the player's job in detail, NPC careers in simplified form. */

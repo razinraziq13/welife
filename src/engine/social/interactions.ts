@@ -18,6 +18,15 @@ import {
   shareMoment,
 } from './family';
 import { addMemory } from './memories';
+import {
+  CONTEXTUAL,
+  CONTEXTUAL_BLOCK_MESSAGES,
+  CONTEXTUAL_IDS,
+  contextualBlock,
+  contextualOutcome,
+  type ContextualBlock,
+  type ContextualId,
+} from './contextual';
 import { createPotentialPartner, meetPeople } from './npcs';
 import { FAMILY_TYPES, adjustPair, findRelationship, kinship, linkPair } from './relationships';
 
@@ -48,6 +57,7 @@ export const INTERACTION_IDS = [
   'planFamily',
   'stopPlanning',
   'adopt',
+  ...CONTEXTUAL_IDS,
 ] as const;
 export type InteractionId = (typeof INTERACTION_IDS)[number];
 
@@ -78,7 +88,15 @@ export const INTERACTIONS: Record<InteractionId, InteractionDefinition> = {
   planFamily: { id: 'planFamily', hours: 1, minAge: ADULT_AGE },
   stopPlanning: { id: 'stopPlanning', hours: 1, minAge: ADULT_AGE },
   adopt: { id: 'adopt', hours: 10, minAge: 25 },
+  ...(Object.fromEntries(CONTEXTUAL_IDS.map((id) => [id, { id, ...CONTEXTUAL[id] }])) as Record<
+    ContextualId,
+    InteractionDefinition
+  >),
 };
+
+function isContextual(id: InteractionId): id is ContextualId {
+  return (CONTEXTUAL_IDS as readonly string[]).includes(id);
+}
 
 export type InteractionBlock =
   | 'tooYoung'
@@ -99,7 +117,8 @@ export type InteractionBlock =
   | 'noHome'
   | 'livingTogether'
   | 'cannotAfford'
-  | 'expecting';
+  | 'expecting'
+  | ContextualBlock;
 
 export const INTERACTION_BLOCK_MESSAGES: Record<InteractionBlock, string> = {
   tooYoung: 'You are too young for this.',
@@ -121,6 +140,7 @@ export const INTERACTION_BLOCK_MESSAGES: Record<InteractionBlock, string> = {
   livingTogether: 'You already live together.',
   cannotAfford: 'You cannot afford this right now.',
   expecting: 'A child is already on the way.',
+  ...CONTEXTUAL_BLOCK_MESSAGES,
 };
 
 const SOCIAL_TYPES: ReadonlySet<RelationType> = new Set([
@@ -162,6 +182,15 @@ export function interactionBlock(
   const partner = player.partnership?.partnerId === other.id ? player.partnership : null;
   const hours = timeBudget(world);
   if (hours.used + def.hours > hours.total) return 'noTime';
+  if (isContextual(id))
+    return contextualBlock(world, player, other, id, {
+      rel,
+      relation,
+      isFamily,
+      isPartner: partner !== null,
+      age,
+      theirAge,
+    });
   switch (id) {
     case 'chat':
       return theirAge < 2 ? 'targetTooYoung' : null;
@@ -245,6 +274,8 @@ export interface InteractionResult {
   outcome: 'success' | 'mixed' | 'failure';
   /** Localisation key describing what happened. */
   key: string;
+  /** Values for the message (amounts, percentages, titles). */
+  params?: Record<string, string | number>;
 }
 
 /** Success chance from chemistry, closeness, their personality and your social skill. */
@@ -290,6 +321,26 @@ export function interact(world: World, personId: string, id: InteractionId): Int
     key,
   });
   const source = `int:${String(world.tick)}:${id}`;
+  if (isContextual(id) && rel) {
+    const relation = relationOf(world, player, other);
+    const done = contextualOutcome(
+      world,
+      player,
+      other,
+      id,
+      {
+        rel,
+        relation,
+        isFamily: relation !== null && FAMILY_TYPES.has(relation),
+        isPartner: player.partnership?.partnerId === other.id,
+        age: ageYears(world, player),
+        theirAge: ageYears(world, other),
+      },
+      percent,
+      source,
+    );
+    return { interactionId: id, personId, ...done };
+  }
 
   switch (id) {
     case 'chat':
@@ -523,6 +574,8 @@ export function interact(world: World, personId: string, id: InteractionId): Int
       return result('success', 'int.adopt');
     }
   }
+  // A contextual interaction without a relationship (already refused by the eligibility check).
+  throw new InteractionError('unknownPerson');
 }
 
 export class InteractionError extends Error {

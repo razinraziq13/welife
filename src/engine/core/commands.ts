@@ -21,6 +21,8 @@ import {
   respondToOffer,
   retire,
 } from '../career/jobs';
+import { WORK_ACTION_IDS, WorkActionError, performWorkAction } from '../career/workActions';
+import { LifestyleError, findLifestyle, performLifestyle } from '../activities/lifestyle';
 import {
   FinanceError,
   LedgerError,
@@ -152,6 +154,8 @@ export const CommandSchema = z.discriminatedUnion('type', [
   // Social (Milestone 3)
   command('interact', { personId: EntityId, interactionId: z.enum(INTERACTION_IDS) }),
   command('meetPeople', {}),
+  // Career play (gameplay expansion)
+  command('workAction', { actionId: z.enum(WORK_ACTION_IDS) }),
   // Education (Milestone 3)
   command('setStudyEffort', { value: z.enum(STUDY_EFFORTS) }),
   command('joinClub', { clubId: z.string().min(1).max(40) }),
@@ -388,6 +392,7 @@ const done = (key: string, params: Record<string, string | number> = {}): Comman
 /** Actions that need freedom of movement (unavailable in custody, spec §4 Law). */
 const BLOCKED_IN_CUSTODY = new Set<string>([
   'meetPeople',
+  'workAction',
   'joinClub',
   'applyStudy',
   'planActivity',
@@ -431,6 +436,10 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
         kind: 'interacted',
         interaction: interact(world, cmd.personId, cmd.interactionId),
       };
+    case 'workAction': {
+      const r = performWorkAction(world, player, cmd.actionId);
+      return done(r.key, r.params);
+    }
     case 'meetPeople': {
       const met = meetNewPeople(world);
       return done(met.personId ? 'out.metSomeone' : 'out.metNoOne', {
@@ -756,6 +765,7 @@ const DOMAIN_ERRORS = [
   FinanceError,
   LedgerError,
   InteractionError,
+  WorkActionError,
   CalendarError,
   BusinessError,
   PropertyError,
@@ -872,6 +882,17 @@ export function execute(
   switch (command.type) {
     case 'act': {
       if (world.lifeStatus !== 'alive') return reject(state, 'lifeEnded', 'This life has ended.');
+      if (findLifestyle(command.activityId)) {
+        try {
+          const r = performLifestyle(world, command.activityId);
+          outcome = { status: 'applied', kind: 'done', key: r.key, params: r.params };
+        } catch (error) {
+          if (error instanceof LifestyleError)
+            return reject(state, 'ineligible', error.message, errorKey(error));
+          throw error;
+        }
+        break;
+      }
       outcome = {
         status: 'applied',
         kind: 'acted',

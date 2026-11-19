@@ -15,42 +15,42 @@ _Adopted 2026-11-19 from the expanded game design specification (a proposal writ
 
 Legend: **Done**, **Partial**, **Next** (current slice), **Later**.
 
-| #   | Idea                         | Status  | Notes                                                                   |
-| --- | ---------------------------- | ------- | ----------------------------------------------------------------------- |
-| 01  | Four-month advance           | Done    | D11; stops early for decisions, death and refusals                      |
-| 02  | Simplified Life home         | Done    | Header, four stats, action grid; story feed added in this slice         |
-| 03  | Simple and detailed modes    | Later   | UI preference only                                                      |
-| 04  | End-of-life summary          | Done    | This slice: summary, title and milestones; share card not yet           |
-| 05  | Achievement pop-ups          | Done    | This slice                                                              |
-| 06  | 400+ events                  | Later   | 131 today; R6                                                           |
-| 07  | Story lines                  | Partial | Second-person feed from recorded biography (see correction 4)           |
-| 08  | Activities hub               | Later   | Activities exist on the Life tab; groups, search and favourites to come |
-| 09  | Quick activities             | Later   |                                                                         |
-| 10  | Pets                         | Later   | New entity; needs schema migration                                      |
-| 11  | Appearance and wardrobe      | Later   |                                                                         |
-| 12  | Adult chance activities      | Later   | Optional                                                                |
-| 13  | Health choices               | Partial | Conditions and treatment exist                                          |
-| 14  | Civil lawsuits               | Partial | Civil claims exist as events; no player-started case flow yet           |
-| 15  | Grouped person menus         | Later   | 19 interactions exist; regroup                                          |
-| 16  | Ask family for things        | Later   |                                                                         |
-| 17  | Shared outings               | Later   |                                                                         |
-| 18  | Conflict and repair          | Partial | Argue and apologise exist                                               |
-| 19  | Dating depth                 | Partial | Dating, engagement, marriage exist                                      |
-| 20  | School hub                   | Partial | Education card on the Career tab                                        |
-| 21  | Popularity and friend groups | Later   |                                                                         |
-| 22  | School events                | Later   |                                                                         |
-| 23  | Attendance, nurse, teachers  | Later   |                                                                         |
-| 24  | University life              | Partial | Further study, scholarships and loans exist                             |
-| 25  | Fame careers                 | Partial | Social media exists                                                     |
-| 26  | Freelance and side work      | Later   |                                                                         |
-| 27  | Abstract crime and prison    | Partial | Legal cases and custody exist                                           |
-| 28  | Collectibles                 | Later   |                                                                         |
-| 29  | Weekly challenges            | Later   |                                                                         |
-| 30  | Life titles gallery          | Partial | This slice: titles on the summary and in the family line                |
-| 31  | Mini-games                   | Later   |                                                                         |
-| 32  | Scenario starts              | Done    | 12 scenarios (W-01)                                                     |
-| 33  | Fantasy packs                | Later   | Content packs exist; packs only, never core                             |
-| 34  | Era packs                    | Later   | After 1.0                                                               |
+| #   | Idea                         | Status  | Notes                                                                                   |
+| --- | ---------------------------- | ------- | --------------------------------------------------------------------------------------- |
+| 01  | Four-month advance           | Done    | D11; stops early for decisions, death and refusals                                      |
+| 02  | Simplified Life home         | Done    | Header, four stats, action grid; story feed added in this slice                         |
+| 03  | Simple and detailed modes    | Later   | UI preference only                                                                      |
+| 04  | End-of-life summary          | Done    | This slice: summary, title and milestones; share card not yet                           |
+| 05  | Achievement pop-ups          | Done    | This slice                                                                              |
+| 06  | 400+ events                  | Later   | 131 today; R6                                                                           |
+| 07  | Story lines                  | Partial | Second-person feed from recorded biography (see correction 4)                           |
+| 08  | Activities hub               | Done    | Search, nine categories, favourites, monthly plans, suggestions with reasons            |
+| 09  | Quick activities             | Done    | Doctor, dentist, spa, cinema, concerts, museums, trips, shopping, parties, driving test |
+| 10  | Pets                         | Later   | New entity; needs schema migration                                                      |
+| 11  | Appearance and wardrobe      | Partial | New clothes and gadgets; no wardrobe on the avatar yet                                  |
+| 12  | Adult chance activities      | Later   | Optional                                                                                |
+| 13  | Health choices               | Partial | Doctor, dentist and spa visits in the hub; conditions and treatment exist               |
+| 14  | Civil lawsuits               | Partial | Civil claims exist as events; no player-started case flow yet                           |
+| 15  | Grouped person menus         | Done    | Grouped into Talk, Friendship, Family, Romance and Work                                 |
+| 16  | Ask family for things        | Done    | Money (through the ledger) and permission                                               |
+| 17  | Shared outings               | Partial | Family get-togethers, making something together; outings with a chosen person to come   |
+| 18  | Conflict and repair          | Done    | Make peace, talk it through, apologise, argue                                           |
+| 19  | Dating depth                 | Partial | Dating, engagement, marriage exist                                                      |
+| 20  | School hub                   | Partial | Education card on the Career tab                                                        |
+| 21  | Popularity and friend groups | Later   |                                                                                         |
+| 22  | School events                | Later   |                                                                                         |
+| 23  | Attendance, nurse, teachers  | Later   |                                                                                         |
+| 24  | University life              | Partial | Further study, scholarships and loans exist                                             |
+| 25  | Fame careers                 | Partial | Performing track: auditions, paid roles, reputation                                     |
+| 26  | Freelance and side work      | Later   |                                                                                         |
+| 27  | Abstract crime and prison    | Partial | Legal cases and custody exist                                                           |
+| 28  | Collectibles                 | Later   |                                                                                         |
+| 29  | Weekly challenges            | Later   |                                                                                         |
+| 30  | Life titles gallery          | Partial | This slice: titles on the summary and in the family line                                |
+| 31  | Mini-games                   | Later   |                                                                                         |
+| 32  | Scenario starts              | Done    | 12 scenarios (W-01)                                                                     |
+| 33  | Fantasy packs                | Later   | Content packs exist; packs only, never core                                             |
+| 34  | Era packs                    | Later   | After 1.0                                                                               |
 
 ## Phases
 

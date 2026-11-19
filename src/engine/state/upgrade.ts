@@ -5,7 +5,7 @@ import { emptyEducation } from '../characters/factory';
 import { randomInterests } from '../social/relationships';
 import { birthCivic, defaultCivic, parentsOf, religionFor } from '../civics/status';
 import { currencyFor } from '../economy/finance';
-import { RNG_STREAMS, SKILL_KEYS, type World } from './schema';
+import { DEFAULT_CAREER, RNG_STREAMS, SKILL_KEYS, type World } from './schema';
 
 /**
  * Upgrades a version-1 world (Milestones 1-2) to version 2. Pure and deterministic: new
@@ -204,6 +204,11 @@ export function upgradeWorldV4(raw: Record<string, unknown>): Record<string, unk
       succession: null,
       house: null,
     };
+  }
+  // Gameplay expansion: professional reputation, specialism and personal projects.
+  for (const c of Object.values(world.characters) as Partial<World['characters'][string]>[]) {
+    c.career ??= { ...DEFAULT_CAREER };
+    c.projects ??= {};
   }
   world.schemaVersion = 5;
   return world;

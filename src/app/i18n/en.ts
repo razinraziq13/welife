@@ -6,6 +6,8 @@
 import { enCivic } from './en-civic';
 import { enLegacy } from './en-legacy';
 import { enErrors } from './en-errors';
+import { enPlay } from './en-play';
+import { enHub } from './en-hub';
 import { enEnterprise } from './en-enterprise';
 import { enLife } from './en-life';
 
@@ -185,6 +187,8 @@ export const en: Record<string, string> = {
   ...enCivic,
   ...enLegacy,
   ...enErrors,
+  ...enPlay,
+  ...enHub,
 };
 
 /** Resolves a key with `{param}` placeholders. Unknown keys fall back to the key itself. */
