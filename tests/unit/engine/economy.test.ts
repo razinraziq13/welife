@@ -4,8 +4,19 @@ import { checkInvariants } from '@engine/core/invariants';
 import { WorldSchema, type World } from '@engine/state/schema';
 import { INDUSTRIES, OCCUPATIONS, getOccupation, jobTitle } from '@engine/career/occupations';
 import { endEmployment } from '@engine/career/jobs';
-import { checkLedger, monthTotals, netWorthOf } from '@engine/economy/ledger';
-import { payMedicalCost } from '@engine/economy/finance';
+import { checkLedger, monthTotals, netWorthOf, openAccount, post } from '@engine/economy/ledger';
+import {
+  ensurePlayerAccounts,
+  loanPayments,
+  payExpense,
+  payMedicalCost,
+  processFinances,
+  receiveIncome,
+  repayLoan,
+  startStudentLoan,
+} from '@engine/economy/finance';
+import { convertCurrency, localAccount } from '@engine/economy/fx';
+import { projectGame } from '@engine/view';
 import { medianWage } from '@engine/economy/economy';
 import {
   upgradeWorldV1,
@@ -18,6 +29,103 @@ import { canonicalJson } from '@engine/core/data';
 import fixture from '../../fixtures/world-v1.json';
 import type { run } from '../../helpers/sim';
 import { advanceMonths, cid, newState, playerOf } from '../../helpers/sim';
+
+describe('finance regressions', () => {
+  function withChecking() {
+    const state = newState();
+    const player = playerOf(state);
+    player.birth.year -= 20;
+    ensurePlayerAccounts(state.world, player);
+    const checkingId = player.finance?.checkingId;
+    if (!checkingId) throw new Error('Expected a checking account');
+    return { state, world: state.world, player, checkingId };
+  }
+
+  it('values foreign mortgage obligations in home currency and accepts payment in loan currency', () => {
+    const { state, world, player, checkingId } = withChecking();
+    const loanId = openAccount(world, player.id, 'loan', 'USD', {
+      loan: {
+        product: 'mortgage',
+        rateBp: 0,
+        termMonths: 12,
+        paymentMinor: 100n,
+        principalMinor: 1_000n,
+        firstPaymentTick: world.tick + 1,
+        missedPayments: 0,
+      },
+    });
+    const foreignId = localAccount(world, player.id, 'USD');
+    post(world, 'test.mortgage', [
+      { accountId: foreignId, debit: 1_000n },
+      { accountId: loanId, credit: 1_000n },
+    ]);
+    // Use the proceeds so the repayment must exchange from the home account.
+    payExpense(
+      world,
+      { ownerId: player.id, checkingId: foreignId, savingsId: null },
+      'test',
+      1_000n,
+      'test.purchase',
+    );
+    const obligation = convertCurrency(world, 100n, 'USD', 'MYR');
+    expect(loanPayments(world, player)).toBe(obligation);
+    const finance = projectGame(state).finance;
+    expect(finance.loans[0]?.currency.code).toBe('USD');
+    expect(finance.personal?.liabilities).toBe(convertCurrency(world, 1_000n, 'USD', 'MYR'));
+    expect(finance.month.totalExpenses).toBe(convertCurrency(world, 1_000n, 'USD', 'MYR'));
+    expect(() => {
+      repayLoan(world, player, loanId, 100n);
+    }).toThrow('There is not enough money');
+    receiveIncome(world, player.id, checkingId, 'test', obligation * 2n, 'test.income');
+    repayLoan(world, player, loanId, 100n);
+    expect(world.ledger.accounts[loanId]?.balance).toBe(900n);
+    expect(checkLedger(world)).toEqual([]);
+  });
+
+  it('keeps an undrawn student loan open while enrolled on a full scholarship', () => {
+    const { world, player } = withChecking();
+    player.education.current = {
+      id: 'test-enrollment',
+      stage: 'tertiary',
+      institution: 'Test university',
+      kind: 'public',
+      programId: null,
+      level: 'bachelor',
+      startTick: world.tick,
+      yearsCompleted: 0,
+      years: 3,
+      grade: 500,
+      scholarshipPercent: 100,
+    };
+    const loanId = startStudentLoan(world, player);
+    processFinances(world, new Map());
+    expect(world.ledger.accounts[loanId]).toMatchObject({ balance: 0n, closedTick: null });
+    player.education.current.scholarshipPercent = 0;
+    world.tick += 1;
+    processFinances(world, new Map());
+    expect(world.ledger.accounts[loanId]?.balance).toBeGreaterThan(0n);
+  });
+
+  it('settles foreign arrears from home checking when funds become available', () => {
+    const { world, player, checkingId } = withChecking();
+    const foreignId = localAccount(world, player.id, 'USD');
+    payExpense(
+      world,
+      { ownerId: player.id, checkingId: foreignId, savingsId: null },
+      'propertyUpkeep',
+      100n,
+      'tx.propertyUpkeep',
+    );
+    const arrears = Object.values(world.ledger.accounts).find(
+      (a) => a.ownerId === player.id && a.type === 'arrears',
+    );
+    expect(arrears?.balance).toBe(100n);
+    receiveIncome(world, player.id, checkingId, 'test', 100_000n, 'test.income');
+    processFinances(world, new Map());
+    expect(arrears?.balance).toBe(0n);
+    expect(checkLedger(world)).toEqual([]);
+  });
+});
 
 describe('occupation catalogue (decision D8)', () => {
   it('has at least 150 advertised occupations across 25 industries', () => {

@@ -199,16 +199,20 @@ export function ownedAccounts(world: World, ownerId: string): Account[] {
     .filter((a) => a.ownerId === ownerId && a.closedTick === null);
 }
 
-export function assetsOf(world: World, ownerId: string): bigint {
+type AccountAmount = (amount: bigint, currency: string) => bigint;
+const nominalAmount: AccountAmount = (amount) => amount;
+
+export function assetsOf(world: World, ownerId: string, value = nominalAmount): bigint {
   let total = 0n;
-  for (const a of ownedAccounts(world, ownerId)) if (ASSET_TYPES.has(a.type)) total += a.balance;
+  for (const a of ownedAccounts(world, ownerId))
+    if (ASSET_TYPES.has(a.type)) total += value(a.balance, a.currency);
   return total;
 }
 
-export function liabilitiesOf(world: World, ownerId: string): bigint {
+export function liabilitiesOf(world: World, ownerId: string, value = nominalAmount): bigint {
   let total = 0n;
   for (const a of ownedAccounts(world, ownerId))
-    if (LIABILITY_TYPES.has(a.type)) total += a.balance;
+    if (LIABILITY_TYPES.has(a.type)) total += value(a.balance, a.currency);
   return total;
 }
 
@@ -221,6 +225,7 @@ export function monthTotals(
   world: World,
   ownerId: string,
   tick: number = world.tick,
+  value = nominalAmount,
 ): { income: bigint; expenses: bigint; byCategory: Map<string, bigint> } {
   let income = 0n;
   let expenses = 0n;
@@ -230,14 +235,14 @@ export function monthTotals(
       const account = world.ledger.accounts[entry.accountId];
       if (account?.ownerId !== ownerId) continue;
       if (account.type === 'income') {
-        const amount = entry.credit - entry.debit;
+        const amount = value(entry.credit - entry.debit, account.currency);
         income += amount;
         byCategory.set(
           `income:${account.category}`,
           (byCategory.get(`income:${account.category}`) ?? 0n) + amount,
         );
       } else if (account.type === 'expense') {
-        const amount = entry.debit - entry.credit;
+        const amount = value(entry.debit - entry.credit, account.currency);
         expenses += amount;
         byCategory.set(
           `expense:${account.category}`,
