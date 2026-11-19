@@ -16,6 +16,7 @@ import { Button } from '@app/components/ui/button';
 import { formatAge, formatMonth, setActiveCurrency, setCustomEventTexts } from '@app/i18n/format';
 import { SuccessionPanel } from './screens/LegacyScreen';
 import { AchievementToasts } from './AchievementToasts';
+import { FeedbackToast } from './FeedbackToast';
 import { LifeSummaryCard } from './LifeSummaryCard';
 import { cn } from '@app/lib/cn';
 import { getEngine } from '@app/bridge/engine';
@@ -77,7 +78,7 @@ function OpenError({ saveId }: { saveId: string }) {
 
 export function PlayLayout() {
   const { saveId = '' } = useParams();
-  const { session, phase, saveId: openId, open, message, clearMessage } = useGameStore();
+  const { session, phase, saveId: openId, open } = useGameStore();
 
   useEffect(() => {
     if (openId !== saveId) void open(saveId);
@@ -94,14 +95,6 @@ export function PlayLayout() {
 
   // The Life tab shows who you are in its own header card; the bar then only needs the month.
   const onLife = useMatch('/play/:saveId/life') !== null;
-
-  useEffect(() => {
-    if (!message) return;
-    const timer = window.setTimeout(clearMessage, 6000);
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [message, clearMessage]);
 
   if (phase === 'error') return <OpenError saveId={saveId} />;
   if (session?.saveId !== saveId) {
@@ -214,9 +207,7 @@ export function PlayLayout() {
         {view.lifeStatus === 'succession' && <SuccessionPanel />}
         <EventDialog />
         <AchievementToasts saveId={saveId} view={view} base={base} />
-        <div aria-live="polite" className="min-h-0 text-sm">
-          {message && <p className="rounded-xl bg-surface-2 px-3 py-2 text-fg">{message}</p>}
-        </div>
+        <FeedbackToast />
       </div>
 
       <div className="mt-2 md:grid md:grid-cols-[11rem_1fr] md:gap-6">

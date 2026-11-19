@@ -1,5 +1,5 @@
 import type { ActivityAvailability } from '@engine/activities/activities';
-import { Button } from '@app/components/ui/button';
+import { ActionButton } from './ActionButton';
 import { t } from '@app/i18n/en';
 import { displayValue } from '@app/i18n/format';
 import { useGameStore } from '@app/stores/gameStore';
@@ -45,15 +45,16 @@ export function ActivityList({ filter }: { filter?: (a: ActivityAvailability) =>
                 </p>
                 {reason && <p className="text-xs font-medium text-danger">{reason}</p>}
               </div>
-              <Button
+              <ActionButton
                 size="sm"
                 variant="secondary"
-                disabled={busy || reason !== null}
-                onClick={() => void act(a.id)}
+                busy={busy}
+                reason={reason}
+                onAct={() => void act(a.id)}
                 aria-label={`Do it: ${t(`activity.${a.id}`)}${reason ? ` (unavailable: ${reason})` : ''}`}
               >
                 Do it
-              </Button>
+              </ActionButton>
             </li>
           );
         })}

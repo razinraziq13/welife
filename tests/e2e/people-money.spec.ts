@@ -87,7 +87,19 @@ test.describe('an adult life', () => {
     // A locked activity says why.
     await page.getByRole('searchbox', { name: 'Search activities' }).fill('doctor');
     await page.getByRole('button', { name: 'Do it: See a doctor' }).click();
-    await expect(page.getByText('Once a month; you have already done this.')).toBeVisible();
+    await expect(page.getByTestId('feedback')).toHaveAttribute('data-kind', 'success');
+    // Pressing it again explains why it cannot be done, in a pop-up. (The button is marked
+    // unavailable, so Playwright will not click it; pressing it from the keyboard works, as a
+    // tap does on a phone.)
+    await page.getByRole('button', { name: 'Do it: See a doctor' }).focus();
+    await page.keyboard.press('Enter');
+    const feedback = page.getByTestId('feedback');
+    await expect(feedback).toHaveAttribute('data-kind', 'error');
+    // On screen, wherever the page is scrolled (not just present in the page).
+    await expect(feedback).toBeInViewport();
+    await expect(feedback).toContainText('Not possible: Once a month; you have already done this.');
+    await feedback.getByRole('button', { name: 'Close message' }).click();
+    await expect(feedback).toHaveCount(0);
 
     // The barber or salon: pick a new style with a preview, then pay for it.
     await page.getByRole('searchbox', { name: 'Search activities' }).fill('salon');

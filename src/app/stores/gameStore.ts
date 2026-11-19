@@ -27,8 +27,12 @@ interface GameState {
   /** True for the whole of a multi-month advance (keeps Advance locked between months). */
   advancing: boolean;
   lastActivity: ActivityResult | null;
-  /** Short status message announced to screen readers. */
+  /** Short status message announced to screen readers (shown as a pop-up). */
   message: string | null;
+  /** Whether the message reports something done or something that could not be done. */
+  messageKind: 'success' | 'error';
+  /** Shows why something cannot be done (locked buttons call this when tapped). */
+  explain: (reason: string) => void;
   open: (saveId: string) => Promise<void>;
   close: () => void;
   send: (body: CommandBody) => Promise<CommandOutcome | null>;
@@ -84,6 +88,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
   advancing: false,
   lastActivity: null,
   message: null,
+  messageKind: 'success',
 
   async open(saveId) {
     set({ saveId, phase: 'loading', error: null, errorCode: null, lastActivity: null });
@@ -104,6 +109,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
       errorCode: null,
       lastActivity: null,
       message: null,
+      messageKind: 'success',
     });
   },
 
@@ -116,14 +122,17 @@ export const useGameStore = create<GameState>()((set, get) => ({
       const result = await getEngine().call('game.command', { saveId, command });
       set({ session: result.session, busy: false });
       if (result.outcome.status === 'rejected')
-        set({ message: rejectionText(result.outcome.key, result.outcome.message) });
+        set({
+          message: rejectionText(result.outcome.key, result.outcome.message),
+          messageKind: 'error',
+        });
       else {
         const message = appliedMessage(result.outcome, result.session.view);
-        if (message) set({ message });
+        if (message) set({ message, messageKind: 'success' });
       }
       return result.outcome;
     } catch (error) {
-      set({ busy: false, message: describeError(error) });
+      set({ busy: false, message: describeError(error), messageKind: 'error' });
       if (errorCode(error) === 'CONFLICT') await get().open(saveId);
       return null;
     }
@@ -180,7 +189,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
     try {
       await getEngine().call('game.setLayout', { saveId, layout });
     } catch (error) {
-      set({ session, message: describeError(error) });
+      set({ session, message: describeError(error), messageKind: 'error' });
     }
   },
 
@@ -194,10 +203,11 @@ export const useGameStore = create<GameState>()((set, get) => ({
         session,
         busy: false,
         lastActivity: null,
+        messageKind: 'success',
         message: `Rewound to a new timeline: ${session.branch.name}.`,
       });
     } catch (error) {
-      set({ busy: false, message: describeError(error) });
+      set({ busy: false, message: describeError(error), messageKind: 'error' });
     }
   },
 
@@ -211,15 +221,20 @@ export const useGameStore = create<GameState>()((set, get) => ({
         session,
         busy: false,
         lastActivity: null,
+        messageKind: 'success',
         message: `Switched to ${session.branch.name}.`,
       });
     } catch (error) {
-      set({ busy: false, message: describeError(error) });
+      set({ busy: false, message: describeError(error), messageKind: 'error' });
     }
   },
 
   clearMessage() {
     set({ message: null });
+  },
+
+  explain(reason) {
+    set({ message: reason, messageKind: 'error' });
   },
 
   async person(personId) {
@@ -228,7 +243,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
     try {
       return await getEngine().call('game.person', { saveId, personId });
     } catch (error) {
-      set({ message: describeError(error) });
+      set({ message: describeError(error), messageKind: 'error' });
       return null;
     }
   },
@@ -239,7 +254,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
     try {
       return await getEngine().call('game.biography', { saveId, personId });
     } catch (error) {
-      set({ message: describeError(error) });
+      set({ message: describeError(error), messageKind: 'error' });
       return null;
     }
   },
@@ -250,7 +265,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
     try {
       return await getEngine().call('game.family', { saveId });
     } catch (error) {
-      set({ message: describeError(error) });
+      set({ message: describeError(error), messageKind: 'error' });
       return null;
     }
   },

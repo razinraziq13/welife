@@ -2,7 +2,7 @@ import { Link } from 'react-router';
 import { Briefcase, Landmark, Lock, Star, Store, UserRound } from 'lucide-react';
 import type { GameView } from '@engine/view';
 import { StatBar } from '@app/components/StatBar';
-import { Button } from '@app/components/ui/button';
+import { ActionButton } from './ActionButton';
 import { Card } from '@app/components/ui/card';
 import { t } from '@app/i18n/en';
 import { cn } from '@app/lib/cn';
@@ -97,16 +97,17 @@ export function CareerPlayCard({ view, base }: { view: GameView; base: string })
                   <p className="text-xs text-muted">
                     {a.hours} h · energy {Math.round(a.energy / 10)}
                   </p>
-                  {a.available ? (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={busy || pending}
-                      onClick={() => void send({ type: 'workAction', actionId: a.id })}
-                    >
-                      Do it
-                    </Button>
-                  ) : (
+                  <ActionButton
+                    size="sm"
+                    variant="secondary"
+                    busy={busy}
+                    reason={pending ? 'Make the waiting decision first.' : a.reason}
+                    onAct={() => void send({ type: 'workAction', actionId: a.id })}
+                    aria-label={`Do it: ${t(`workAction.${a.id}`)}`}
+                  >
+                    Do it
+                  </ActionButton>
+                  {!a.available && (
                     <p className="flex items-start gap-1 text-xs text-muted">
                       <Lock aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
                       {a.reason}

@@ -13,6 +13,7 @@ import { cn } from '@app/lib/cn';
 import { useGameStore } from '@app/stores/gameStore';
 import { resolveLayout } from '../tabs/LifeTab';
 import { SalonDialog } from '../SalonDialog';
+import { ActionButton } from '../ActionButton';
 
 /** Existing screens for paperwork that already has its own place in the game. */
 const ADMIN_LINKS: { to: string; label: string; hint: string }[] = [
@@ -135,22 +136,22 @@ export function ActivitiesHubScreen() {
           </div>
         )}
         <div className="mt-auto flex flex-wrap items-center gap-2">
-          {blocked ? (
-            <p className="flex items-start gap-1 text-xs text-muted">
+          <ActionButton
+            size="sm"
+            busy={busy}
+            reason={blocked}
+            onAct={() => {
+              doIt(item);
+            }}
+            aria-label={`Do it: ${name}`}
+          >
+            Do it
+          </ActionButton>
+          {blocked && (
+            <p className="flex w-full items-start gap-1 text-xs text-muted">
               <Lock aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
               {blocked}
             </p>
-          ) : (
-            <Button
-              size="sm"
-              disabled={busy}
-              onClick={() => {
-                doIt(item);
-              }}
-              aria-label={`Do it: ${name}`}
-            >
-              Do it
-            </Button>
           )}
           {item.recurring &&
             alive &&
