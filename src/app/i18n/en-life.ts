@@ -201,6 +201,7 @@ export const enLife: Record<string, string> = {
   'tx.benefit': 'Unemployment benefit',
   'tx.statePension': 'State pension',
   'tx.drawdown': 'Retirement income',
+  'tx.pensionLumpSum': 'Retirement lump sum',
   'tx.familySupport': 'Family support',
   'tx.living': 'Living costs',
   'tx.rent': 'Rent',
@@ -360,6 +361,8 @@ export const enLife: Record<string, string> = {
   'out.insuranceCancelled': 'Policy cancelled.',
   'out.lifestyle': 'Lifestyle set to {valueName}.',
   'out.pension': 'Retirement saving set to {percent}% of your salary.',
+  'out.pensionLumpSum':
+    'You took a lump sum from your retirement fund; it is in your current account.',
   'out.movedOut': 'You moved into your own home.',
   'out.movedHome': 'You moved back in with your family.',
 
@@ -434,6 +437,7 @@ export const enLife: Record<string, string> = {
   'bio.promoted': 'Promoted to {title} at {employer}.',
   'bio.retired': 'Retired.',
   'bio.movedOut': 'Moved into a home of their own.',
+  'bio.pensionLumpSum': 'Took {percent}% of their retirement fund as a lump sum.',
   'bio.movedHome': 'Moved back in with family.',
   'bio.childBorn': 'Became a parent: {name} was born.',
   'bio.adoptedChild': 'Welcomed {name} into the family through adoption.',

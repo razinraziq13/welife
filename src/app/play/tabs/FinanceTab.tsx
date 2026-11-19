@@ -21,6 +21,7 @@ import {
 } from '@app/i18n/format';
 import { useGameStore } from '@app/stores/gameStore';
 import { tickToMonth } from '../widgets';
+import { ActionButton } from '../ActionButton';
 
 function useAct() {
   const send = useGameStore((s) => s.send);
@@ -466,6 +467,8 @@ function RetirementCard({ view }: { view: GameView }) {
   const f = view.finance;
   const cur = f.currency;
   const selectId = useId();
+  const [confirmLump, setConfirmLump] = useState(false);
+  const p = f.retirementPayout;
   if (!f.personal || view.character.age.years < 16) return null;
   return (
     <Card title="Retirement">
@@ -505,6 +508,56 @@ function RetirementCard({ view }: { view: GameView }) {
       <p className="mt-1 text-xs text-muted">
         Pension contributions are taken before you are paid and grow with the market.
       </p>
+
+      <div className="mt-4 border-t border-border pt-3">
+        <h3 className="text-sm font-semibold text-fg">Taking money out</h3>
+        <p className="mt-1 text-sm text-muted">
+          {p.retired ? (
+            <>
+              You are retired: the fund pays you about{' '}
+              <Money minor={p.monthlyMinor} currency={cur} /> a month into your current account,
+              spread so it lasts until you are 90. What is left keeps growing with the market.
+            </>
+          ) : (
+            <>
+              The fund pays you a monthly income once you retire (Career tab, from age 55): about{' '}
+              <Money minor={p.monthlyMinor} currency={cur} /> a month if you retired now, spread so
+              it lasts until you are 90.
+            </>
+          )}
+        </p>
+        <p className="mt-2 text-sm text-muted">
+          From age {p.lumpSumAge} you can also take {p.lumpSumPercent}% of the fund as cash, once in
+          your life, tax-free, whether or not you have retired.
+        </p>
+        <div className="mt-2 flex flex-col gap-1">
+          <ActionButton
+            size="sm"
+            variant="secondary"
+            className="self-start"
+            busy={disabled}
+            reason={p.lumpSumBlock}
+            onAct={() => {
+              setConfirmLump(true);
+            }}
+          >
+            {`Take ${String(p.lumpSumPercent)}% as cash${
+              p.lumpSumBlock === null ? ` (${formatMoney(p.lumpSumMinor, cur)})` : ''
+            }`}
+          </ActionButton>
+          {p.lumpSumBlock && <p className="text-xs text-muted">{p.lumpSumBlock}</p>}
+        </div>
+      </div>
+      <ConfirmDialog
+        open={confirmLump}
+        onOpenChange={setConfirmLump}
+        title="Take a lump sum?"
+        confirmLabel="Take the cash"
+        onConfirm={() => send({ type: 'takePensionLumpSum' })}
+      >
+        {formatMoney(p.lumpSumMinor, cur)} moves from your retirement fund to your current account.
+        You can only do this once, and your monthly retirement income will be smaller.
+      </ConfirmDialog>
     </Card>
   );
 }

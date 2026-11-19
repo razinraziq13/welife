@@ -668,9 +668,7 @@ function householdIncome(world: World, h: Household): void {
         'tx.statePension',
       );
     if (isPlayer && m.finance.retired && m.finance.retirementId && m.finance.checkingId) {
-      const balance = balanceOf(world, m.finance.retirementId);
-      const monthsLeft = Math.max(60, (90 - ageYears(world, m)) * 12);
-      const draw = balance / BigInt(monthsLeft);
+      const draw = retirementDraw(world, m);
       if (draw > 0n)
         post(world, 'tx.drawdown', [
           { accountId: m.finance.checkingId, debit: draw },
@@ -972,7 +970,10 @@ export type FinanceRejection =
   | 'cannotAffordMove'
   | 'cannotMoveHome'
   | 'notStudying'
-  | 'noStudentLoans';
+  | 'noStudentLoans'
+  | 'tooYoungForLumpSum'
+  | 'lumpSumTaken'
+  | 'emptyFund';
 
 export const FINANCE_MESSAGES: Record<FinanceRejection, string> = {
   noAccount: 'You do not have that account yet.',
@@ -992,6 +993,9 @@ export const FINANCE_MESSAGES: Record<FinanceRejection, string> = {
   cannotMoveHome: 'You cannot move back in with your family right now.',
   notStudying: 'Student loans are for people enrolled in further education.',
   noStudentLoans: 'This country has no student loan scheme in the game.',
+  tooYoungForLumpSum: 'You can take a lump sum from your retirement fund from the age of 55.',
+  lumpSumTaken: 'You have already taken your one-off lump sum.',
+  emptyFund: 'Your retirement fund is empty.',
 };
 
 export class FinanceError extends Error {
@@ -1292,6 +1296,56 @@ export function setPensionContribution(world: World, c: Character, bp: number): 
   if (c.finance.pensionBp === bp) throw new FinanceError('noChange');
   ensurePlayerAccounts(world, c);
   c.finance.pensionBp = bp;
+}
+
+/**
+ * Monthly retirement income from the fund once retired: the balance spread over the months
+ * left until 90 (at least 60 months), recalculated each month.
+ */
+export function retirementDraw(world: World, c: Character): bigint {
+  const balance = balanceOf(world, c.finance?.retirementId ?? null);
+  if (balance <= 0n) return 0n;
+  const monthsLeft = Math.max(60, (90 - ageYears(world, c)) * 12);
+  return balance / BigInt(monthsLeft);
+}
+
+/** From this age a one-off lump sum can be taken from the retirement fund. */
+export const LUMP_SUM_AGE = 55;
+/** Share of the retirement fund paid out as the lump sum (tax-free in the game). */
+export const LUMP_SUM_PERCENT = 25;
+
+/** Why the lump sum cannot be taken now, or null when it can. */
+export function lumpSumBlock(world: World, c: Character): FinanceRejection | null {
+  if (!c.finance?.retirementId || !c.finance.checkingId) return 'noAccount';
+  if (ageYears(world, c) < LUMP_SUM_AGE) return 'tooYoungForLumpSum';
+  if (c.finance.lumpSumTaken) return 'lumpSumTaken';
+  if (lumpSumAmount(world, c) <= 0n) return 'emptyFund';
+  return null;
+}
+
+/** What the lump sum would pay right now. */
+export function lumpSumAmount(world: World, c: Character): bigint {
+  const fund = balanceOf(world, c.finance?.retirementId ?? null);
+  return fund > 0n ? applyPercent(fund, LUMP_SUM_PERCENT) : 0n;
+}
+
+/**
+ * Takes a quarter of the retirement fund as cash, once in a life, from age 55 (gameplay
+ * expansion, decision E70). The rest stays invested and pays out monthly after retiring.
+ */
+export function takePensionLumpSum(world: World, c: Character): bigint {
+  const block = lumpSumBlock(world, c);
+  if (block) throw new FinanceError(block);
+  const finance = c.finance;
+  if (!finance?.retirementId || !finance.checkingId) throw new FinanceError('noAccount');
+  const amount = lumpSumAmount(world, c);
+  post(world, 'tx.pensionLumpSum', [
+    { accountId: finance.checkingId, debit: amount },
+    { accountId: finance.retirementId, credit: amount },
+  ]);
+  finance.lumpSumTaken = true;
+  addBiography(world, c.id, 'money', 'bio.pensionLumpSum', { percent: LUMP_SUM_PERCENT });
+  return amount;
 }
 
 /** Moves the player into a rented home of their own (partner and children come along). */

@@ -25,6 +25,12 @@ import type { EventDefinition, Predicate } from './events/schema';
 import { medianWage } from './economy/economy';
 import {
   DEFAULT_LIFESTYLE,
+  FINANCE_MESSAGES,
+  LUMP_SUM_AGE,
+  LUMP_SUM_PERCENT,
+  lumpSumAmount,
+  lumpSumBlock,
+  retirementDraw,
   debtLimitPercent,
   educationFees,
   insurancePremium,
@@ -378,6 +384,18 @@ export interface FinanceView {
   benefits: { months: number; amountMinor: bigint };
   statePensionAge: number;
   statePensionEstimateMinor: bigint;
+  /** Retirement fund payouts (gameplay expansion): monthly once retired, and a one-off lump sum. */
+  retirementPayout: {
+    retired: boolean;
+    /** Monthly income from the fund if retired now (or as now, when retired). */
+    monthlyMinor: bigint;
+    lumpSumAge: number;
+    lumpSumPercent: number;
+    lumpSumMinor: bigint;
+    lumpSumTaken: boolean;
+    /** Why the lump sum cannot be taken now, or null. */
+    lumpSumBlock: string | null;
+  };
   netIncomeMinor: bigint;
   /** For loan previews: the rate offered now, current repayments and the affordability limit. */
   personalLoanRateBp: number;
@@ -896,6 +914,15 @@ function financeView(world: World, c: Character): FinanceView {
     benefits: { months: c.finance?.benefitMonths ?? 0, amountMinor: c.finance?.benefitMinor ?? 0n },
     statePensionAge: rules.pension.stateAge,
     statePensionEstimateMinor: statePension(world, c, true),
+    retirementPayout: {
+      retired: c.finance?.retired ?? false,
+      monthlyMinor: retirementDraw(world, c),
+      lumpSumAge: LUMP_SUM_AGE,
+      lumpSumPercent: LUMP_SUM_PERCENT,
+      lumpSumMinor: lumpSumAmount(world, c),
+      lumpSumTaken: c.finance?.lumpSumTaken === true,
+      lumpSumBlock: ((code) => (code ? FINANCE_MESSAGES[code] : null))(lumpSumBlock(world, c)),
+    },
     netIncomeMinor: monthlyNetIncome(world, c),
     personalLoanRateBp: rateFor(world, c, 'personal'),
     loanPaymentsMinor: loanPayments(world, c),

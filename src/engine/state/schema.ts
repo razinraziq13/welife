@@ -441,6 +441,8 @@ export const CharacterFinanceSchema = z
     /** Unemployment benefit months remaining and amount. */
     benefitMonths: z.number().int().min(0).max(60),
     benefitMinor: NonNegativeMinor,
+    /** The one-off retirement lump sum has been taken (optional: older saves lack it). */
+    lumpSumTaken: z.boolean().optional(),
   })
   .strict();
 export type CharacterFinance = z.infer<typeof CharacterFinanceSchema>;

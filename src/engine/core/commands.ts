@@ -39,6 +39,7 @@ import {
   setLifestyle,
   setPensionContribution,
   startStudentLoan,
+  takePensionLumpSum,
   takePersonalLoan,
   transferBetween,
 } from '../economy/finance';
@@ -225,6 +226,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
   command('cancelInsurance', { policyId: EntityId }),
   command('setLifestyle', { value: z.enum(LIFESTYLES) }),
   command('setPension', { bp: z.number().int().min(0).max(3000) }),
+  command('takePensionLumpSum', {}),
   command('moveOut', { size: z.enum(HOME_SIZES) }),
   command('moveHome', {}),
   // Companies (Milestone 5)
@@ -590,6 +592,10 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
     case 'setPension':
       setPensionContribution(world, player, cmd.bp);
       return done('out.pension', { bp: cmd.bp });
+    case 'takePensionLumpSum': {
+      takePensionLumpSum(world, player);
+      return done('out.pensionLumpSum');
+    }
     case 'moveOut':
       moveOut(world, player, cmd.size);
       return done('out.movedOut', { size: cmd.size });

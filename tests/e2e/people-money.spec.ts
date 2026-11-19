@@ -470,3 +470,37 @@ test.describe('rival job offers', () => {
     }
   });
 });
+
+test.describe('retirement fund lump sum', () => {
+  test.describe.configure({ timeout: 120_000 });
+  let json = '';
+  test.beforeAll(async () => {
+    json = await adultSaveJson('e2e-pension', { age: 56 });
+  });
+
+  test('explains payouts and takes a one-off lump sum from 55', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'pension.welife.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(json),
+    });
+    await expect(page).toHaveURL(/\/play\/[^/]+\/life$/);
+    const saveId = /\/play\/([^/]+)\//.exec(page.url())?.[1] ?? '';
+    await page.goto(`/play/${saveId}/finance`);
+    await expect(page.getByRole('heading', { level: 3, name: 'Taking money out' })).toBeVisible();
+    await expect(page.getByText(/pays you a monthly income once you retire/)).toBeVisible();
+    await expectAccessible(page);
+    await page.getByRole('button', { name: /^Take 25% as cash \(/ }).click();
+    await page.getByRole('button', { name: 'Take the cash' }).click();
+    const feedback = page.getByTestId('feedback');
+    await expect(feedback).toHaveAttribute('data-kind', 'success');
+    await expect(feedback).toContainText('You took a lump sum from your retirement fund');
+    // A second time is not possible, and tapping explains why.
+    const again = page.getByRole('button', { name: 'Take 25% as cash' });
+    await again.focus();
+    await page.keyboard.press('Enter');
+    await expect(feedback).toHaveAttribute('data-kind', 'error');
+    await expect(feedback).toContainText('already taken your one-off lump sum');
+  });
+});

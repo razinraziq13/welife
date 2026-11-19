@@ -32,7 +32,7 @@ function month(state: SimState): SimState {
  */
 export async function adultSaveJson(
   seed = 'e2e-adult',
-  options: { rivalOffer?: boolean } = {},
+  options: { rivalOffer?: boolean; age?: number } = {},
 ): Promise<string> {
   let state: SimState = {
     world: createWorld(`world-${seed}`, {
@@ -78,6 +78,11 @@ export async function adultSaveJson(
       state = month(state);
     }
     if (!approached()) throw new Error('fixture: no rival offer');
+  }
+  if (options.age !== undefined) {
+    // Fixture only: make the adult older (e.g. to reach pension ages) without playing decades.
+    const p = player();
+    if (p) p.birth = { ...p.birth, year: state.world.clock.year - options.age - 1 };
   }
   // Fixture only: an inheritance-sized gift so business and property can be tried in the UI.
   // It is booked against an equity account so the ledger still balances.
