@@ -11,7 +11,7 @@ import { activeEmployment } from '../career/jobs';
 import { getOccupation } from '../career/occupations';
 import { COUNTRIES } from '../world/countries';
 import { adjustPair, kinship } from '../social/relationships';
-import type { Character, SkillKey, World } from '../state/schema';
+import { APPEARANCE_LIMITS, type Character, type SkillKey, type World } from '../state/schema';
 import { diminishingPercent, ensureActivityMonth } from './activities';
 
 /**
@@ -29,6 +29,7 @@ export const HUB_CATEGORIES = [
   'entertainment',
   'travel',
   'shopping',
+  'style',
   'family',
   'social',
   'projects',
@@ -120,7 +121,8 @@ export const LIFESTYLE: readonly LifestyleDefinition[] = [
   def('day-trip', 'travel', 8, 10, 60, 2, { oncePerMonth: true }),
   def('weekend-away', 'travel', 18, 20, 40, 8, { oncePerMonth: true }),
   def('holiday-abroad', 'travel', 18, 40, 20, 25, { oncePerMonth: true, ownMoney: true }),
-  def('new-clothes', 'shopping', 10, 3, 20, 3),
+  def('new-clothes', 'style', 10, 3, 20, 3),
+  def('salon', 'style', 3, 2, 10, 2, { oncePerMonth: true }),
   def('new-gadget', 'shopping', 12, 2, 10, 10, { oncePerMonth: true }),
   def('gifts-for-family', 'shopping', 10, 3, 20, 4, { oncePerMonth: true }),
   def('family-dinner-out', 'family', 6, 3, 10, 3),
@@ -164,6 +166,8 @@ export type LifestyleBlock =
   | 'doneThisMonth'
   | 'noOwnMoney'
   | 'hasLicence'
+  | 'tooYoungToColour'
+  | 'noChange'
   | 'lifeEnded';
 
 export const LIFESTYLE_MESSAGES: Record<LifestyleBlock, string> = {
@@ -176,6 +180,8 @@ export const LIFESTYLE_MESSAGES: Record<LifestyleBlock, string> = {
   doneThisMonth: 'Once a month; you have already done this.',
   noOwnMoney: 'You need money of your own (a bank account) for this.',
   hasLicence: 'You already have a driving licence.',
+  tooYoungToColour: 'Hair colouring is for ages 14 and up.',
+  noChange: 'That is the look you already have.',
   lifeEnded: 'This life has ended.',
 };
 
@@ -468,6 +474,9 @@ export function performLifestyle(world: World, id: string): LifestyleResult {
       stat('confidence', -20);
       return done('life.driving-licence.failed');
     }
+    case 'salon':
+      stat('confidence', 10);
+      return done('life.salon.trim');
     case 'review-finances':
       changeSkill(world, c, 'business', scale(20), cause);
       stat('stress', -20);
@@ -508,4 +517,49 @@ export function recommendations(
   if (age >= 18 && c.finance?.checkingId) add('review-finances', 'adultMoney');
   if (age >= 3) add('read', 'always');
   return out;
+}
+
+/** Extra cost of colouring hair, as a percentage of the median monthly wage. */
+export const HAIR_COLOUR_PERCENT = 3;
+
+export function salonCost(world: World, c: Character, recolour: boolean): bigint {
+  const median = medianWage(world, c.countryCode);
+  return applyPercent(median, 2) + (recolour ? applyPercent(median, HAIR_COLOUR_PERCENT) : 0n);
+}
+
+/**
+ * A visit to the barber or salon (gameplay: change your hair). Choosing a new style (and, from
+ * 14, a new colour) changes the character's look. Paid through the ledger; children's visits are
+ * paid by the household. Once a month.
+ */
+export function visitSalon(
+  world: World,
+  hairStyle: number,
+  hairColor: number | null,
+): LifestyleResult {
+  const c = activeCharacter(world);
+  ensureActivityMonth(world);
+  const d = BY_ID.get('salon');
+  const block = lifestyleBlock(world, c, 'salon');
+  if (block || !d) throw new LifestyleError(block ?? 'lifeEnded');
+  if (hairStyle < 0 || hairStyle >= APPEARANCE_LIMITS.hairStyle)
+    throw new LifestyleError('noChange');
+  const recolour = hairColor !== null && hairColor !== c.appearance.hairColor;
+  if (recolour && ageYears(world, c) < 14) throw new LifestyleError('tooYoungToColour');
+  if (hairStyle === c.appearance.hairStyle && !recolour) throw new LifestyleError('noChange');
+  const cost = salonCost(world, c, recolour);
+  const payer = payerFor(world, c);
+  if (!canPay(world, payer, cost)) throw new LifestyleError('cannotAfford');
+  spendHours(world, d.hours);
+  world.activity.counts[countKey('salon')] = timesThisMonth(world, 'salon') + 1;
+  changeStat(world, c, 'energy', -d.energy, 'life:salon');
+  if (payer) payExpense(world, payer, 'haircuts', cost, 'tx.salon');
+  c.appearance = {
+    ...c.appearance,
+    hairStyle,
+    hairColor: recolour ? hairColor : c.appearance.hairColor,
+  };
+  changeStat(world, c, 'confidence', 20, 'life:salon');
+  changeStat(world, c, 'happiness', 15, 'life:salon');
+  return { activityId: 'salon', key: 'life.salon.changed', params: { hairStyle } };
 }

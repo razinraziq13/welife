@@ -16,6 +16,7 @@ import {
   lifestyleCost,
   performLifestyle,
   recommendations,
+  salonCost,
   timesThisMonth,
   type HubCategory,
   type Recommendation,
@@ -72,6 +73,8 @@ export interface HubItem {
 export interface HubView {
   items: HubItem[];
   recommendations: Recommendation[];
+  /** Barber or salon prices: a cut, and colouring on top. */
+  salon: { cutMinor: bigint; colourMinor: bigint };
 }
 
 const ACTIVITY_REASON: Record<string, string> = {
@@ -116,8 +119,10 @@ export function projectHub(world: World): HubView {
   });
   const items = [...personal, ...lifestyle];
   const open = new Set(items.filter((i) => i.available).map((i) => i.id));
+  const cut = salonCost(world, c, false);
   return {
     items,
+    salon: { cutMinor: cut, colourMinor: salonCost(world, c, true) - cut },
     recommendations:
       world.lifeStatus === 'alive' ? recommendations(world, c, (id) => open.has(id)) : [],
   };

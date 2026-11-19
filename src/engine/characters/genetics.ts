@@ -1,17 +1,39 @@
 import type { Rng } from '../core/rng';
 import { clamp } from '../core/data';
-import { APPEARANCE_LIMITS, TRAIT_KEYS, type Appearance, type Traits } from '../state/schema';
+import {
+  APPEARANCE_LIMITS,
+  TRAIT_KEYS,
+  type Appearance,
+  type Gender,
+  type Traits,
+} from '../state/schema';
 
 /**
  * Appearance and personality generation. Appearance is cosmetic only and never affects
  * stats or outcomes (spec §4: "Optional cosmetic appearance does not determine personal worth").
  */
 
-export function randomAppearance(rng: Rng): Appearance {
+/**
+ * Hairstyles people are usually given at birth, by gender (styles: 0 short crop, 1 side part,
+ * 2 short curls, 3 long straight, 4 bob, 5 ponytail, 6 volume, 7 buzz). Anyone can change their
+ * hair later at a barber or salon; this only sets a typical starting style.
+ */
+export const HAIR_STYLES_BY_GENDER: Record<Gender, readonly number[]> = {
+  male: [0, 1, 2, 6, 7],
+  female: [3, 4, 5, 2, 6, 1],
+  nonbinary: [0, 1, 2, 3, 4, 5, 6, 7],
+};
+
+export function hairStyleFor(rng: Rng, gender: Gender): number {
+  const options = HAIR_STYLES_BY_GENDER[gender];
+  return options[rng.int(options.length)] ?? 0;
+}
+
+export function randomAppearance(rng: Rng, gender: Gender): Appearance {
   return {
     skinTone: rng.int(APPEARANCE_LIMITS.skinTone),
     hairColor: rng.int(APPEARANCE_LIMITS.hairColor),
-    hairStyle: rng.int(APPEARANCE_LIMITS.hairStyle),
+    hairStyle: hairStyleFor(rng, gender),
     eyeColor: rng.int(APPEARANCE_LIMITS.eyeColor),
     faceShape: rng.int(APPEARANCE_LIMITS.faceShape),
     freckles: rng.int(10) === 0,
@@ -19,9 +41,13 @@ export function randomAppearance(rng: Rng): Appearance {
 }
 
 /** A child's appearance blended from biological parents, with small random variation. */
-export function inheritAppearance(rng: Rng, parents: readonly Appearance[]): Appearance {
+export function inheritAppearance(
+  rng: Rng,
+  parents: readonly Appearance[],
+  gender: Gender,
+): Appearance {
   const [a, b] = parents;
-  if (!a) return randomAppearance(rng);
+  if (!a) return randomAppearance(rng, gender);
   const other = b ?? a;
   const blendTone = Math.floor((a.skinTone + other.skinTone + 1) / 2) + rng.range(-1, 1);
   const fromParent = <K extends keyof Appearance>(key: K): Appearance[K] =>
@@ -29,7 +55,7 @@ export function inheritAppearance(rng: Rng, parents: readonly Appearance[]): App
   return {
     skinTone: clamp(blendTone, 0, APPEARANCE_LIMITS.skinTone - 1),
     hairColor: rng.int(10) < 8 ? fromParent('hairColor') : rng.int(APPEARANCE_LIMITS.hairColor),
-    hairStyle: rng.int(APPEARANCE_LIMITS.hairStyle),
+    hairStyle: hairStyleFor(rng, gender),
     eyeColor: rng.int(10) < 9 ? fromParent('eyeColor') : rng.int(APPEARANCE_LIMITS.eyeColor),
     faceShape: fromParent('faceShape'),
     freckles: a.freckles || other.freckles ? rng.int(2) === 0 : rng.int(10) === 0,

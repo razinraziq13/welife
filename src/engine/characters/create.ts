@@ -312,7 +312,7 @@ export function createWorld(worldId: string, rawInput: unknown): World {
       stats: npcStats(creation, reputation),
       skills: adultSkills(creation),
       traits: randomTraits(genetics),
-      appearance: randomAppearance(genetics),
+      appearance: randomAppearance(genetics, gender),
     });
   });
 
@@ -353,6 +353,7 @@ export function createWorld(worldId: string, rawInput: unknown): World {
         appearance: inheritAppearance(
           genetics,
           parents.map((p) => p.appearance),
+          gender,
         ),
       }),
     );
@@ -391,8 +392,9 @@ export function createWorld(worldId: string, rawInput: unknown): World {
       ? inheritAppearance(
           genetics,
           biologicalParents.map((p) => p.appearance),
+          gender,
         )
-      : randomAppearance(genetics));
+      : randomAppearance(genetics, gender));
   const parentIntelligence =
     biologicalParents.length > 0
       ? Math.floor(

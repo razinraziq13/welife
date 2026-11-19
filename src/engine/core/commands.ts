@@ -22,7 +22,12 @@ import {
   retire,
 } from '../career/jobs';
 import { WORK_ACTION_IDS, WorkActionError, performWorkAction } from '../career/workActions';
-import { LifestyleError, findLifestyle, performLifestyle } from '../activities/lifestyle';
+import {
+  LifestyleError,
+  findLifestyle,
+  performLifestyle,
+  visitSalon,
+} from '../activities/lifestyle';
 import {
   FinanceError,
   LedgerError,
@@ -117,6 +122,7 @@ import {
   type InteractionResult,
 } from '../social/interactions';
 import {
+  APPEARANCE_LIMITS,
   APPLICATION_ROUTES,
   MEDIA_STYLES,
   DIFFICULTIES,
@@ -156,6 +162,19 @@ export const CommandSchema = z.discriminatedUnion('type', [
   command('meetPeople', {}),
   // Career play (gameplay expansion)
   command('workAction', { actionId: z.enum(WORK_ACTION_IDS) }),
+  command('visitSalon', {
+    hairStyle: z
+      .number()
+      .int()
+      .min(0)
+      .max(APPEARANCE_LIMITS.hairStyle - 1),
+    hairColor: z
+      .number()
+      .int()
+      .min(0)
+      .max(APPEARANCE_LIMITS.hairColor - 1)
+      .nullable(),
+  }),
   // Education (Milestone 3)
   command('setStudyEffort', { value: z.enum(STUDY_EFFORTS) }),
   command('joinClub', { clubId: z.string().min(1).max(40) }),
@@ -436,6 +455,10 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
         kind: 'interacted',
         interaction: interact(world, cmd.personId, cmd.interactionId),
       };
+    case 'visitSalon': {
+      const r = visitSalon(world, cmd.hairStyle, cmd.hairColor);
+      return done(r.key, r.params);
+    }
     case 'workAction': {
       const r = performWorkAction(world, player, cmd.actionId);
       return done(r.key, r.params);
@@ -766,6 +789,7 @@ const DOMAIN_ERRORS = [
   LedgerError,
   InteractionError,
   WorkActionError,
+  LifestyleError,
   CalendarError,
   BusinessError,
   PropertyError,

@@ -4,6 +4,10 @@
 
 ### Changed
 
+- **Hair fix:** new characters (you, your family and everyone you meet) start with a hairstyle typical for their gender; boys no longer get long straight hair, a bob or a ponytail by default. Existing characters keep their hair; visit the barber to change it.
+- **Barber or salon:** a new "Look & style" category in the Activities Hub. Pick any of eight hairstyles with a live preview, and from age 14 a new colour; paid through your accounts (or by your family while you are a child), once a month.
+- **Gender options:** a new life is now a girl, a boy or random (the non-binary option was removed from New Life; existing saves are unaffected).
+
 - **New Life tab header:** a large portrait, your name, age, what you are doing and where you live, with four headline stats (health, happiness, intelligence, energy). On this tab the top bar shows just the month. The old Profile and Vitals sections start hidden; turn them back on with Customise.
 - **"What do you want to do?" grid:** Activities, School or Work, People, Money, Calendar and More.
 - **Redesigned profile:** portrait banner, Generation and life-stage badges, personal details with icons, and key statistics.

@@ -89,6 +89,18 @@ test.describe('an adult life', () => {
     await page.getByRole('button', { name: 'Do it: See a doctor' }).click();
     await expect(page.getByText('Once a month; you have already done this.')).toBeVisible();
 
+    // The barber or salon: pick a new style with a preview, then pay for it.
+    await page.getByRole('searchbox', { name: 'Search activities' }).fill('salon');
+    await page.getByRole('button', { name: 'Do it: Barber or salon' }).click();
+    const salon = page.getByRole('dialog', { name: 'Barber or salon' });
+    await expect(salon.getByRole('button', { name: 'Choose a new look' })).toBeDisabled();
+    // Any style other than the current one.
+    await salon.getByRole('radio', { checked: false }).first().check({ force: true });
+    await expect(salon.getByRole('img', { name: /Preview of/ })).toBeVisible();
+    await expectAccessible(page);
+    await salon.getByRole('button', { name: 'Get this look' }).click();
+    await expect(page.getByText(/You have a new look: /)).toBeVisible();
+
     // Career play on the Career tab.
     await page.goto(`/play/${saveId}/career`);
     await expect(page.getByRole('heading', { level: 2, name: 'Your career path' })).toBeVisible();

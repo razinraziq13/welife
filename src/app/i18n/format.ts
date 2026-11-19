@@ -1,4 +1,5 @@
 import { findEvent } from '@engine/content';
+import { HAIR_STYLE_NAMES } from '@app/components/avatar/palette';
 import { findClub, findProgram } from '@engine/education/catalog';
 import { stageName } from '@engine/education/school';
 import { findCountry } from '@engine/world/countries';
@@ -146,6 +147,8 @@ function enrich(params: Record<string, string | number>): Record<string, string 
         ? stageName(params.country, params.stage as EducationStage)
         : t(`stage.${params.stage}`);
   }
+  if (typeof params.hairStyle === 'number')
+    out.styleName = (HAIR_STYLE_NAMES[params.hairStyle] ?? '').toLowerCase();
   if (typeof params.projectId === 'string') out.projectName = t('activity.' + params.projectId);
   if (typeof params.activityId === 'string') out.activityName = t(`activity.${params.activityId}`);
   if (typeof params.cause === 'string') out.causeName = t(`cause.${params.cause}`);

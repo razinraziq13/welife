@@ -5,6 +5,7 @@ export const enHub: Record<string, string> = {
   'hubCategory.entertainment': 'Entertainment',
   'hubCategory.travel': 'Travel',
   'hubCategory.shopping': 'Shopping',
+  'hubCategory.style': 'Look & style',
   'hubCategory.family': 'Family',
   'hubCategory.social': 'Social',
   'hubCategory.projects': 'Personal projects',
@@ -110,4 +111,9 @@ export const enHub: Record<string, string> = {
   'tx.lifestyle': '{activityName}',
   'tx.royalties': 'Book royalties',
   'tx.appIncome': 'App income',
+  'activity.salon': 'Barber or salon',
+  'activityHint.salon': 'Change your hairstyle, or colour it from age 14.',
+  'life.salon.changed': 'You have a new look: {styleName}.',
+  'life.salon.trim': 'A fresh trim. You look sharp.',
+  'tx.salon': 'Barber or salon',
 };

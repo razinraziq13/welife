@@ -12,6 +12,7 @@ import { displayValue } from '@app/i18n/format';
 import { cn } from '@app/lib/cn';
 import { useGameStore } from '@app/stores/gameStore';
 import { resolveLayout } from '../tabs/LifeTab';
+import { SalonDialog } from '../SalonDialog';
 
 /** Existing screens for paperwork that already has its own place in the game. */
 const ADMIN_LINKS: { to: string; label: string; hint: string }[] = [
@@ -39,6 +40,7 @@ export function ActivitiesHubScreen() {
   const setLayout = useGameStore((s) => s.setLayout);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<HubCategory | 'all'>('all');
+  const [salonOpen, setSalonOpen] = useState(false);
   const searchId = useId();
   if (!session) return null;
   const view = session.view;
@@ -65,7 +67,8 @@ export function ActivitiesHubScreen() {
     void setLayout({ ...layout, favourites: next });
   };
   const doIt = (item: HubItem) => {
-    if (item.kind === 'activity') void act(item.id);
+    if (item.id === 'salon') setSalonOpen(true);
+    else if (item.kind === 'activity') void act(item.id);
     else void send({ type: 'act', activityId: item.id });
   };
 
@@ -195,6 +198,15 @@ export function ActivitiesHubScreen() {
 
   return (
     <div className="flex flex-col gap-4">
+      {salonOpen && (
+        <SalonDialog
+          view={view}
+          open={salonOpen}
+          onOpenChange={setSalonOpen}
+          cutMinor={view.hub.salon.cutMinor}
+          colourMinor={view.hub.salon.colourMinor}
+        />
+      )}
       <PageHeader
         title="Activities"
         description={`Everything you can do with your free time. ${String(hoursLeft)} hours left this month.`}

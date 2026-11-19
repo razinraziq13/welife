@@ -1,4 +1,5 @@
 import { useId, useMemo, useState } from 'react';
+import { HAIR_STYLES_BY_GENDER } from '@engine/characters/genetics';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, ArrowRight, Dices, Sparkles } from 'lucide-react';
 import { scenarioAvailability } from '@engine/characters/scenarios';
@@ -41,12 +42,14 @@ function randomSeed(): string {
   return crypto.randomUUID().slice(0, 8);
 }
 
-function randomAppearance(): Appearance {
+/** A random look; the hairstyle is a typical one for the chosen gender (any can be picked). */
+function randomAppearance(gender: Gender | 'random' = 'random'): Appearance {
   const pick = (n: number) => Math.floor(Math.random() * n);
+  const styles = HAIR_STYLES_BY_GENDER[gender === 'random' ? 'nonbinary' : gender];
   return {
     skinTone: pick(APPEARANCE_LIMITS.skinTone),
     hairColor: pick(APPEARANCE_LIMITS.hairColor),
-    hairStyle: pick(APPEARANCE_LIMITS.hairStyle),
+    hairStyle: styles[pick(styles.length)] ?? 0,
     eyeColor: pick(APPEARANCE_LIMITS.eyeColor),
     faceShape: pick(APPEARANCE_LIMITS.faceShape),
     freckles: pick(5) === 0,
@@ -363,12 +366,19 @@ export function NewLifeScreen() {
               legend="Gender"
               name="gender"
               value={gender}
-              onChange={setGender}
+              onChange={(next) => {
+                setGender(next);
+                // Keep the chosen look, but start from a typical hairstyle for the new gender.
+                if (
+                  next !== 'random' &&
+                  !HAIR_STYLES_BY_GENDER[next].includes(appearance.hairStyle)
+                )
+                  setAppearance({ ...appearance, hairStyle: HAIR_STYLES_BY_GENDER[next][0] ?? 0 });
+              }}
               options={[
                 { value: 'random', label: 'Random' },
                 { value: 'female', label: 'Girl' },
                 { value: 'male', label: 'Boy' },
-                { value: 'nonbinary', label: 'Non-binary' },
               ]}
             />
             <Switch
@@ -439,7 +449,7 @@ export function NewLifeScreen() {
                       variant="secondary"
                       size="sm"
                       onClick={() => {
-                        setAppearance(randomAppearance());
+                        setAppearance(randomAppearance(gender));
                       }}
                     >
                       <Dices aria-hidden="true" className="size-4" /> Randomise look

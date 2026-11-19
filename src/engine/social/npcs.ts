@@ -104,8 +104,9 @@ export function createNpc(world: World, spec: NpcSpec): Character {
       ? inheritAppearance(
           genetics,
           parents.map((p) => p.appearance),
+          gender,
         )
-      : randomAppearance(genetics);
+      : randomAppearance(genetics, gender);
   world.rng.npc = rng.state();
   world.rng.genetics = genetics.state();
   const death =

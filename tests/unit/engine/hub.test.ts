@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { checkInvariants } from '@engine/core/invariants';
 import { checkLedger } from '@engine/economy/ledger';
 import { projectHub } from '@engine/activities/hub';
+import { HAIR_STYLES_BY_GENDER } from '@engine/characters/genetics';
 import {
   HUB_CATEGORIES,
   LIFESTYLE,
@@ -109,5 +110,65 @@ describe('Activities Hub (gameplay expansion, feature 8)', () => {
     const a = run(state, { type: 'act', activityId: 'driving-licence' });
     const b = run(state, { type: 'act', activityId: 'driving-licence' });
     expect(a.outcome).toEqual(b.outcome);
+  });
+
+  it('people start with a hairstyle typical for their gender (players and everyone around them)', () => {
+    for (let i = 0; i < 12; i++) {
+      const state = newState({
+        seed: 'hair-' + String(i),
+        identity: { firstName: null, lastName: null, gender: 'male' },
+      });
+      expect(HAIR_STYLES_BY_GENDER.male, 'player').toContain(playerOf(state).appearance.hairStyle);
+      for (const c of Object.values(state.world.characters)) {
+        const g = c.identity.gender;
+        expect(HAIR_STYLES_BY_GENDER[g], c.id).toContain(c.appearance.hairStyle);
+      }
+    }
+  });
+
+  it('the barber or salon changes your hair, through the ledger, once a month', () => {
+    let state = adult('hub-salon');
+    const p = playerOf(state);
+    const style = p.appearance.hairStyle === 0 ? 1 : 0;
+    const colour = p.appearance.hairColor === 0 ? 1 : 0;
+    const refused = run(state, {
+      type: 'visitSalon',
+      hairStyle: p.appearance.hairStyle,
+      hairColor: null,
+    });
+    expect(refused.outcome).toMatchObject({
+      status: 'rejected',
+      key: 'err.LifestyleError.noChange',
+    });
+    const before = balanceOf(state);
+    const prices = projectHub(state.world).salon;
+    const result = checked(state, { type: 'visitSalon', hairStyle: style, hairColor: colour });
+    expect(result.outcome).toMatchObject({ status: 'applied', key: 'life.salon.changed' });
+    state = result.state;
+    expect(playerOf(state).appearance).toMatchObject({ hairStyle: style, hairColor: colour });
+    expect(balanceOf(state)).toBe(before - prices.cutMinor - prices.colourMinor);
+    expect(checkLedger(state.world)).toEqual([]);
+    expect(lifestyleBlock(state.world, playerOf(state), 'salon')).toBe('doneThisMonth');
+  });
+
+  it('children can get a haircut (the household pays) but not colour their hair', () => {
+    const child = advanceMonths(newState({ seed: 'hub-kid-hair' }), 8 * 12);
+    const p = playerOf(child);
+    const colour = run(child, {
+      type: 'visitSalon',
+      hairStyle: p.appearance.hairStyle,
+      hairColor: (p.appearance.hairColor + 1) % 8,
+    });
+    expect(colour.outcome).toMatchObject({
+      status: 'rejected',
+      key: 'err.LifestyleError.tooYoungToColour',
+    });
+    const cut = checked(child, {
+      type: 'visitSalon',
+      hairStyle: (p.appearance.hairStyle + 1) % 8,
+      hairColor: null,
+    });
+    expect(cut.outcome.status).toBe('applied');
+    expect(checkLedger(cut.state.world)).toEqual([]);
   });
 });

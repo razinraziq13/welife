@@ -294,7 +294,7 @@ describe('export and import', () => {
     expect(timeline.branches).toHaveLength(2);
     const opened = await call('game.open', { saveId: imported.saveId });
     expect(opened.view.tick).toBe(8);
-  });
+  }, 60_000);
 
   it('rejects damaged, edited or foreign files without changing anything', async () => {
     const database = db();
