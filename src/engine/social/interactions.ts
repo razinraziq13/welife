@@ -144,16 +144,6 @@ export const INTERACTION_BLOCK_MESSAGES: Record<InteractionBlock, string> = {
   ...CONTEXTUAL_BLOCK_MESSAGES,
 };
 
-const SOCIAL_TYPES: ReadonlySet<RelationType> = new Set([
-  'classmate',
-  'neighbour',
-  'acquaintance',
-  'colleague',
-  'teacher',
-  'manager',
-  'exPartner',
-]);
-
 function relationOf(world: World, player: Character, other: Character): RelationType | null {
   return (
     kinship(world, player.id, other.id) ??
@@ -778,9 +768,4 @@ export function respondToDatingProfile(
     salience: 45,
     decay: 'slow',
   });
-}
-
-/** Social types that can turn into friendships. */
-export function canBecomeFriends(type: RelationType): boolean {
-  return SOCIAL_TYPES.has(type) || type === 'cousin';
 }

@@ -72,7 +72,14 @@ import {
   startBusiness,
   takeBusinessLoan,
 } from '../business/business';
-import { InvestmentError, buyFund, sellFund } from '../economy/investments';
+import {
+  BOND_TERMS,
+  InvestmentError,
+  buyBond,
+  buyFund,
+  sellBond,
+  sellFund,
+} from '../economy/investments';
 import {
   PropertyError,
   buyProperty,
@@ -291,6 +298,11 @@ export const CommandSchema = z.discriminatedUnion('type', [
   command('listProperty', { propertyId: EntityId, list: z.boolean() }),
   command('buyFund', { fund: z.enum(FUNDS), amountMinor: AmountMinor }),
   command('sellFund', { fund: z.enum(FUNDS), amountMinor: AmountMinor }),
+  command('buyBond', {
+    termMonths: z.union(BOND_TERMS.map((m) => z.literal(m))),
+    amountMinor: AmountMinor,
+  }),
+  command('sellBond', { accountId: EntityId }),
   // Milestone 6: migration, health, law, religion, military, politics, royal duties.
   command('applyVisa', {
     countryCode: z.string().length(2),
@@ -691,6 +703,12 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
     case 'sellFund':
       sellFund(world, player, cmd.fund, BigInt(cmd.amountMinor));
       return done('out.fundSold', { fund: cmd.fund });
+    case 'buyBond':
+      buyBond(world, player, cmd.termMonths, BigInt(cmd.amountMinor));
+      return done('out.bondBought', { years: cmd.termMonths / 12 });
+    case 'sellBond':
+      sellBond(world, player, cmd.accountId);
+      return done('out.bondSold');
     case 'applyVisa': {
       const app = applyForStatus(world, player, cmd.countryCode, cmd.route, cmd.renounce);
       return done('out.visaApplied', {

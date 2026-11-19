@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
-import { advanceOnce, createLife } from './helpers';
+import { advanceOnce, createLife, importSave } from './helpers';
 import { adultSaveJson } from './adultSave';
 
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
@@ -56,22 +56,11 @@ test.describe('an adult life', () => {
     json = await adultSaveJson();
   });
 
-  async function openAdult(page: Page): Promise<string> {
-    await page.goto('/');
-    await page.locator('input[type="file"]').setInputFiles({
-      name: 'adult.welife.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(json),
-    });
-    await expect(page).toHaveURL(/\/play\/[^/]+\/life$/);
-    return /\/play\/([^/]+)\//.exec(page.url())?.[1] ?? '';
-  }
-
   test('activities hub, grouped person actions and career play work and are accessible', async ({
     page,
   }) => {
     test.setTimeout(120_000);
-    const saveId = await openAdult(page);
+    const saveId = await importSave(page, json);
     // Activities Hub: search, do a paid activity, favourite it.
     await page.goto(`/play/${saveId}/activities`);
     await expect(page.getByRole('heading', { level: 1, name: 'Activities' })).toBeVisible();
@@ -140,7 +129,7 @@ test.describe('an adult life', () => {
   test('career, finance and people screens work for an adult (M4) and are accessible', async ({
     page,
   }) => {
-    const saveId = await openAdult(page);
+    const saveId = await importSave(page, json);
     await page.goto(`/play/${saveId}/career`);
     await expect(page.getByRole('heading', { level: 1, name: 'Career' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: /Your job|Work/ })).toBeVisible();
@@ -202,14 +191,7 @@ test.describe('companies and property (M5)', () => {
   test('start and run a company, buy property and invest; screens are accessible', async ({
     page,
   }) => {
-    await page.goto('/');
-    await page.locator('input[type="file"]').setInputFiles({
-      name: 'tycoon.welife.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(json),
-    });
-    await expect(page).toHaveURL(/\/play\/[^/]+\/life$/);
-    const saveId = /\/play\/([^/]+)\//.exec(page.url())?.[1] ?? '';
+    const saveId = await importSave(page, json);
 
     await page.goto(`/play/${saveId}/business`);
     await expect(page.getByRole('heading', { level: 1, name: 'Business' })).toBeVisible();
@@ -273,14 +255,7 @@ test.describe('institutions and civic life (M6)', () => {
   test('apply for a visa, join a party, choose a belief; civic screens are accessible', async ({
     page,
   }) => {
-    await page.goto('/');
-    await page.locator('input[type="file"]').setInputFiles({
-      name: 'civic.welife.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(json),
-    });
-    await expect(page).toHaveURL(/\/play\/[^/]+\/life$/);
-    const saveId = /\/play\/([^/]+)\//.exec(page.url())?.[1] ?? '';
+    const saveId = await importSave(page, json);
 
     // World and migration: country rules, a visa application.
     await page.goto(`/play/${saveId}/world`);
@@ -348,14 +323,7 @@ test.describe('legacy, media, achievements and the event creator (M7-M8)', () =>
   test('social media, a will, achievements and biography; screens are accessible', async ({
     page,
   }) => {
-    await page.goto('/');
-    await page.locator('input[type="file"]').setInputFiles({
-      name: 'legacy.welife.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(json),
-    });
-    await expect(page).toHaveURL(/\/play\/[^/]+\/life$/);
-    const saveId = /\/play\/([^/]+)\//.exec(page.url())?.[1] ?? '';
+    const saveId = await importSave(page, json);
 
     await page.goto(`/play/${saveId}/media`);
     await expect(page.getByRole('heading', { level: 1, name: 'Social media' })).toBeVisible();
@@ -391,14 +359,7 @@ test.describe('legacy, media, achievements and the event creator (M7-M8)', () =>
   });
 
   test('make a pack in the event creator, then enable it for a life', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('input[type="file"]').setInputFiles({
-      name: 'packs.welife.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(json),
-    });
-    await expect(page).toHaveURL(/\/play\/[^/]+\/life$/);
-    const saveId = /\/play\/([^/]+)\//.exec(page.url())?.[1] ?? '';
+    const saveId = await importSave(page, json);
 
     await page.goto('/editor');
     await expect(page.getByRole('heading', { level: 1, name: 'Event creator' })).toBeVisible();
@@ -440,14 +401,7 @@ test.describe('rival job offers', () => {
   test('a rival offer shows on Career and you can ask your employer to match it', async ({
     page,
   }) => {
-    await page.goto('/');
-    await page.locator('input[type="file"]').setInputFiles({
-      name: 'rival.welife.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(json),
-    });
-    await expect(page).toHaveURL(/\/play\/[^/]+\/life$/);
-    const saveId = /\/play\/([^/]+)\//.exec(page.url())?.[1] ?? '';
+    const saveId = await importSave(page, json);
     await page.goto(`/play/${saveId}/career`);
     await expect(page.getByText(/They approached you/)).toBeVisible();
     await expect(page.getByText(/Accepting means leaving that job/)).toBeVisible();
@@ -479,14 +433,7 @@ test.describe('retirement fund lump sum', () => {
   });
 
   test('explains payouts and takes a one-off lump sum from 55', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('input[type="file"]').setInputFiles({
-      name: 'pension.welife.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(json),
-    });
-    await expect(page).toHaveURL(/\/play\/[^/]+\/life$/);
-    const saveId = /\/play\/([^/]+)\//.exec(page.url())?.[1] ?? '';
+    const saveId = await importSave(page, json);
     await page.goto(`/play/${saveId}/finance`);
     await expect(page.getByRole('heading', { level: 3, name: 'Taking money out' })).toBeVisible();
     await expect(page.getByText(/pays you a monthly income once you retire/)).toBeVisible();
@@ -502,5 +449,31 @@ test.describe('retirement fund lump sum', () => {
     await page.keyboard.press('Enter');
     await expect(feedback).toHaveAttribute('data-kind', 'error');
     await expect(feedback).toContainText('already taken your one-off lump sum');
+  });
+});
+
+test.describe('government bonds', () => {
+  test.describe.configure({ timeout: 120_000 });
+  let json = '';
+  test.beforeAll(async () => {
+    json = await adultSaveJson('e2e-bonds');
+  });
+
+  test('buy a bond, see its interest and sale price, sell it early', async ({ page }) => {
+    const saveId = await importSave(page, json);
+    await page.goto(`/play/${saveId}/finance`);
+    await expect(page.getByRole('heading', { level: 3, name: 'Government bonds' })).toBeVisible();
+    await page.getByText(/^10 years$/).click();
+    await page.getByLabel(/^Buy bonds/).fill('1000');
+    await page.getByRole('button', { name: 'Buy bonds', exact: true }).click();
+    const feedback = page.getByTestId('feedback');
+    await expect(feedback).toContainText('10-year government bond');
+    await expect(page.getByText(/10-year at/)).toBeVisible();
+    await expect(page.getByText(/a month · repaid .* if sold now/)).toBeVisible();
+    await expectAccessible(page);
+    await page.getByRole('button', { name: 'Sell', exact: true }).last().click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Sell' }).click();
+    await expect(feedback).toContainText('Bond sold');
+    await expect(page.getByText(/10-year at/)).toHaveCount(0);
   });
 });

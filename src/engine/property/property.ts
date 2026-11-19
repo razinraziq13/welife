@@ -1,4 +1,4 @@
-import { clamp, sortedKeys, sortedValues } from '../core/data';
+import { clamp, sortedKeys } from '../core/data';
 import { amortisedPayment, applyBp, applyPercent, divRound, maxBig, minBig } from '../core/money';
 import { addBiography, addNotification, ageYears, nextId, withRng } from '../core/world';
 import { emptyFinance, moveToHousehold } from '../characters/factory';
@@ -806,12 +806,6 @@ export function processProperties(world: World): void {
   const player = world.characters[world.activeCharacterId];
   if (player) sweepAbroad(world, player);
   refreshListings(world);
-}
-
-export function playerProperties(world: World): Property[] {
-  return sortedValues(world.properties).filter(
-    (p) => p.status === 'owned' && p.owners.some((o) => o.ownerId === world.activeCharacterId),
-  );
 }
 
 export { medianWage };

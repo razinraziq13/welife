@@ -144,12 +144,6 @@ export function medianWage(world: World, code: string): bigint {
   return applyBp(baseMedianWage(code), index);
 }
 
-/** Scales a start-of-game price by simulated inflation. */
-export function indexedPrice(world: World, code: string, amount: bigint): bigint {
-  const index = world.economy[code]?.priceIndexBp ?? 10_000;
-  return applyBp(amount, index);
-}
-
 /** Savings rate follows the policy rate. */
 export function savingsRateBp(world: World, code: string): number {
   const rules = getRules(code).rates;

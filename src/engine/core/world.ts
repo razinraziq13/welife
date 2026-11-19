@@ -1,5 +1,5 @@
 import { Rng } from './rng';
-import { ageOf, type Age } from './clock';
+import { ageOf } from './clock';
 import type {
   BiographyEntry,
   Character,
@@ -32,10 +32,6 @@ export function getCharacter(world: World, id: string): Character {
 
 export function activeCharacter(world: World): Character {
   return getCharacter(world, world.activeCharacterId);
-}
-
-export function characterAge(world: World, character: Character): Age {
-  return ageOf(character.birth, character.death ?? world.clock);
 }
 
 export function isAlive(character: Character): boolean {

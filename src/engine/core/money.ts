@@ -34,10 +34,6 @@ export function maxBig(a: bigint, b: bigint): bigint {
   return a > b ? a : b;
 }
 
-export function clampBig(value: bigint, min: bigint, max: bigint): bigint {
-  return value < min ? min : value > max ? max : value;
-}
-
 /** Converts a safe integer (e.g. country data) to minor units. */
 export function toMinor(value: number): bigint {
   if (!Number.isSafeInteger(value)) throw new RangeError('toMinor: not a safe integer');

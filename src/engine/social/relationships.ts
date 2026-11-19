@@ -105,11 +105,6 @@ export function relationshipIndex(world: World): Map<string, Relationship> {
   return index;
 }
 
-/** Relationships from one person's side, in id order. */
-export function relationshipsOf(world: World, aId: string): Relationship[] {
-  return sortedValues(world.relationships).filter((r) => r.aId === aId);
-}
-
 export interface PairChange {
   closeness?: number;
   trust?: number;
@@ -138,16 +133,6 @@ export function adjustPair(
     if (contact) {
       rel.lastContactTick = world.tick;
       rel.history = Math.min(1000, rel.history + 1);
-    }
-  }
-}
-
-export function removePair(world: World, aId: string, bId: string): void {
-  for (const id of Object.keys(world.relationships)) {
-    const rel = world.relationships[id];
-    if (!rel) continue;
-    if ((rel.aId === aId && rel.bId === bId) || (rel.aId === bId && rel.bId === aId)) {
-      Reflect.deleteProperty(world.relationships, id);
     }
   }
 }

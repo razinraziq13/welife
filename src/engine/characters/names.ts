@@ -9,7 +9,3 @@ export function displayName(identity: Identity, withTitle = true): string {
   const name = parts.filter((part) => part.length > 0).join(' ');
   return withTitle && identity.title ? `${identity.title} ${name}` : name;
 }
-
-export function shortName(identity: Identity): string {
-  return identity.firstName;
-}

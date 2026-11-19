@@ -11,6 +11,7 @@ import { Card } from '@app/components/ui/card';
 import { ChoiceGroup } from '@app/components/ui/choice-group';
 import { ConfirmDialog } from '@app/components/ui/confirm-dialog';
 import { t } from '@app/i18n/en';
+import { cn } from '@app/lib/cn';
 import {
   countryName,
   formatBp,
@@ -726,6 +727,8 @@ function InvestmentsCard({ view }: { view: GameView }) {
   const inv = view.enterprise.investments;
   const cur = { ...view.finance.currency };
   const [fund, setFund] = useState<'stocks' | 'bonds'>('stocks');
+  const [term, setTerm] = useState<12 | 60 | 120>(60);
+  const [selling, setSelling] = useState<(typeof inv.bonds)[number] | null>(null);
   if (view.character.age.years < 18) return null;
   return (
     <Card
@@ -734,7 +737,9 @@ function InvestmentsCard({ view }: { view: GameView }) {
     >
       <dl className="text-sm">
         <Row label={t('fund.stocks')}>{<Money minor={inv.stocksMinor} currency={cur} />}</Row>
+        <GainLine value={inv.stocksMinor} cost={inv.stocksCostMinor} cur={cur} />
         <Row label={t('fund.bonds')}>{<Money minor={inv.bondsMinor} currency={cur} />}</Row>
+        <GainLine value={inv.bondsMinor} cost={inv.bondsCostMinor} cur={cur} />
       </dl>
       <div className="mt-3 flex flex-col gap-3">
         <ChoiceGroup
@@ -770,7 +775,102 @@ function InvestmentsCard({ view }: { view: GameView }) {
           onSubmit={(minor) => send({ type: 'sellFund', fund, amountMinor: minor })}
         />
       </div>
+
+      <div className="mt-5 border-t border-border pt-3">
+        <h3 className="text-sm font-semibold text-fg">Government bonds</h3>
+        <p className="mt-1 text-sm text-muted">
+          Lend money to the government for a fixed time at a fixed rate. You get interest every
+          month and your money back at the end. Selling early pays today&apos;s price: less if
+          interest rates have risen since you bought, more if they have fallen.
+        </p>
+        <div className="mt-3 flex flex-col gap-3">
+          <ChoiceGroup
+            legend="Term"
+            name="bond-term"
+            value={String(term)}
+            onChange={(v) => {
+              setTerm(Number(v) as 12 | 60 | 120);
+            }}
+            options={inv.bondOffers.map((o) => ({
+              value: String(o.termMonths),
+              label: `${String(o.termMonths / 12)} year${o.termMonths === 12 ? '' : 's'}`,
+              description: `${formatBp(o.yieldBp)} a year, fixed`,
+            }))}
+          />
+          <AmountForm
+            label="Buy bonds"
+            currency={cur}
+            submitLabel="Buy bonds"
+            disabled={disabled}
+            onSubmit={(minor) => send({ type: 'buyBond', termMonths: term, amountMinor: minor })}
+          />
+        </div>
+        {inv.bonds.length > 0 && (
+          <ul className="mt-3 divide-y divide-border text-sm">
+            {inv.bonds.map((b) => (
+              <li key={b.id} className="flex flex-wrap items-center gap-2 py-2.5">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-fg">
+                    <Money minor={b.faceMinor} currency={cur} />, {String(b.termMonths / 12)}-year
+                    at {formatBp(b.couponBp)}
+                  </p>
+                  <p className="text-xs text-muted">
+                    Pays <Money minor={b.monthlyInterestMinor} currency={cur} /> a month · repaid{' '}
+                    {month(view, b.maturityTick)} · worth{' '}
+                    <Money minor={b.saleValueMinor} currency={cur} /> if sold now
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={disabled}
+                  onClick={() => {
+                    setSelling(b);
+                  }}
+                >
+                  Sell
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <ConfirmDialog
+        open={selling !== null}
+        onOpenChange={(o) => {
+          if (!o) setSelling(null);
+        }}
+        title="Sell this bond early?"
+        confirmLabel="Sell"
+        onConfirm={() => (selling ? send({ type: 'sellBond', accountId: selling.id }) : undefined)}
+      >
+        You get {selling ? formatMoney(selling.saleValueMinor, cur) : ''} now instead of{' '}
+        {selling ? formatMoney(selling.faceMinor, cur) : ''} at the end, and the monthly interest
+        stops.
+      </ConfirmDialog>
     </Card>
+  );
+}
+
+/** "Put in £X · up £Y (+Z%)" under a fund; nothing for holdings bought before this was tracked. */
+function GainLine({
+  value,
+  cost,
+  cur,
+}: {
+  value: bigint;
+  cost: bigint | null;
+  cur: GameView['finance']['currency'];
+}) {
+  if (cost === null || cost === 0n) return null;
+  const gain = value - cost;
+  const percent = Number((gain * 1000n) / cost) / 10;
+  return (
+    <p className={cn('-mt-1 mb-1 text-right text-xs', gain < 0n ? 'text-danger' : 'text-muted')}>
+      Put in <Money minor={cost} currency={cur} /> · {gain < 0n ? 'down' : 'up'}{' '}
+      <Money minor={gain < 0n ? -gain : gain} currency={cur} /> ({gain < 0n ? '' : '+'}
+      {percent.toFixed(1)}%)
+    </p>
   );
 }
 

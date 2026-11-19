@@ -1,5 +1,5 @@
 import { applyBp } from '../core/money';
-import { addBiography, addNotification, ageYears } from '../core/world';
+import { addBiography, ageYears } from '../core/world';
 import { changeNeed, changeStat } from '../characters/stats';
 import { payExpense, payerFor } from '../economy/finance';
 import { getInstitutions, type Religion } from '../world/institutions';
@@ -88,8 +88,4 @@ export function processReligion(world: World): void {
       payExpense(world, payer, 'churchTax', tax, 'tx.churchTax');
     }
   }
-}
-
-export function notifyReligiousMilestone(world: World, c: Character, key: string): void {
-  addNotification(world, 'civic', key, { religion: c.civic.religion }, 'religion');
 }

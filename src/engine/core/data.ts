@@ -63,11 +63,6 @@ export function parseCanonicalJson(text: string): unknown {
   });
 }
 
-export function deepEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  return canonicalJson(a) === canonicalJson(b);
-}
-
 /** Keys of a record in a stable (sorted) order; use for every iteration that affects results. */
 export function sortedKeys(record: Record<string, unknown>): string[] {
   return Object.keys(record).sort();
@@ -82,9 +77,4 @@ export function sortedValues<T>(record: Record<string, T>): T[] {
 
 export function clamp(value: number, min: number, max: number): number {
   return value < min ? min : value > max ? max : value;
-}
-
-/** Integer division rounded toward negative infinity (deterministic for negatives too). */
-export function idiv(numerator: number, denominator: number): number {
-  return Math.floor(numerator / denominator);
 }

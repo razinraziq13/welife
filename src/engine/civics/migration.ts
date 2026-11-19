@@ -523,6 +523,11 @@ function convertMoney(
       category: account.category,
       rateBp: account.type === 'savings' ? savingsRateBp(world, toCode) : account.rateBp,
     });
+    // Bonds keep their terms and funds their (converted) cost after the move.
+    const moved = world.ledger.accounts[next];
+    if (moved && account.bond) moved.bond = { ...account.bond };
+    if (moved && account.costMinor !== undefined)
+      moved.costMinor = convertCurrency(world, account.costMinor, account.currency, toCurrency);
     if (account.balance > 0n)
       exchange(world, account.ownerId, account.id, next, account.balance, 'tx.moveMoney');
     world.ledger.accounts[account.id] = { ...account, closedTick: world.tick };

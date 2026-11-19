@@ -91,10 +91,6 @@ export function rankTitle(record: ServiceRecord): string {
   return list[Math.min(record.rank, list.length - 1)] ?? 'Private';
 }
 
-export function serviceRecords(world: World, characterId: string): ServiceRecord[] {
-  return sortedValues(world.civics.service).filter((s) => s.characterId === characterId);
-}
-
 export function currentService(world: World, c: Character): ServiceRecord | undefined {
   return sortedValues(world.civics.service).find(
     (s) =>

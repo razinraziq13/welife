@@ -760,14 +760,4 @@ export function leaveEducation(world: World, c: Character): void {
   finish(world, c, 'left', null);
 }
 
-/** Hours per month that clubs take. */
-export function clubHours(c: Character): number {
-  return c.education.clubs.reduce((sum, id) => sum + (findClub(id)?.hours ?? 0), 0);
-}
-
-/** Months until the next school-year start (0 = this month). */
-export function monthsUntilSchoolYear(world: World, countryCode: string): number {
-  return (getRules(countryCode).education.schoolYearStartMonth - world.clock.month + 12) % 12;
-}
-
 export { CLUBS };

@@ -297,8 +297,6 @@ export const EMPLOYER_ONCOST_PERCENT = 10;
 /** Utilities and sundries, percent of revenue, plus a fixed amount per outlet (% of median). */
 export const OTHER_COSTS_PERCENT = 8;
 export const OUTLET_FIXED_PERCENT = 5;
-/** Hours a month an owner-manager spends per business. */
-export const OWNER_HOURS = 40;
 /** A hired manager costs this many staff wages. */
 export const MANAGER_WAGES = 2;
 /** Months of unpaid bills before a business fails. */

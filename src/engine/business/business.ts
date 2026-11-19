@@ -1324,17 +1324,3 @@ export function processBusinesses(world: World): void {
   }
   evolveCompetitors(world);
 }
-
-/** Businesses the player owns (any share). */
-export function playerBusinesses(world: World): Business[] {
-  return sortedValues(world.businesses).filter(
-    (b) => b.status === 'active' && ownerShare(b, world.activeCharacterId),
-  );
-}
-
-/** Monthly hours the player spends managing their companies. */
-export function managementHours(world: World, ownerId: string): number {
-  return sortedValues(world.businesses).filter(
-    (b) => b.status === 'active' && b.manager === 'owner' && ownerShare(b, ownerId),
-  ).length;
-}

@@ -219,10 +219,6 @@ function active(world: World, c: Character): HealthCondition[] {
   );
 }
 
-export function activeConditions(world: World, c: Character): HealthCondition[] {
-  return active(world, c);
-}
-
 export function diagnose(world: World, c: Character, kind: ConditionKind): HealthCondition {
   const existing = active(world, c).find((h) => h.kind === kind);
   if (existing) return existing;

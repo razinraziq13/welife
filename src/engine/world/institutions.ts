@@ -2418,7 +2418,3 @@ export function getInstitutions(code: string): Institutions {
   if (!found) throw new Error(`No institutions for ${code}`);
   return found;
 }
-
-export function religionShares(code: string): [Religion, number][] {
-  return getInstitutions(code).religion.shares;
-}

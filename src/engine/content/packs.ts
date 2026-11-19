@@ -64,7 +64,6 @@ export const ScenarioPresetSchema = z
     easyMigration: z.boolean(),
   })
   .strict();
-export type ScenarioPreset = z.infer<typeof ScenarioPresetSchema>;
 
 export const PackFileSchema = z
   .object({

@@ -55,3 +55,15 @@ export async function advanceOnce(page: Page): Promise<void> {
     )
     .toBe(true);
 }
+
+/** Imports a save file (JSON text) from the home screen; returns the new save's id. */
+export async function importSave(page: Page, json: string): Promise<string> {
+  await page.goto('/');
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'fixture.welife.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(json),
+  });
+  await expect(page).toHaveURL(/\/play\/[^/]+\/life$/);
+  return /\/play\/([^/]+)\//.exec(page.url())?.[1] ?? '';
+}

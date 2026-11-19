@@ -26,7 +26,6 @@ import type {
 } from '../state/schema';
 import { medianWage, savingsRateBp, type MarketMove } from './economy';
 import {
-  ASSET_TYPES,
   LedgerError,
   balanceOf,
   categoryAccount,
@@ -590,6 +589,7 @@ function growAccounts(
   for (const account of sortedValues(world.ledger.accounts)) {
     if (account.ownerId !== ownerId || account.closedTick !== null || account.balance <= 0n)
       continue;
+    if (account.bond) continue; // fixed-term bonds pay interest instead (processBonds)
     const cur = account.currency;
     if (account.type === 'savings') {
       account.rateBp = savingsRateBp(world, code);
@@ -1426,10 +1426,6 @@ export function moveHome(world: World, c: Character, familyHouseholdId: string):
   // The old household stays (empty) because its expense history lives in the ledger.
   home.finance = null;
   addBiography(world, c.id, 'money', 'bio.movedHome', {});
-}
-
-export function isAsset(account: Account): boolean {
-  return ASSET_TYPES.has(account.type);
 }
 
 export { LedgerError };

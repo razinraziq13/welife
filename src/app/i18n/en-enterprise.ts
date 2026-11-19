@@ -57,6 +57,8 @@ export const enEnterprise: Record<string, string> = {
   'out.propertyUnlisted': 'Property taken off the market.',
   'out.fundBought': 'Investment bought.',
   'out.fundSold': 'Investment sold.',
+  'out.bondBought': 'You bought a {years}-year government bond. It pays interest every month.',
+  'out.bondSold': 'Bond sold at the current price; the money is in your current account.',
 
   // Transactions and categories
   'tx.businessCapital': 'Invested in {business}',
@@ -91,6 +93,11 @@ export const enEnterprise: Record<string, string> = {
   'tx.rentReceived': 'Rent from {tenant}',
   'tx.fundBought': 'Investment bought',
   'tx.fundSold': 'Investment sold',
+  'tx.bondBought': 'Government bond bought',
+  'tx.bondSold': 'Government bond sold',
+  'tx.bondInterest': 'Bond interest',
+  'tx.bondMatured': 'Government bond repaid',
+  'ntf.bondMatured': 'Your {months}-month government bond has been repaid in full.',
   'tx.familyCovers': 'Family help with spending',
   'category.businessGains': 'Company value gains',
   'category.businessLosses': 'Company value losses',

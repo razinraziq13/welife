@@ -90,14 +90,3 @@ export function hasMemory(world: World, key: string, subjectId: string): boolean
     (m) => m.key === key && (m.subjectIds.includes(subjectId) || m.ownerId === subjectId),
   );
 }
-
-/** Removes memories that reference people who no longer exist. */
-export function pruneMemories(world: World): void {
-  for (const id of sortedKeys(world.memories)) {
-    const m = world.memories[id];
-    if (!m) continue;
-    if (!world.characters[m.ownerId] || m.subjectIds.some((s) => !world.characters[s])) {
-      Reflect.deleteProperty(world.memories, id);
-    }
-  }
-}

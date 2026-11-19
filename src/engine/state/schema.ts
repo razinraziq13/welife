@@ -63,7 +63,6 @@ export const TRAIT_KEYS = [
   'agreeableness',
   'neuroticism',
 ] as const;
-export type TraitKey = (typeof TRAIT_KEYS)[number];
 
 export const HABIT_KEYS = ['exercise', 'reading', 'sleepRoutine', 'creativePractice'] as const;
 export type HabitKey = (typeof HABIT_KEYS)[number];
@@ -221,10 +220,8 @@ export const EDUCATION_STAGES = [
 export type EducationStage = (typeof EDUCATION_STAGES)[number];
 
 export const STUDY_EFFORTS = ['relaxed', 'steady', 'focused'] as const;
-export type StudyEffort = (typeof STUDY_EFFORTS)[number];
 
 export const WORK_EFFORTS = ['coast', 'steady', 'hard'] as const;
-export type WorkEffort = (typeof WORK_EFFORTS)[number];
 
 export const CONTRACT_TYPES = [
   'permanent',
@@ -555,7 +552,6 @@ export const HouseholdFinanceSchema = z
     headId: Id,
   })
   .strict();
-export type HouseholdFinance = z.infer<typeof HouseholdFinanceSchema>;
 
 export const HouseholdSchema = z
   .object({
@@ -593,7 +589,6 @@ export const FamilyLinkSchema = z
     type: z.enum(['biological', 'adoptive']),
   })
   .strict();
-export type FamilyLink = z.infer<typeof FamilyLinkSchema>;
 
 export const RelationshipSchema = z
   .object({
@@ -667,7 +662,6 @@ export const ScheduledConsequenceSchema = z
     context: Params,
   })
   .strict();
-export type ScheduledConsequence = z.infer<typeof ScheduledConsequenceSchema>;
 
 export const NotificationSchema = z
   .object({
@@ -815,7 +809,6 @@ export const LoanTermsSchema = z
     missedPayments: z.number().int().min(0),
   })
   .strict();
-export type LoanTerms = z.infer<typeof LoanTermsSchema>;
 
 export const AccountSchema = z
   .object({
@@ -833,6 +826,17 @@ export const AccountSchema = z
     openedTick: Tick,
     closedTick: Tick.nullable(),
     loan: LoanTermsSchema.nullable(),
+    /** Investment funds: money put in, less the cost of what was sold (optional: older saves). */
+    costMinor: NonNegativeMinor.optional(),
+    /** A fixed-term government bond held to maturity; the balance is its face value. */
+    bond: z
+      .object({
+        termMonths: z.number().int().min(12).max(120),
+        couponBp: z.number().int().min(0).max(3000),
+        maturityTick: Tick,
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 export type Account = z.infer<typeof AccountSchema>;
@@ -949,7 +953,6 @@ export const ExpectingSchema = z
     dueTick: Tick,
   })
   .strict();
-export type Expecting = z.infer<typeof ExpectingSchema>;
 
 // ---------------------------------------------------------------------------------------
 // Businesses, property and investments (spec §4 Business, §6 Business/BusinessBranch/Property)
@@ -1316,7 +1319,6 @@ export const LineageEntrySchema = z
     currency: z.string().length(3),
   })
   .strict();
-export type LineageEntry = z.infer<typeof LineageEntrySchema>;
 
 export const BeneficiarySchema = z
   .object({ characterId: Id, sharesBp: z.number().int().min(1).max(10_000) })
@@ -1416,7 +1418,6 @@ export const AchievementUnlockSchema = z
     generation: z.number().int().min(1).max(500),
   })
   .strict();
-export type AchievementUnlock = z.infer<typeof AchievementUnlockSchema>;
 
 /**
  * A content pack enabled for this world. Its events are stored in the world, so snapshots,
@@ -1459,7 +1460,6 @@ export const RNG_STREAMS = [
 export type RngStream = (typeof RNG_STREAMS)[number];
 
 export const RngStateSchema = z.tuple([Uint32, Uint32, Uint32, Uint32]);
-export type RngStateTuple = z.infer<typeof RngStateSchema>;
 
 export const WorldSchema = z
   .object({

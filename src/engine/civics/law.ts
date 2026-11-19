@@ -109,10 +109,6 @@ export class LawError extends Error {
   }
 }
 
-export function isCriminal(kind: CaseKind): boolean {
-  return CASE_RULES[kind].criminal;
-}
-
 /** Opens a case (from an event or the engine). */
 export function openCase(
   world: World,

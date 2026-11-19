@@ -2,7 +2,6 @@ import { clamp, sortedKeys } from '../core/data';
 import { addBiography, addNotification, ageYears, nextId, withRng } from '../core/world';
 import { emptyFinance, moveToHousehold } from '../characters/factory';
 import { changeStat } from '../characters/stats';
-import { displayName } from '../characters/names';
 import type { Character, Partnership, World } from '../state/schema';
 import { addMemory } from './memories';
 import { createNpc, createPotentialPartner, newNpcHousehold } from './npcs';
@@ -389,8 +388,4 @@ export function shareMoment(
     decay: 'fast',
   });
   adjustPair(world, a.id, b.id, { closeness: Math.trunc(valence / 10) });
-}
-
-export function personLabel(c: Character): string {
-  return displayName(c.identity, false);
 }

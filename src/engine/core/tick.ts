@@ -13,6 +13,7 @@ import {
 } from '../characters/monthly';
 import { advanceEconomies } from '../economy/economy';
 import { processFinances, rescheduleStudentLoan } from '../economy/finance';
+import { processBonds } from '../economy/investments';
 import { processEducation } from '../education/school';
 import { processBusinesses } from '../business/business';
 import { processProperties } from '../property/property';
@@ -102,6 +103,7 @@ export function advanceMonth(committed: World): AdvanceResult {
   // 4. Economy and money.
   const markets = advanceEconomies(world);
   processFinances(world, markets);
+  processBonds(world);
   processCivicDuties(world);
   processMedia(world);
 

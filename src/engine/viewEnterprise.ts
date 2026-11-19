@@ -15,7 +15,14 @@ import {
 import { BUSINESS_TYPES, getBusinessType } from './business/catalog';
 import { displayName } from './characters/names';
 import { convert } from './economy/economy';
-import { fundAccount } from './economy/investments';
+import {
+  BOND_TERMS,
+  bondSaleValue,
+  bondYieldBp,
+  fundAccount,
+  playerBonds,
+} from './economy/investments';
+import { monthlyInterest } from './core/money';
 import { balanceOf } from './economy/ledger';
 import { rateFor } from './economy/finance';
 import { RENOVATION, depositPercent, marketRent } from './property/property';
@@ -151,8 +158,23 @@ export interface EnterpriseView {
   investments: {
     stocksMinor: bigint;
     bondsMinor: bigint;
+    /** Money put into each fund, less the cost of what was sold (null for older holdings). */
+    stocksCostMinor: bigint | null;
+    bondsCostMinor: bigint | null;
     stockIndexBp: number;
     bondIndexBp: number;
+    /** Government bonds on offer now: term and annual yield. */
+    bondOffers: { termMonths: number; yieldBp: number }[];
+    /** Bonds held: face value, fixed rate, monthly interest, maturity and today's sale price. */
+    bonds: {
+      id: string;
+      faceMinor: bigint;
+      couponBp: number;
+      termMonths: number;
+      maturityTick: number;
+      monthlyInterestMinor: bigint;
+      saleValueMinor: bigint;
+    }[];
   };
 }
 
@@ -348,6 +370,21 @@ export function projectEnterprise(world: World, player: Character): EnterpriseVi
     investments: {
       stocksMinor: fundAccount(world, player.id, 'stocks')?.balance ?? 0n,
       bondsMinor: fundAccount(world, player.id, 'bonds')?.balance ?? 0n,
+      stocksCostMinor: fundAccount(world, player.id, 'stocks')?.costMinor ?? null,
+      bondsCostMinor: fundAccount(world, player.id, 'bonds')?.costMinor ?? null,
+      bondOffers: BOND_TERMS.map((termMonths) => ({
+        termMonths,
+        yieldBp: bondYieldBp(world, player.countryCode, termMonths),
+      })),
+      bonds: playerBonds(world, player.id).map((a) => ({
+        id: a.id,
+        faceMinor: a.balance,
+        couponBp: a.bond?.couponBp ?? 0,
+        termMonths: a.bond?.termMonths ?? 0,
+        maturityTick: a.bond?.maturityTick ?? 0,
+        monthlyInterestMinor: monthlyInterest(a.balance, a.bond?.couponBp ?? 0),
+        saleValueMinor: bondSaleValue(world, a, player.countryCode),
+      })),
       stockIndexBp: world.economy[player.countryCode]?.marketIndexBp ?? 10_000,
       bondIndexBp: world.economy[player.countryCode]?.bondIndexBp ?? 10_000,
     },

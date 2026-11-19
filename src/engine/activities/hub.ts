@@ -28,10 +28,6 @@ import {
  * with categories, costs, reasons when unavailable, plans and suggestions.
  */
 
-export function isKnownActivity(id: string): boolean {
-  return findActivity(id) !== undefined || findLifestyle(id) !== undefined;
-}
-
 /** Hours one attempt of any activity takes (for calendar planning). */
 export function activityHours(id: string): number {
   return findActivity(id)?.hours ?? findLifestyle(id)?.hours ?? 0;

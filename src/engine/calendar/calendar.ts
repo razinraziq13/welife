@@ -9,7 +9,6 @@ import { medianWage } from '../economy/economy';
 import { payExpense, payMedicalCost, payerFor } from '../economy/finance';
 import { getClub } from '../education/catalog';
 import { setPartnershipStatus, shareMoment } from '../social/family';
-import { findRelationship } from '../social/relationships';
 import { getRules } from '../world/rules';
 import type { CalendarItem, Character, World } from '../state/schema';
 
@@ -430,36 +429,12 @@ export function upcoming(world: World, months = 12): UpcomingEntry[] {
   return out.sort((a, b) => a.tick - b.tick || a.kind.localeCompare(b.kind));
 }
 
-/** Clashes for a proposed calendar item (shown before booking). */
-export function conflictsFor(world: World, tick: number): string[] {
-  const player = world.characters[world.activeCharacterId];
-  if (!player) return [];
-  const clashes: string[] = [];
-  for (const entry of upcoming(world, 24)) {
-    if (entry.tick !== tick) continue;
-    if (
-      entry.kind === 'exam' ||
-      entry.kind === 'interview' ||
-      entry.kind === 'wedding' ||
-      entry.kind === 'vacation' ||
-      entry.kind === 'family'
-    ) {
-      clashes.push(entry.key);
-    }
-  }
-  return clashes;
-}
-
 /** Hours that recurring plans will use each month. */
 export function plannedHours(world: World): number {
   let total = 0;
   for (const plan of world.calendar.plans)
     total += activityHours(plan.activityId) * plan.timesPerMonth;
   return total;
-}
-
-export function relationshipCloseness(world: World, aId: string, bId: string): number | null {
-  return findRelationship(world, aId, bId)?.closeness ?? null;
 }
 
 export { ACTIVITIES };

@@ -1358,10 +1358,6 @@ const EDUCATION_RANK: Record<EducationLevel, number> = {
   master: 4,
 };
 
-export function educationRank(level: EducationLevel): number {
-  return EDUCATION_RANK[level];
-}
-
 /** Highest education level and fields from a list of qualifications. */
 export function educationProfile(qualifications: readonly string[]): {
   level: EducationLevel;
