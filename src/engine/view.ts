@@ -16,7 +16,7 @@ import { findOccupation, getOccupation, industryName, jobTitle } from './career/
 import { displayName } from './characters/names';
 import { lifeStage, type LifeStage } from './characters/stats';
 import { getEventIn } from './content/packs';
-import type { EventDefinition } from './events/schema';
+import type { EventDefinition, Predicate } from './events/schema';
 import { medianWage } from './economy/economy';
 import {
   DEFAULT_LIFESTYLE,
@@ -125,9 +125,12 @@ export interface PendingEventView {
   definitionId: string;
   /** The event text (built-in or from a content pack). */
   text: EventDefinition['text']['en'];
+  /** Event category, for its icon. */
+  category: EventDefinition['category'];
   /** In-game month the decision belongs to (the month being advanced into). */
   clock: YearMonth;
-  choices: { id: string; available: boolean }[];
+  /** For a closed choice, `unmet` is the condition that keeps it closed (null when open). */
+  choices: { id: string; available: boolean; unmet: Predicate | null }[];
   /** Values for {subject} and context placeholders in the event text. */
   params: Record<string, string | number>;
 }
@@ -872,6 +875,7 @@ export function projectGame(state: SimState): GameView {
         instanceId: instance.id,
         definitionId: instance.definitionId,
         text: def.text.en,
+        category: def.category,
         clock: pendingWorld.clock,
         choices: choiceAvailability(pendingWorld, instance.id),
         params: textParams(pendingWorld, instance),

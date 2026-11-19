@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, NavLink, Outlet, useParams } from 'react-router';
+import { Link, NavLink, Outlet, useMatch, useParams } from 'react-router';
 import {
   Bell,
   Briefcase,
@@ -90,6 +90,9 @@ export function PlayLayout() {
     setCustomEventTexts(customTexts ?? {});
   }, [customTexts]);
 
+  // The Life tab shows who you are in its own header card; the bar then only needs the month.
+  const onLife = useMatch('/play/:saveId/life') !== null;
+
   useEffect(() => {
     if (!message) return;
     const timer = window.setTimeout(clearMessage, 6000);
@@ -114,24 +117,34 @@ export function PlayLayout() {
   return (
     <div className="pb-24 md:pb-0">
       <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-surface p-3 shadow-sm">
-        <Link
-          to={`${base}/character`}
-          className="flex min-w-0 flex-1 items-center gap-3 rounded-xl"
-        >
-          <Avatar
-            appearance={c.appearance}
-            stage={c.stage}
-            ageYears={c.age.years}
-            className="size-12"
-          />
-          <span className="min-w-0">
-            <span className="block truncate font-semibold text-fg">{c.displayName}</span>
-            <span className="block text-sm text-muted">
-              {c.alive ? formatAge(c.age) : `Died at ${String(c.age.years)}`} ·{' '}
+        {onLife ? (
+          <p className="flex min-w-0 flex-1 items-center gap-2 px-1 font-semibold text-fg">
+            <CalendarDays aria-hidden="true" className="size-5 shrink-0 text-primary" />
+            <span>
+              <span className="sr-only">Current month: </span>
               {formatMonth(view.clock)}
             </span>
-          </span>
-        </Link>
+          </p>
+        ) : (
+          <Link
+            to={`${base}/character`}
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-xl"
+          >
+            <Avatar
+              appearance={c.appearance}
+              stage={c.stage}
+              ageYears={c.age.years}
+              className="size-12"
+            />
+            <span className="min-w-0">
+              <span className="block truncate font-semibold text-fg">{c.displayName}</span>
+              <span className="block text-sm text-muted">
+                {c.alive ? formatAge(c.age) : `Died at ${String(c.age.years)}`} ·{' '}
+                {formatMonth(view.clock)}
+              </span>
+            </span>
+          </Link>
+        )}
         <Link
           to={`${base}/calendar`}
           className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'size-11')}

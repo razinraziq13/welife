@@ -1,12 +1,49 @@
+import type { ReactNode } from 'react';
+import {
+  Briefcase,
+  Cake,
+  Crown,
+  Flower2,
+  GraduationCap,
+  MapPin,
+  UserRound,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import { PageHeader } from '@app/components/PageHeader';
 import { StatBar } from '@app/components/StatBar';
 import { Avatar } from '@app/components/avatar/Avatar';
 import { Card } from '@app/components/ui/card';
 import { t } from '@app/i18n/en';
-import { causeText, formatAge, formatMonth, formatShortMonth } from '@app/i18n/format';
+import {
+  causeText,
+  formatAge,
+  formatMonth,
+  formatShortMonth,
+  qualificationName,
+} from '@app/i18n/format';
 import { useGameStore } from '@app/stores/gameStore';
 import { NEED_KEYS, SKILL_KEYS, STAT_KEYS } from '@engine/state/schema';
 import { FeedWidget, tickToMonth } from '../widgets';
+import { HeadlineStats, occupationLine } from '../LifeHero';
+
+function Detail({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: LucideIcon;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3 py-2.5">
+      <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted" />
+      <dt className="w-24 shrink-0 text-muted">{label}</dt>
+      <dd className="min-w-0 flex-1 text-right text-fg">{children}</dd>
+    </div>
+  );
+}
 
 /** Character Detail (spec §3.4). Personality traits are hidden by design; only their effects show. */
 export function CharacterScreen() {
@@ -14,50 +51,75 @@ export function CharacterScreen() {
   if (!session) return null;
   const view = session.view;
   const c = view.character;
+  const highest = view.education.qualifications.at(-1);
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title={c.displayName} documentTitle="Character" />
-      <Card>
-        <div className="flex flex-wrap items-center gap-5">
+      <section
+        aria-label="Portrait"
+        className="overflow-hidden rounded-3xl border border-border bg-surface shadow-sm"
+      >
+        <div
+          aria-hidden="true"
+          className="h-20 bg-linear-to-br from-primary/30 via-primary-soft to-accent/35 sm:h-24"
+        />
+        <div className="-mt-14 flex flex-wrap items-end gap-4 px-4 pb-5 sm:px-6">
           <Avatar
             appearance={c.appearance}
             stage={c.stage}
             ageYears={c.age.years}
-            className="size-32"
+            className="size-32 shrink-0 rounded-full border-4 border-surface bg-surface shadow-md sm:size-40"
             label={`Portrait of ${c.displayName}`}
           />
-          <dl className="grid grid-cols-[auto_1fr] gap-x-5 gap-y-1 text-sm">
-            <dt className="text-muted">Age</dt>
-            <dd className="text-fg">{formatAge(c.age)}</dd>
-            <dt className="text-muted">Born</dt>
-            <dd className="text-fg">
+          <div className="min-w-0 flex-1 pb-2">
+            <PageHeader title={c.displayName} documentTitle="Character" />
+            <p className="mt-1 flex flex-wrap gap-2 text-xs font-semibold">
+              <span className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-fg">
+                <Crown aria-hidden="true" className="size-3.5 text-accent-strong" />
+                Generation {view.legacy.generation}
+              </span>
+              <span className="rounded-full bg-surface-2 px-2 py-0.5 text-fg">
+                {t(`stage.${c.stage}`)}
+              </span>
+            </p>
+          </div>
+        </div>
+      </section>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card title="Personal details">
+          <dl className="flex flex-col divide-y divide-border text-sm">
+            <Detail icon={UserRound} label="Age">
+              {formatAge(c.age)}
+            </Detail>
+            <Detail icon={Cake} label="Born">
               {formatMonth(c.birth)} in {view.country.name}
-            </dd>
+            </Detail>
             {c.death && (
-              <>
-                <dt className="text-muted">Died</dt>
-                <dd className="text-fg">
-                  {formatMonth(c.death)} ({t(`cause.${c.deathCause ?? 'natural'}`)})
-                </dd>
-              </>
+              <Detail icon={Flower2} label="Died">
+                {formatMonth(c.death)} ({t(`cause.${c.deathCause ?? 'natural'}`)})
+              </Detail>
             )}
-            <dt className="text-muted">Life stage</dt>
-            <dd className="text-fg">{t(`stage.${c.stage}`)}</dd>
-            <dt className="text-muted">Lives in</dt>
-            <dd className="text-fg">
+            <Detail icon={MapPin} label="Lives in">
               {c.location.name}, {c.location.region}
-            </dd>
-            <dt className="text-muted">Gender</dt>
-            <dd className="text-fg">
+            </Detail>
+            <Detail icon={Briefcase} label="Occupation">
+              {occupationLine(view)}
+            </Detail>
+            <Detail icon={GraduationCap} label="Education">
+              {highest ? qualificationName(highest, c.countryCode) : 'No qualifications yet'}
+            </Detail>
+            <Detail icon={Users} label="Gender">
               {c.identity.gender === 'nonbinary'
                 ? 'Non-binary'
                 : c.identity.gender === 'female'
                   ? 'Female'
                   : 'Male'}
-            </dd>
+            </Detail>
           </dl>
-        </div>
-      </Card>
+        </Card>
+        <Card title="Key statistics">
+          <HeadlineStats view={view} />
+        </Card>
+      </div>
       <div className="grid gap-4 lg:grid-cols-3">
         <Card title="Stats">
           {STAT_KEYS.map((key) => (

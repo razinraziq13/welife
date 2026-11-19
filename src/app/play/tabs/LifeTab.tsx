@@ -7,12 +7,17 @@ import { Card } from '@app/components/ui/card';
 import { t } from '@app/i18n/en';
 import { useGameStore } from '@app/stores/gameStore';
 import { renderWidget } from '../widgets';
+import { ActionGrid, LifeHero } from '../LifeHero';
+
+/** Shown at the top of the Life tab already, so hidden from the dashboard unless chosen. */
+const DEFAULT_HIDDEN: readonly DashboardWidget[] = ['profile', 'vitals'];
 
 /** Normalises a stored layout: keeps known widgets, appends any new ones. */
 export function resolveLayout(layout: DashboardLayout | null): DashboardLayout {
   const order = (layout?.order ?? []).filter((id) => DASHBOARD_WIDGETS.includes(id));
   for (const id of DASHBOARD_WIDGETS) if (!order.includes(id)) order.push(id);
-  return { order, hidden: (layout?.hidden ?? []).filter((id) => order.includes(id)) };
+  const hidden = layout ? layout.hidden : [...DEFAULT_HIDDEN];
+  return { order, hidden: hidden.filter((id) => order.includes(id)) };
 }
 
 export function LifeTab() {
@@ -32,6 +37,18 @@ export function LifeTab() {
     if (target < 0 || target >= order.length) return;
     [order[index], order[target]] = [order[target] as DashboardWidget, id];
     void setLayout({ ...layout, order });
+  };
+  const showActivities = () => {
+    const scroll = () => {
+      document.getElementById('widget-activities')?.scrollIntoView({ block: 'start' });
+    };
+    if (layout.hidden.includes('activities')) {
+      void setLayout({ ...layout, hidden: layout.hidden.filter((h) => h !== 'activities') }).then(
+        () => {
+          requestAnimationFrame(scroll);
+        },
+      );
+    } else scroll();
   };
   const toggle = (id: DashboardWidget) => {
     const hidden = layout.hidden.includes(id)
@@ -56,6 +73,9 @@ export function LifeTab() {
           {customizing ? 'Done' : 'Customise'}
         </Button>
       </div>
+
+      <LifeHero view={view} base={base} />
+      <ActionGrid view={view} base={base} onActivities={showActivities} />
 
       {customizing && (
         <Card
@@ -122,6 +142,7 @@ export function LifeTab() {
         {visible.map((id) => (
           <Card
             key={id}
+            id={`widget-${id}`}
             title={t(`widget.${id}`)}
             headingLevel={2}
             data-widget={id}

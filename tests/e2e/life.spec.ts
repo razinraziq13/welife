@@ -16,12 +16,14 @@ test('creates a life, plays months, and keeps everything after a reload', async 
 
   // Each click plays up to four months (stopping early for a decision).
   for (let i = 0; i < 4; i++) await advanceOnce(page);
-  await expect(page.getByText(/\d+ (years?|months?)/).first()).toBeVisible();
-  const header = await page.getByRole('link', { name: /Yui/ }).first().textContent();
+  // The Life tab's header card: name, age, place and headline stats.
+  const card = page.getByRole('region', { name: /Yui/ });
+  await expect(card.getByText(/\d+ (years?|months?)/).first()).toBeVisible();
+  const header = await card.textContent();
 
   await page.reload();
   await expect(page.getByRole('heading', { level: 1, name: 'Life' })).toBeVisible();
-  expect(await page.getByRole('link', { name: /Yui/ }).first().textContent()).toBe(header);
+  expect(await card.textContent()).toBe(header);
 });
 
 test('royal births are only offered where realistic, with an explanation', async ({ page }) => {
@@ -45,8 +47,10 @@ test('the dashboard layout can be customised and is saved with the life (M2 exit
 }) => {
   await createLife(page, { seed: 'e2e-layout' });
   const widgets = page.getByTestId('dashboard').locator('[data-widget]');
-  await expect(widgets.first()).toHaveAttribute('data-widget', 'profile');
+  // Profile and Vitals are covered by the header card, so they start hidden.
+  await expect(widgets.first()).toHaveAttribute('data-widget', 'time');
   await page.getByRole('button', { name: 'Customise' }).click();
+  await page.getByRole('button', { name: 'Show Vitals' }).click();
   await page.getByRole('button', { name: 'Move Vitals up' }).click();
   await page.getByRole('button', { name: 'Hide Where you live' }).click();
   await expect(widgets.first()).toHaveAttribute('data-widget', 'vitals');

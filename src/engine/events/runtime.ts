@@ -14,7 +14,7 @@ import type {
 } from '../state/schema';
 import { applyEffects } from './effects';
 import { evaluate } from './predicates';
-import type { EventDefinition, Subject } from './schema';
+import type { EventDefinition, Predicate, Subject } from './schema';
 
 /** At most this many events without choices fire for the player in one month. */
 export const MAX_AUTOMATIC_EVENTS_PER_MONTH = 2;
@@ -332,15 +332,33 @@ export class ChoiceError extends Error {
 export function choiceAvailability(
   world: World,
   instanceId: string,
-): { id: string; available: boolean }[] {
+): { id: string; available: boolean; unmet: Predicate | null }[] {
   const instance = world.events.instances[instanceId];
   if (!instance) return [];
   const def = getEventIn(world, instance.definitionId);
   const character = activeCharacter(world);
-  return def.choices.map((choice) => ({
-    id: choice.id,
-    available: choice.requires === null || evaluate(choice.requires, world, character),
-  }));
+  return def.choices.map((choice) => {
+    const unmet = choice.requires === null ? null : firstUnmet(choice.requires, world, character);
+    return { id: choice.id, available: unmet === null, unmet };
+  });
+}
+
+/**
+ * The condition that keeps a choice closed, so the player can be told why: the first unmet
+ * part of an "all", or the whole condition otherwise. Null when the condition holds.
+ */
+export function firstUnmet(
+  predicate: Predicate,
+  world: World,
+  character: Parameters<typeof evaluate>[2],
+): Predicate | null {
+  if (evaluate(predicate, world, character)) return null;
+  if (predicate.kind === 'all')
+    for (const part of predicate.of) {
+      const unmet = firstUnmet(part, world, character);
+      if (unmet) return unmet;
+    }
+  return predicate;
 }
 
 /** Applies the chosen option of the pending event exactly once and clears the pending state. */
