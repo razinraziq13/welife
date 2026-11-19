@@ -156,6 +156,10 @@ function openAccountsOf(world: World, id: string): Account[] {
 
 /** The account an heir receives money into (opened if they have none). */
 function receivingAccount(world: World, heir: Character): string {
+  // An heir who runs a household receives into the household budget (survivors keep paying bills).
+  const home = world.households[heir.householdId]?.finance;
+  if (home?.headId === heir.id && world.ledger.accounts[home.checkingId]?.closedTick === null)
+    return home.checkingId;
   heir.finance ??= emptyFinance(world.tick);
   if (
     heir.finance.checkingId &&
@@ -279,6 +283,31 @@ function handOver(
   }
   world.ledger.accounts[account.id] = { ...account, closedTick: world.tick };
   return next;
+}
+
+/**
+ * A household whose budget used the deceased's own accounts gets accounts of its own (the old
+ * ones belong to the estate), and a living member takes over running it.
+ */
+export function detachHouseholds(world: World, d: Character): void {
+  for (const h of Object.values(world.households)) {
+    const f = h.finance;
+    if (!f) continue;
+    const checking = world.ledger.accounts[f.checkingId];
+    const savings = world.ledger.accounts[f.savingsId];
+    if (checking?.ownerId !== d.id && savings?.ownerId !== d.id) continue;
+    const cur = checking?.currency ?? currencyFor(d.countryCode);
+    if (checking?.ownerId === d.id) f.checkingId = openAccount(world, h.id, 'checking', cur);
+    if (savings?.ownerId === d.id)
+      f.savingsId = openAccount(world, h.id, 'savings', cur, { rateBp: savings.rateBp });
+    if (f.headId === d.id) {
+      const next = h.memberIds
+        .map((id) => world.characters[id])
+        .filter((m): m is Character => m?.death === null)
+        .sort((a, b) => a.birth.year * 12 + a.birth.month - (b.birth.year * 12 + b.birth.month))[0];
+      if (next) f.headId = next.id;
+    }
+  }
 }
 
 /**

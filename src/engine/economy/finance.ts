@@ -896,6 +896,13 @@ export function processFinances(world: World, markets: Map<string, MarketMove>):
     recordMonthSummary(world, player.id);
     if (h?.finance) recordMonthSummary(world, h.id);
   }
+  // Former players keep their own money moving: loan payments, interest and fund values.
+  for (const entry of world.legacy.lineage) {
+    const c = world.characters[entry.characterId];
+    if (c?.death !== null || c.id === world.activeCharacterId || !c.finance) continue;
+    processLoans(world, c);
+    growAccounts(world, c.id, c.countryCode, markets.get(c.countryCode));
+  }
   for (const id of sortedKeys(world.characters)) {
     const c = world.characters[id];
     if (c?.death === null && c.id !== world.activeCharacterId && c.finance)

@@ -64,8 +64,9 @@ export class RoyalError extends Error {
 export function dutyKind(world: World, c: Character): RoyalDuty['kind'] | null {
   const flags = world.households[c.householdId]?.flags;
   const country = getCountry(c.countryCode).monarchy;
-  if (flags?.royal && country.royalBirthAvailable) return 'royal';
-  if (flags?.noble && country.nobilityAvailable) return 'noble';
+  // House members keep their role when they leave the family home.
+  if ((flags?.royal || c.flags['house.royal']) && country.royalBirthAvailable) return 'royal';
+  if ((flags?.noble || c.flags['house.noble']) && country.nobilityAvailable) return 'noble';
   return null;
 }
 

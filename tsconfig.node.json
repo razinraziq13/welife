@@ -11,6 +11,7 @@
   "include": [
     "vite.config.ts",
     "vitest.config.ts",
+    "vitest.soak.config.ts",
     "playwright.config.ts",
     "pwa-assets.config.ts",
     "aliases.ts",

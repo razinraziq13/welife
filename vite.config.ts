@@ -1,4 +1,5 @@
-import { defineConfig } from 'vite';
+import { createHash } from 'node:crypto';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -6,6 +7,47 @@ import { aliases } from './aliases.ts';
 
 const THEME_COLOR = '#0e6e5c';
 const BACKGROUND_COLOR = '#f6f5f1';
+
+/**
+ * Content Security Policy for production builds (docs/SECURITY.md). Everything is served from
+ * the app's own origin; the only inline script (the pre-paint theme snippet in index.html) is
+ * allowed by its hash. The dev server is left without a policy because Vite injects inline
+ * scripts for hot reload.
+ */
+function contentSecurityPolicy(): Plugin {
+  return {
+    name: 'welife-csp',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html) {
+        const hashes = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(
+          (m) =>
+            `'sha256-${createHash('sha256')
+              .update(m[1] ?? '')
+              .digest('base64')}'`,
+        );
+        const policy = [
+          "default-src 'self'",
+          `script-src 'self' ${hashes.join(' ')}`,
+          "style-src 'self'",
+          "img-src 'self' data: blob:",
+          "font-src 'self'",
+          "connect-src 'self'",
+          "worker-src 'self'",
+          "manifest-src 'self'",
+          "object-src 'none'",
+          "base-uri 'self'",
+          "form-action 'none'",
+        ].join('; ');
+        return html.replace(
+          '<meta charset="UTF-8" />',
+          `<meta charset="UTF-8" />\n    <meta http-equiv="Content-Security-Policy" content="${policy}" />`,
+        );
+      },
+    },
+  };
+}
 
 export default defineConfig({
   resolve: { alias: aliases },
@@ -17,6 +59,7 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    contentSecurityPolicy(),
     VitePWA({
       registerType: 'prompt',
       injectRegister: false,

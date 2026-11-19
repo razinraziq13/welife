@@ -331,7 +331,13 @@ export type RejectReason =
   | 'ineligible';
 
 export type CommandOutcome =
-  | { status: 'rejected'; reason: RejectReason; message: string }
+  | {
+      status: 'rejected';
+      reason: RejectReason;
+      message: string;
+      /** Localisation key (\`err.<ErrorName>.<code>\`) when the refusal has one (spec P-10). */
+      key?: string;
+    }
   | { status: 'applied'; kind: 'advanced'; report: TickReport }
   | { status: 'applied'; kind: 'pending'; report: TickReport; instanceId: string }
   | { status: 'applied'; kind: 'chosen' }
@@ -349,7 +355,17 @@ export function committedNewMonth(outcome: CommandOutcome): boolean {
   return outcome.status === 'applied' && (outcome.kind === 'advanced' || outcome.kind === 'chosen');
 }
 
-function reject(state: SimState, reason: RejectReason, message: string) {
+/** The localisation key of a domain error, e.g. "err.MigrationError.noStatus". */
+function errorKey(error: unknown): string | undefined {
+  const code = (error as { code?: unknown }).code;
+  return error instanceof Error && typeof code === 'string'
+    ? `err.${error.name}.${code}`
+    : undefined;
+}
+
+function reject(state: SimState, reason: RejectReason, message: string, key?: string) {
+  if (key)
+    return { state, outcome: { status: 'rejected', reason, message, key } as CommandOutcome };
   return { state, outcome: { status: 'rejected', reason, message } as CommandOutcome };
 }
 
@@ -900,7 +916,7 @@ export function execute(
         enforcePopulation(world);
       } catch (error) {
         if (DOMAIN_ERRORS.some((E) => error instanceof E)) {
-          return reject(state, 'ineligible', (error as Error).message);
+          return reject(state, 'ineligible', (error as Error).message, errorKey(error));
         }
         throw error;
       }

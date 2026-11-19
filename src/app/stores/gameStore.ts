@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { en, t } from '@app/i18n/en';
 import type { ActivityResult } from '@engine/activities/activities';
 import type { Command, CommandOutcome } from '@engine/core/commands';
 import type { Difficulty } from '@engine/state/schema';
@@ -65,6 +66,11 @@ function newCommandId(): string {
   return crypto.randomUUID();
 }
 
+/** A refusal in the player's language: the translated key when there is one. */
+function rejectionText(key: string | undefined, fallback: string): string {
+  return key && en[key] ? t(key) : fallback;
+}
+
 /** Months played by one click of Advance. */
 export const ADVANCE_MONTHS = 4;
 
@@ -109,7 +115,8 @@ export const useGameStore = create<GameState>()((set, get) => ({
       const command = { ...body, id: newCommandId() };
       const result = await getEngine().call('game.command', { saveId, command });
       set({ session: result.session, busy: false });
-      if (result.outcome.status === 'rejected') set({ message: result.outcome.message });
+      if (result.outcome.status === 'rejected')
+        set({ message: rejectionText(result.outcome.key, result.outcome.message) });
       else {
         const message = appliedMessage(result.outcome, result.session.view);
         if (message) set({ message });

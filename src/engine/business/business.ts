@@ -1046,6 +1046,10 @@ function runBranch(
     others += offerScore(c.quality, c.brand, c.pricePercent, type.elasticity) * c.size;
     outlets += c.size;
   }
+  // Difficulty (spec §4): Challenging raises competition, Casual eases it (PROPOSED TUNING).
+  const rivalry =
+    world.rules.difficulty === 'challenging' ? 120 : world.rules.difficulty === 'casual' ? 85 : 100;
+  others = Math.floor((others * rivalry) / 100);
   const market = marketUnits(world, type, branch.locationId, outlets);
   const demanded = Math.floor((market * mine) / (mine + others));
   const capacity = branch.staff * type.capacityPerStaff;

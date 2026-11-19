@@ -281,6 +281,8 @@ export function checkInvariants(world: World): string[] {
     for (const id of s7?.candidates ?? [])
       if (world.characters[id]?.death !== null) v.push(`heir candidate ${id} is not alive`);
   } else if (world.legacy.succession !== null) v.push('succession recorded outside succession');
+  const house = world.legacy.house;
+  if (house?.headId && !world.characters[house.headId]) v.push('the head of the house is missing');
   for (const l of world.legacy.lineage)
     if (!world.characters[l.characterId]) v.push(`lineage entry ${l.characterId} is missing`);
   for (const u of Object.values(world.achievements))

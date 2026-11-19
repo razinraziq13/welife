@@ -131,6 +131,45 @@ function LineageCard({ view }: { view: GameView }) {
   );
 }
 
+const RULE_TEXT: Record<string, string> = {
+  agnatic: 'Only sons and their male lines succeed.',
+  malePreference: 'Sons before daughters, then each line in order of birth.',
+  absolute: 'The eldest child succeeds, whatever their gender.',
+};
+
+function HouseCard({ view }: { view: GameView }) {
+  const house = view.legacy.house;
+  if (!house) return null;
+  return (
+    <Card
+      title={house.kind === 'royal' ? 'The royal house' : 'The noble house'}
+      description="The headship passes down the line of succession, separately from who inherits money and whom you play."
+    >
+      <p className="text-sm text-fg">
+        Head of the house: {house.headName ?? 'none (the line has ended)'}
+        {house.youAreHead ? ' (you)' : ''}
+        {house.title ? ` · title: ${house.title}` : ''}
+      </p>
+      <p className="mt-1 text-xs text-muted">{RULE_TEXT[house.rule]}</p>
+      {house.line.length > 0 && (
+        <>
+          <h3 className="mt-3 text-sm font-semibold text-fg">Next in line</h3>
+          <ol className="list-decimal pl-5 text-sm text-fg">
+            {house.line.map((p) => (
+              <li key={p.name + String(p.age)}>
+                {p.name} ({p.age})
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+      {house.heads.length > 1 && (
+        <p className="mt-2 text-xs text-muted">Heads so far: {house.heads.join(' → ')}</p>
+      )}
+    </Card>
+  );
+}
+
 function HandOverCard({ view }: { view: GameView }) {
   const { send, disabled } = useAct();
   const [chosen, setChosen] = useState<string | null>(null);
@@ -318,6 +357,7 @@ export function LegacyScreen() {
       <PageHeader title="Legacy" description="Your family across the generations." />
       {view.lifeStatus === 'succession' && <SuccessionPanel />}
       <LineageCard view={view} />
+      <HouseCard view={view} />
       {view.lifeStatus === 'alive' && <HandOverCard view={view} />}
       {view.lifeStatus === 'alive' && <WillCard view={view} />}
       <EstatesCard view={view} />

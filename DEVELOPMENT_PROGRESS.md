@@ -3,18 +3,80 @@
 Spec: `WeLife_Claude_Development_Specification.md` v1.0 · Decisions: [docs/DECISIONS.md](docs/DECISIONS.md) ·
 Requirement map: [docs/TRACEABILITY.md](docs/TRACEABILITY.md)
 
-| Milestone                        | Status                        | Branch          |
-| -------------------------------- | ----------------------------- | --------------- |
-| M0 Repository and architecture   | Complete (commit e6ea3ee)     | `milestone-0`   |
-| M1 Deterministic core            | Complete (commit 26ffa4e)     | `milestone-1-2` |
-| M2 New Life and character        | Complete (commit 26ffa4e)     | `milestone-1-2` |
-| M3 Social, childhood, education  | Complete (commit 98e24fb)     | `milestone-3-4` |
-| M4 Careers and household economy | Complete (commit 98e24fb)     | `milestone-3-4` |
-| M5 Business and real estate      | Complete (commit 11d2504)     | `milestone-5`   |
-| M6 Global institutions           | Complete (commit 5d35fb1)     | `milestone-6`   |
-| M7 Media, legacy, narrative      | **Complete, awaiting review** | `milestone-7-8` |
-| M8 Event editor and content      | **Complete, awaiting review** | `milestone-7-8` |
-| M9 Integration, balance, release | Not started                   | —               |
+| Milestone                        | Status                                   | Branch          |
+| -------------------------------- | ---------------------------------------- | --------------- |
+| M0 Repository and architecture   | Complete (commit e6ea3ee)                | `milestone-0`   |
+| M1 Deterministic core            | Complete (commit 26ffa4e)                | `milestone-1-2` |
+| M2 New Life and character        | Complete (commit 26ffa4e)                | `milestone-1-2` |
+| M3 Social, childhood, education  | Complete (commit 98e24fb)                | `milestone-3-4` |
+| M4 Careers and household economy | Complete (commit 98e24fb)                | `milestone-3-4` |
+| M5 Business and real estate      | Complete (commit 11d2504)                | `milestone-5`   |
+| M6 Global institutions           | Complete (commit 5d35fb1)                | `milestone-6`   |
+| M7 Media, legacy, narrative      | Complete (commit eef78c2)                | `milestone-7-8` |
+| M8 Event editor and content      | Complete (commit eef78c2)                | `milestone-7-8` |
+| M9 Integration, balance, release | **Complete (0.9.0 RC), awaiting review** | `milestone-9`   |
+
+---
+
+## Milestone 9: Integration, balance and release (0.9.0 release candidate)
+
+Built on branch `milestone-9` (from `milestone-7-8`, after the four-months-per-click change) at the user's request ("m9"). Version 0.9.0, not 1.0.0: the content target and a device install check are still open (decision E51).
+
+**Exit criteria (spec §9 and §8):**
+
+- 10 generations and 10,000 months without unbounded growth or integrity violations (P-12). **Met.** `npm run soak` plays 10,010 months and 10+ generations in one world, checking invariants and the ledger about every 1,000 months:
+  - living people level off at about 300-340, characters at about 650-710, households under 330;
+  - relationships, open accounts, event records and notifications stay within fixed bounds;
+  - the world is 3.0 MB after 10,000 months, and the second half of the run added 0.6 MB against 2.4 MB in the first; what still grows is the family record (biography and the lineage's money history).
+- Deterministic across browsers (C-05). **Met for Chromium and WebKit locally**; Firefox runs in CI. `determinism.spec.ts` imports a Node-built save, plays about 32 months in the browser, exports it, and compares it with a Node replay of the same months: RNG state, clock, people, every account balance and every decision match exactly.
+- Release readiness: security review, smaller first download, release notes. **Met**, with the open items below.
+
+### Checklist
+
+- [x] **Long-run stability** (found by the new soak):
+  - Archived people never died, so the world grew without limit and each month got slower. They now age off screen with a yearly mortality draw (E42).
+  - A yearly clean-up removes people dead 30+ years who matter to no lasting record, along with their relationships, memories, applications and old jobs, plus empty homes (E43, E45).
+  - Their spent books close into an archive equity account, so the ledger still balances (E44).
+- [x] **Household fix**: when the person whose accounts a household budget used dies, the household gets its own accounts and a new head. This fixed a crash, "account is closed", in long games.
+- [x] **Royal and noble succession**, separate from inheritance: country rules (agnatic, male preference, absolute), line of succession, past heads, biography and notification; Legacy screen card (E48).
+- [x] **Former players' money keeps running**: loans are repaid and savings earn interest after the switch.
+- [x] **Difficulty changes business rivals** (Casual 85%, Challenging 120%).
+- [x] **Refusal keys** for translation (E47).
+- [x] **Four months per click** (D11; reviewed change).
+- [x] **Code-splitting**: main script 271 KB (was 991 KB); screens load on demand and are still precached for offline use (E49).
+- [x] **Security**: production Content Security Policy with a hash for the inline theme script; `docs/SECURITY.md`; no `eval`, `innerHTML` or `dangerouslySetInnerHTML` in `src/` (E50).
+- [x] **Tests**:
+  - `release.test.ts`: refusal key, succession order in three countries, difficulty, clean-up, closing the books.
+  - Former player's loan repayment (in `legacy.test.ts`).
+  - The soak (`tests/soak`, `npm run soak`, its own CI job).
+  - Cross-browser determinism (`determinism.spec.ts`).
+- [x] **CI**: Firefox crashed under parallel load on the 2-core runner (all 7 CI failures were "Page crashed" in Firefox; Chromium and WebKit passed), so it now runs as its own step with one worker (E52). The fix is not yet confirmed by a CI run.
+- [x] Docs: `CHANGELOG.md`, README, ARCHITECTURE, DECISIONS (E42-E52), TRACEABILITY (P-10, P-12, P-13, C-05, C-15, L-04).
+- [ ] **Event content to 400+** (D8): still 131 built-in events.
+- [ ] **Tax, wage and school figures checked against sources** (F-02, W-03): still baseline approximations.
+- [ ] **Balance pass across many lives** and a full copy review: not done.
+- [ ] **Keyboard tests for the later screens** (P-07): not added.
+- [ ] **Install on a physical phone and tablet** (P-01): manual; cannot be done from here.
+
+### Verification results (actual runs, 2026-11-19)
+
+| Command          | Result                                                                                                                                                                                                                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run verify` | exit 0: typecheck ✔, ESLint 0 problems ✔, dependency-cruiser "no dependency violations found (182 modules, 1146 dependencies cruised)" ✔, Prettier ✔, Vitest **209/209 passed** (22 files) ✔, production build ✔                                                                            |
+| `npm run soak`   | **1 passed** in 3 min 46 s (10,010 months; size table above)                                                                                                                                                                                                                                |
+| `npm run e2e`    | exit 0: **202 passed, 2 skipped** in 7.9 min (desktop Chromium, desktop WebKit, Pixel 7 Chromium, iPhone 15 WebKit) against the production build with the CSP and lazy screens; the skips are the Chromium-only offline test on WebKit. New: cross-browser determinism in all four profiles |
+| Determinism      | `determinism.spec.ts` passed in desktop Chromium and desktop WebKit (28 s)                                                                                                                                                                                                                  |
+| Bundle           | main `index` 271 KB, shared `card` chunk 368 KB, engine worker 762 KB; 45 script chunks, all precached                                                                                                                                                                                      |
+
+### Known issues and limitations (M9)
+
+1. **Content is 131 of the 400+ events** (D8). This is the main gap before 1.0.0.
+2. **Tax, wage and school figures are baseline approximations** that have not been checked against official sources.
+3. **Education and pack refusals** still use generated English text (the key falls back to it); some UI labels are inline English.
+4. **Family records keep growing** with each generation (about 140 KB per 100 simulated years in the soak), by design.
+5. **Off-screen deaths are quiet**: people outside your life die without a notification.
+6. **The Firefox CI fix is unconfirmed** until the next CI run; Firefox still can't launch on this machine.
+7. Physical-device install (P-01) needs a manual check.
 
 ---
 
@@ -89,8 +151,6 @@ Built together on branch `milestone-7-8` (from `milestone-6`) at the user's requ
 
 - One click of Advance now plays up to four months, each still its own command and monthly snapshot; it stops early for a decision, the end of a life or a refused month, and the button stays locked for the whole run. The label shows the month four months ahead, with a note that it stops early for decisions.
 - Browser tests updated to wait for the whole run (the shared `advanceOnce` helper, the decision test and the Milestone 5 month loop).
-
-### Next: Milestone 9, integration, balance and release (awaiting approval)
 
 ---
 

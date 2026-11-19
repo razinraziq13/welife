@@ -10,7 +10,7 @@ import { ACHIEVEMENTS } from '@engine/achievements/achievements';
 import { FactSchema } from '@engine/events/schema';
 import { WorldSchema, type Character, type World } from '@engine/state/schema';
 import type { SimState } from '@engine/core/commands';
-import { checked, giveMoney, monthChecked } from '../../helpers/reconcile';
+import { checked, findWork, giveMoney, monthChecked } from '../../helpers/reconcile';
 import { advanceMonths, newState, playerOf, run } from '../../helpers/sim';
 
 /**
@@ -385,10 +385,25 @@ describe('ownership after handing over (spec §4 Legacy, F-05)', () => {
       'applied',
     );
     state = started.state;
+    // A personal loan keeps being repaid from the former player's own money after the switch.
+    state = findWork(state);
+    for (let m = 0; m < 3; m++) state = advanceMonths(state, 1);
+    state = structuredClone(state);
+    const borrower = state.world.characters[state.world.activeCharacterId];
+    if (borrower?.finance) borrower.finance.creditScore = 800; // fixture: a good credit history
+    const loan = run(state, { type: 'takeLoan', amountMinor: '1000000', termMonths: 24 });
+    expect(loan.outcome.status === 'rejected' ? loan.outcome.message : 'applied').toBe('applied');
+    state = loan.state;
+    const loanAccount = Object.values(state.world.ledger.accounts).find(
+      (a) => a.ownerId === founder.id && a.type === 'loan' && a.closedTick === null,
+    );
+    if (!loanAccount) throw new Error('no loan account');
+    const owedAtSwitch = loanAccount.balance;
     const heir = eldestAdultChild(state.world);
     if (!heir) throw new Error('no adult child');
     state = run(state, { type: 'continueAs', characterId: heir.id }).state;
     for (let m = 0; m < 3; m++) state = advanceMonths(state, 1);
+    expect(state.world.ledger.accounts[loanAccount.id]?.balance).toBeLessThan(owedAtSwitch);
     const company = Object.values(state.world.businesses).find((b) => b.name === 'Founders Ltd');
     // Control passed; ownership did not.
     expect(company?.owners.map((o) => o.ownerId)).toEqual([founder.id]);

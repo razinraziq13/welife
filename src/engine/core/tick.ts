@@ -7,6 +7,7 @@ import { processEmployment, refreshJobMarket } from '../career/jobs';
 import {
   driftRelationships,
   processMortality,
+  processOffscreenMortality,
   updateCharactersMonthly,
 } from '../characters/monthly';
 import { advanceEconomies } from '../economy/economy';
@@ -26,6 +27,7 @@ import {
 } from '../events/runtime';
 import { playerFamilyPlanning, processExpecting, processNpcFamilies } from '../social/family';
 import { decayMemories } from '../social/memories';
+import { pruneDeparted } from '../social/prune';
 import { enforcePopulation, rebalancePopulation } from '../social/population';
 import type { World } from '../state/schema';
 
@@ -123,7 +125,11 @@ export function advanceMonth(committed: World): AdvanceResult {
 
   // 8. Relationships, memories, job market, population.
   driftRelationships(world);
-  if (world.tick % 12 === 0) decayMemories(world);
+  if (world.tick % 12 === 0) {
+    decayMemories(world);
+    processOffscreenMortality(world);
+    pruneDeparted(world);
+  }
   processInstitutions(world);
   refreshJobMarket(world);
   if (world.tick % 12 === 0 || deaths.length > 0) rebalancePopulation(world);

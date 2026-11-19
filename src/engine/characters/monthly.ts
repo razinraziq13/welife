@@ -1,4 +1,5 @@
 import { ageOf } from '../core/clock';
+import { Rng, seedFromString } from '../core/rng';
 import { clamp, sortedKeys, sortedValues } from '../core/data';
 import { endEmployment } from '../career/jobs';
 import { payLifeInsurance } from '../economy/finance';
@@ -9,8 +10,9 @@ import { getCountry } from '../world/countries';
 import { displayName } from './names';
 import { monthlyMortalityPpm } from './mortality';
 import { changeHabit, changeNeed, changeStat, lifeStage } from './stats';
-import { settleEstate } from '../legacy/inheritance';
+import { detachHouseholds, settleEstate } from '../legacy/inheritance';
 import { beginSuccession } from '../legacy/legacy';
+import { onHouseDeath } from '../legacy/succession';
 import {
   HABIT_KEYS,
   NEED_KEYS,
@@ -232,12 +234,57 @@ export function processMortality(world: World): string[] {
 }
 
 /** Ends jobs and partnerships, pays life insurance and passes on running the household. */
+/**
+ * People who are no longer simulated (archived, spec §4 NPCs) still grow old off screen. Once
+ * a year each of them faces a year's mortality for their age. The draw comes from a hash of the
+ * world seed, the person and the year rather than from a shared stream, so it is deterministic
+ * and leaves every other random sequence untouched. Their deaths settle like any other, without
+ * notifications (they are out of the player's life).
+ */
+export function processOffscreenMortality(world: World): string[] {
+  const deaths: string[] = [];
+  for (const id of sortedKeys(world.characters)) {
+    const c = world.characters[id];
+    if (!c || !isAlive(c) || c.tier !== 'archived' || id === world.activeCharacterId) continue;
+    const age = ageOf(c.birth, world.clock).years;
+    const ppm = monthlyMortalityPpm({
+      ageYears: age,
+      health: c.stats.health,
+      lifeExpectancy: getCountry(c.countryCode).lifeExpectancy,
+      difficulty: world.rules.difficulty,
+    });
+    const yearly = Math.min(1_000_000, ppm * 12);
+    const rng = new Rng(
+      seedFromString(`${world.seed}|offscreen|${id}|${String(world.clock.year)}`),
+    );
+    if (!rng.chancePpm(yearly)) continue;
+    c.death = { ...world.clock };
+    c.deathCause =
+      c.stats.health < 350
+        ? 'illness'
+        : age >= 70
+          ? 'natural'
+          : rng.int(3) === 0
+            ? 'accident'
+            : 'illness';
+    deaths.push(id);
+  }
+  for (const id of deaths) {
+    const c = world.characters[id];
+    if (c) settleDeath(world, c);
+  }
+  return deaths;
+}
+
 function settleDeath(world: World, c: Character): void {
   if (c.employmentId) endEmployment(world, c, 'died');
   if (c.id === world.activeCharacterId) payLifeInsurance(world, c);
   onDeath(world, c);
   // Inheritance: the estate pays debts and tax and passes to the heirs (Milestone 7).
+  detachHouseholds(world, c);
   settleEstate(world, c);
+  // Royal and noble headship passes separately (spec §4 Legacy).
+  onHouseDeath(world, c);
   const home = world.households[c.householdId];
   if (home?.finance?.headId === c.id) {
     const next = home.memberIds

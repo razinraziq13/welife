@@ -37,6 +37,7 @@ import { initializeSystems } from '../core/setup';
 import { linkPair, randomInterests } from '../social/relationships';
 import { birthCivic, religionFor } from '../civics/status';
 import { initLegacy } from '../legacy/legacy';
+import { initHouse } from '../legacy/succession';
 import {
   FAMILY_TRADES,
   availableConcreteScenarios,
@@ -209,7 +210,7 @@ export function createWorld(worldId: string, rawInput: unknown): World {
     properties: {},
     propertyListings: {},
     civics: { applications: {}, conditions: {}, cases: {}, service: {}, politics: {}, royal: {} },
-    legacy: { generation: 1, lineage: [], wills: {}, estates: [], succession: null },
+    legacy: { generation: 1, lineage: [], wills: {}, estates: [], succession: null, house: null },
     media: { profiles: {}, trends: {} },
     achievements: {},
     contentPacks: [],
@@ -514,6 +515,7 @@ export function createWorld(worldId: string, rawInput: unknown): World {
 
   initializeSystems(world);
   initLegacy(world);
+  initHouse(world);
   assertInvariants(world);
   return world;
 }

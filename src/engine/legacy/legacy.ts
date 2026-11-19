@@ -140,6 +140,7 @@ export function initLegacy(world: World): void {
     wills: {},
     estates: [],
     succession: null,
+    house: null,
   };
 }
 

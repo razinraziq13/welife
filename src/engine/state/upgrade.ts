@@ -202,6 +202,7 @@ export function upgradeWorldV4(raw: Record<string, unknown>): Record<string, unk
       wills: {},
       estates: [],
       succession: null,
+      house: null,
     };
   }
   world.schemaVersion = 5;

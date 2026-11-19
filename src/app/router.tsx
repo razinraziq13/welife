@@ -1,80 +1,188 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import { AppLayout } from '@app/layout/AppLayout';
 import { StartScreen } from '@app/screens/StartScreen';
-import { NewLifeScreen } from '@app/screens/NewLifeScreen';
-import { SettingsScreen } from '@app/screens/SettingsScreen';
 import { NotFoundScreen } from '@app/screens/NotFoundScreen';
 import { RouteErrorScreen } from '@app/screens/RouteErrorScreen';
 import { PlayLayout } from '@app/play/PlayLayout';
 import { LifeTab } from '@app/play/tabs/LifeTab';
-import { CareerTab } from '@app/play/tabs/CareerTab';
-import { FinanceTab } from '@app/play/tabs/FinanceTab';
-import { MoreTab } from '@app/play/tabs/MoreTab';
-import { SocialTab } from '@app/play/tabs/SocialTab';
-import { CharacterScreen } from '@app/play/screens/CharacterScreen';
-import { TimelineScreen } from '@app/play/screens/TimelineScreen';
-import { NotificationsScreen } from '@app/play/screens/NotificationsScreen';
-import { RulesScreen } from '@app/play/screens/RulesScreen';
-import { PersonScreen } from '@app/play/screens/PersonScreen';
-import { FamilyTreeScreen } from '@app/play/screens/FamilyTreeScreen';
-import { CalendarScreen } from '@app/play/screens/CalendarScreen';
-import { BusinessDetailScreen, BusinessScreen } from '@app/play/screens/BusinessScreen';
-import { PropertyScreen } from '@app/play/screens/PropertyScreen';
-import { LegacyScreen } from '@app/play/screens/LegacyScreen';
-import { MediaScreen } from '@app/play/screens/MediaScreen';
-import { AchievementsScreen, BiographyScreen } from '@app/play/screens/AchievementsScreen';
-import { EditorScreen } from '@app/screens/EditorScreen';
-import { GalleryScreen } from '@app/screens/GalleryScreen';
-import {
-  HealthScreen,
-  LegalScreen,
-  MilitaryScreen,
-  PoliticsScreen,
-  ReligionScreen,
-  WorldScreen,
-} from './play/screens/CivicScreens';
 
-/** Routes are added only when their screen is fully functional (no placeholder screens). */
+/**
+ * Screens other than the start screen and the Life tab load on demand (smaller first download;
+ * the service worker still precaches every chunk for offline play).
+ *
+ * Routes are added only when their screen is fully functional (no placeholder screens).
+ */
 export const router = createBrowserRouter([
   {
     element: <AppLayout />,
     errorElement: <RouteErrorScreen />,
     children: [
       { index: true, element: <StartScreen /> },
-      { path: 'new', element: <NewLifeScreen /> },
-      { path: 'settings', element: <SettingsScreen /> },
-      { path: 'editor', element: <EditorScreen /> },
-      { path: 'gallery', element: <GalleryScreen /> },
+      {
+        path: 'new',
+        lazy: () =>
+          import('@app/screens/NewLifeScreen').then((m) => ({ Component: m.NewLifeScreen })),
+      },
+      {
+        path: 'settings',
+        lazy: () =>
+          import('@app/screens/SettingsScreen').then((m) => ({ Component: m.SettingsScreen })),
+      },
+      {
+        path: 'editor',
+        lazy: () =>
+          import('@app/screens/EditorScreen').then((m) => ({ Component: m.EditorScreen })),
+      },
+      {
+        path: 'gallery',
+        lazy: () =>
+          import('@app/screens/GalleryScreen').then((m) => ({ Component: m.GalleryScreen })),
+      },
       {
         path: 'play/:saveId',
         element: <PlayLayout />,
         children: [
           { index: true, element: <Navigate to="life" replace /> },
           { path: 'life', element: <LifeTab /> },
-          { path: 'career', element: <CareerTab /> },
-          { path: 'finance', element: <FinanceTab /> },
-          { path: 'social', element: <SocialTab /> },
-          { path: 'more', element: <MoreTab /> },
-          { path: 'character', element: <CharacterScreen /> },
-          { path: 'timeline', element: <TimelineScreen /> },
-          { path: 'notifications', element: <NotificationsScreen /> },
-          { path: 'rules', element: <RulesScreen /> },
-          { path: 'people/:personId', element: <PersonScreen /> },
-          { path: 'family', element: <FamilyTreeScreen /> },
-          { path: 'calendar', element: <CalendarScreen /> },
-          { path: 'business', element: <BusinessScreen /> },
-          { path: 'business/:businessId', element: <BusinessDetailScreen /> },
-          { path: 'property', element: <PropertyScreen /> },
-          { path: 'world', element: <WorldScreen /> },
-          { path: 'legacy', element: <LegacyScreen /> },
-          { path: 'media', element: <MediaScreen /> },
-          { path: 'achievements', element: <AchievementsScreen /> },
-          { path: 'biography/:personId', element: <BiographyScreen /> },
-          { path: 'health', element: <HealthScreen /> },
-          { path: 'legal', element: <LegalScreen /> },
-          { path: 'religion', element: <ReligionScreen /> },
-          { path: 'military', element: <MilitaryScreen /> },
-          { path: 'politics', element: <PoliticsScreen /> },
+          {
+            path: 'career',
+            lazy: () =>
+              import('@app/play/tabs/CareerTab').then((m) => ({ Component: m.CareerTab })),
+          },
+          {
+            path: 'finance',
+            lazy: () =>
+              import('@app/play/tabs/FinanceTab').then((m) => ({ Component: m.FinanceTab })),
+          },
+          {
+            path: 'social',
+            lazy: () =>
+              import('@app/play/tabs/SocialTab').then((m) => ({ Component: m.SocialTab })),
+          },
+          {
+            path: 'more',
+            lazy: () => import('@app/play/tabs/MoreTab').then((m) => ({ Component: m.MoreTab })),
+          },
+          {
+            path: 'character',
+            lazy: () =>
+              import('@app/play/screens/CharacterScreen').then((m) => ({
+                Component: m.CharacterScreen,
+              })),
+          },
+          {
+            path: 'timeline',
+            lazy: () =>
+              import('@app/play/screens/TimelineScreen').then((m) => ({
+                Component: m.TimelineScreen,
+              })),
+          },
+          {
+            path: 'notifications',
+            lazy: () =>
+              import('@app/play/screens/NotificationsScreen').then((m) => ({
+                Component: m.NotificationsScreen,
+              })),
+          },
+          {
+            path: 'rules',
+            lazy: () =>
+              import('@app/play/screens/RulesScreen').then((m) => ({ Component: m.RulesScreen })),
+          },
+          {
+            path: 'people/:personId',
+            lazy: () =>
+              import('@app/play/screens/PersonScreen').then((m) => ({ Component: m.PersonScreen })),
+          },
+          {
+            path: 'family',
+            lazy: () =>
+              import('@app/play/screens/FamilyTreeScreen').then((m) => ({
+                Component: m.FamilyTreeScreen,
+              })),
+          },
+          {
+            path: 'calendar',
+            lazy: () =>
+              import('@app/play/screens/CalendarScreen').then((m) => ({
+                Component: m.CalendarScreen,
+              })),
+          },
+          {
+            path: 'business',
+            lazy: () =>
+              import('@app/play/screens/BusinessScreen').then((m) => ({
+                Component: m.BusinessScreen,
+              })),
+          },
+          {
+            path: 'business/:businessId',
+            lazy: () =>
+              import('@app/play/screens/BusinessScreen').then((m) => ({
+                Component: m.BusinessDetailScreen,
+              })),
+          },
+          {
+            path: 'property',
+            lazy: () =>
+              import('@app/play/screens/PropertyScreen').then((m) => ({
+                Component: m.PropertyScreen,
+              })),
+          },
+          {
+            path: 'world',
+            lazy: () =>
+              import('./play/screens/CivicScreens').then((m) => ({ Component: m.WorldScreen })),
+          },
+          {
+            path: 'legacy',
+            lazy: () =>
+              import('@app/play/screens/LegacyScreen').then((m) => ({ Component: m.LegacyScreen })),
+          },
+          {
+            path: 'media',
+            lazy: () =>
+              import('@app/play/screens/MediaScreen').then((m) => ({ Component: m.MediaScreen })),
+          },
+          {
+            path: 'achievements',
+            lazy: () =>
+              import('@app/play/screens/AchievementsScreen').then((m) => ({
+                Component: m.AchievementsScreen,
+              })),
+          },
+          {
+            path: 'biography/:personId',
+            lazy: () =>
+              import('@app/play/screens/AchievementsScreen').then((m) => ({
+                Component: m.BiographyScreen,
+              })),
+          },
+          {
+            path: 'health',
+            lazy: () =>
+              import('./play/screens/CivicScreens').then((m) => ({ Component: m.HealthScreen })),
+          },
+          {
+            path: 'legal',
+            lazy: () =>
+              import('./play/screens/CivicScreens').then((m) => ({ Component: m.LegalScreen })),
+          },
+          {
+            path: 'religion',
+            lazy: () =>
+              import('./play/screens/CivicScreens').then((m) => ({ Component: m.ReligionScreen })),
+          },
+          {
+            path: 'military',
+            lazy: () =>
+              import('./play/screens/CivicScreens').then((m) => ({ Component: m.MilitaryScreen })),
+          },
+          {
+            path: 'politics',
+            lazy: () =>
+              import('./play/screens/CivicScreens').then((m) => ({ Component: m.PoliticsScreen })),
+          },
         ],
       },
       { path: '*', element: <NotFoundScreen /> },

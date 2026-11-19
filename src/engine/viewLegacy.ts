@@ -4,6 +4,7 @@ import { displayName } from './characters/names';
 import { ACHIEVEMENTS, ACHIEVEMENT_CATEGORIES, findAchievement } from './achievements/achievements';
 import { switchCandidates } from './legacy/legacy';
 import { intestateHeirs } from './legacy/inheritance';
+import { lineOfSuccession, successionRule } from './legacy/succession';
 import { MEDIA_STYLES } from './state/schema';
 import { NICHES, PLATFORMS, profilesOf } from './media/media';
 import { getInstitutions } from './world/institutions';
@@ -37,6 +38,15 @@ export interface LegacyView {
     died: { year: number; month: number } | null;
   }[];
   succession: { deceasedName: string; candidates: PersonRef[] } | null;
+  house: {
+    kind: 'royal' | 'noble';
+    title: string | null;
+    headName: string | null;
+    youAreHead: boolean;
+    line: { name: string; age: number }[];
+    rule: string;
+    heads: string[];
+  } | null;
   switchCandidates: PersonRef[];
   will: { characterId: string; name: string; sharesBp: number }[] | null;
   intestate: { characterId: string; name: string; sharesBp: number }[];
@@ -177,6 +187,27 @@ export function projectLegacy(world: World, player: Character): LegacyView {
               const dead = world.characters[s.deceasedId];
               return ref(world, dead ?? player, c);
             }),
+        }
+      : null,
+    house: world.legacy.house
+      ? {
+          kind: world.legacy.house.kind,
+          title: world.legacy.house.title,
+          headName: world.legacy.house.headId ? name(world, world.legacy.house.headId) : null,
+          youAreHead: world.legacy.house.headId === player.id,
+          line: world.legacy.house.headId
+            ? lineOfSuccession(
+                world,
+                world.legacy.house.headId,
+                world.legacy.house.countryCode,
+                5,
+              ).map((c) => ({
+                name: displayName(c.identity, false),
+                age: ageOf(c.birth, world.clock).years,
+              }))
+            : [],
+          rule: successionRule(world.legacy.house.countryCode),
+          heads: world.legacy.house.heads.map((h) => name(world, h.characterId)),
         }
       : null,
     switchCandidates:

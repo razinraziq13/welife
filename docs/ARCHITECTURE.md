@@ -62,7 +62,7 @@ src/contracts  protocol + shared shapes (zod + engine types only)
 | `civics/*`                                                           | Citizenship and residence (`status`), migration and moving (`migration`), health conditions (`health`), legal cases (`law`), religion, military service, politics, royal duties, civic time lines and monthly processing. |
 | `economy/fx.ts`                                                      | Currency exchange between a person's accounts, converting debts, and accounts kept abroad.                                                                                                                                |
 | `viewCivic.ts`                                                       | Read-only projection of status, country rules with eligibility, applications, moves, health, law, religion, service, politics and royal duties.                                                                           |
-| `legacy/*`                                                           | Succession, hand-over and the lineage (`legacy`); estates, wills, intestacy and inheritance tax (`inheritance`).                                                                                                          |
+| `legacy/*`                                                           | Succession, hand-over and the lineage (`legacy`); estates, wills, intestacy and inheritance tax (`inheritance`); royal and noble houses and lines of succession (`succession`).                                           |
 | `media/media.ts`                                                     | Fictional platforms, posts, followers, trends, ad income and sponsorships.                                                                                                                                                |
 | `achievements/achievements.ts`                                       | 101 achievements as predicates; unlocked once per timeline.                                                                                                                                                               |
 | `content/packs.ts`, `content/preview.ts`, `content/editorSupport.ts` | Content-pack validation, the world-aware event registry, enabling/disabling, the seeded editor preview and editor building blocks.                                                                                        |
@@ -72,10 +72,20 @@ src/contracts  protocol + shared shapes (zod + engine types only)
 next month while a decision waits. A month is committed exactly once: when Advance finishes
 without a decision, or when the decision is made.
 
+### Bounded worlds
+
+Only up to 150 people are simulated in detail; the rest are archived. Archived people who are
+still alive age off screen and face a yearly mortality draw (from a hash of the seed, person and
+year, so no shared random stream changes). Once a year `social/prune.ts` removes people who
+died more than 30 years ago and are not named by any lasting record (lineage and ancestors,
+owners, estates, wills, house heads, achievements, biography, civic and media records, household
+budgets). Their spent books are closed into an archive equity account per currency, and empty
+homes are dropped. `npm run soak` checks 10,000 months stay bounded and valid.
+
 ### Determinism
 
 Same seed + same commands + same engine/content version ⇒ identical world (tested over
-1,000 months, and by rewinding and replaying). The rules that make this hold: integer
+1,000 months, by rewinding and replaying, and across browsers in `tests/e2e/determinism.spec.ts`). The rules that make this hold: integer
 arithmetic only, seeded RNG streams, sorted iteration over records, no wall-clock time.
 
 ## Persistence (`src/persistence`, IndexedDB schema v3: adds `achievements` and `packs`)
@@ -139,7 +149,7 @@ right theme before first paint.
 ## Offline and installation
 
 `vite-plugin-pwa` (Workbox `generateSW`) precaches the app shell, the engine worker chunk and
-icons. Navigation falls back to the cached `index.html`, so deep links work offline. Updates
+icons, including every lazily loaded screen chunk (screens other than Home and the Life tab load on demand). Production builds carry a Content Security Policy (see `docs/SECURITY.md`). Navigation falls back to the cached `index.html`, so deep links work offline. Updates
 are never applied silently. If service-worker registration fails, Home says so.
 
 ## Testing
@@ -151,3 +161,5 @@ are never applied silently. If service-worker registration fails, Home says so.
 | End-to-end (production build + service worker)                 | Playwright: desktop Chromium/WebKit (+Firefox in CI), Pixel 7, iPhone 15 | `tests/e2e`                             |
 | Accessibility                                                  | axe-core (WCAG 2.2 A/AA) on every screen, light and dark                 | `tests/e2e`                             |
 | Performance                                                    | Monthly turn p95 in a 150-NPC world (engine)                             | `tests/unit/engine/performance.test.ts` |
+| Soak                                                           | 10,000 months, 10+ generations, bounded size (`npm run soak`)            | `tests/soak`                            |
+| Cross-browser determinism                                      | Browser play vs Node replay                                              | `tests/e2e/determinism.spec.ts`         |

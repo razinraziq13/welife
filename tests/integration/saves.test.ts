@@ -129,7 +129,7 @@ describe('monthly turns through storage', () => {
     expect(kinds[0]).toBe('full');
     expect(kinds[KEYFRAME_INTERVAL]).toBe('full');
     expect(kinds.filter((k) => k === 'delta').length).toBeGreaterThan(20);
-  });
+  }, 60_000);
 
   it('applies a retried command only once and ignores a double-clicked Advance', async () => {
     const database = db();

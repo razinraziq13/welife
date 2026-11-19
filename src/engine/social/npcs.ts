@@ -27,6 +27,7 @@ import type {
   World,
 } from '../state/schema';
 import { birthCivic } from '../civics/status';
+import { inheritHouse } from '../legacy/succession';
 import { linkPair, parentsOf, randomInterests } from './relationships';
 
 /**
@@ -124,7 +125,10 @@ export function createNpc(world: World, spec: NpcSpec): Character {
     death,
   });
   household.memberIds.push(character.id);
-  if (parents.length > 0) birthCivic(world, character, parents, country.code);
+  if (parents.length > 0) {
+    birthCivic(world, character, parents, country.code);
+    inheritHouse(character, parents);
+  }
   for (const parent of parents) {
     const id = nextId(world, 'fam');
     world.familyLinks[id] = { id, parentId: parent.id, childId: character.id, type: 'biological' };

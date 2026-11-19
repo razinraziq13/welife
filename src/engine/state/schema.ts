@@ -1324,6 +1324,18 @@ export const LegacySchema = z
       .object({ deceasedId: Id, candidates: z.array(Id).min(1).max(30) })
       .strict()
       .nullable(),
+    /** A royal or noble house: its head passes down the line of succession (separate from inheritance). */
+    house: z
+      .object({
+        kind: z.enum(['royal', 'noble']),
+        countryCode: z.string().length(2),
+        headId: Id.nullable(),
+        title: z.string().max(40).nullable(),
+        heads: z.array(z.object({ characterId: Id, fromTick: Tick }).strict()).max(50),
+      })
+      .strict()
+      .nullable()
+      .default(null),
   })
   .strict();
 
