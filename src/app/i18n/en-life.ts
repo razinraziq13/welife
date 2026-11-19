@@ -322,7 +322,7 @@ export const enLife: Record<string, string> = {
   'int.adopt': 'You and {name} have started the adoption process (about a year).',
 
   // Command outcomes
-  'out.metSomeone': 'You met someone new.',
+  'out.metSomeone': 'You met {name}. Find them under Social, Others.',
   'out.metNoOne': 'A nice time out, but you did not meet anyone new.',
   'out.studyEffort': 'Study effort set to {valueName}.',
   'out.joinedClub': 'You joined the {clubName}.',

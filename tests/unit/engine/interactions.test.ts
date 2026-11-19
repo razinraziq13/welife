@@ -8,6 +8,8 @@ import { adjustPair, findRelationship } from '@engine/social/relationships';
 import type { SimState } from '@engine/core/commands';
 import type { World } from '@engine/state/schema';
 import { en } from '../../../src/app/i18n/en';
+import { projectGame, projectPerson } from '@engine/view';
+import { memoriesAbout } from '@engine/social/memories';
 import { checked, findWork, giveMoney } from '../../helpers/reconcile';
 import { advanceMonths, newState, playerOf, run } from '../../helpers/sim';
 
@@ -123,5 +125,67 @@ describe('contextual interactions (gameplay expansion, feature 2)', () => {
 
   it('every new interaction id is registered with a time cost', () => {
     for (const id of CONTEXTUAL_IDS) expect(INTERACTION_IDS).toContain(id);
+  });
+
+  it('looking for love introduces someone single and interested, shown on the Dating card', () => {
+    const teen = advanceMonths(newState({ seed: 'love-teen' }), 16 * 12);
+    expect(run(teen, { type: 'lookForLove' }).outcome).toMatchObject({ status: 'rejected' });
+    let state = advanceMonths(newState({ seed: 'meet33', countryCode: 'MY' }), 33 * 12);
+    const r = checked(state, { type: 'lookForLove' });
+    state = r.state;
+    const id =
+      r.outcome.status === 'applied' && r.outcome.kind === 'done'
+        ? String(r.outcome.params.personId)
+        : '';
+    expect(id).not.toBe('');
+    const rel = findRelationship(state.world, playerOf(state).id, id);
+    expect(rel?.closeness).toBeGreaterThanOrEqual(38);
+    expect(rel?.chemistry).toBeGreaterThanOrEqual(65);
+    expect(
+      memoriesAbout(state.world, id, playerOf(state).id).some((m) => m.key === 'interestedInYou'),
+    ).toBe(true);
+    const dating = projectGame(state).social.dating;
+    expect(dating?.candidates.some((c) => c.id === id && c.interested)).toBe(true);
+  });
+
+  it('says exactly how much closer you need to be to ask someone out', () => {
+    let state = advanceMonths(newState({ seed: 'meet33', countryCode: 'MY' }), 33 * 12);
+    let id = '';
+    for (let tries = 0; tries < 5 && id === ''; tries++) {
+      const r = checked(state, { type: 'meetPeople' });
+      state = r.state;
+      if (r.outcome.status === 'applied' && r.outcome.kind === 'done')
+        id = String(r.outcome.params.personId ?? '');
+    }
+    expect(id).not.toBe('');
+    const world = structuredClone(state.world);
+    adjustPair(world, playerOf(state).id, id, { closeness: -100 });
+    adjustPair(world, playerOf(state).id, id, { closeness: 20 });
+    const ask = projectPerson({ world, pending: null }, id)?.interactions.find(
+      (i) => i.id === 'askOut',
+    );
+    expect(ask?.reason).toBe('You need to be closer first: closeness 45 needed, you are at 20.');
+  });
+
+  it('someone you are getting close to does not go off with someone else meanwhile', () => {
+    let state = advanceMonths(newState({ seed: 'meet33', countryCode: 'MY' }), 33 * 12);
+    const met: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      const r = checked(state, { type: 'meetPeople' });
+      state = r.state;
+      if (r.outcome.status === 'applied' && r.outcome.kind === 'done' && r.outcome.params.personId)
+        met.push(String(r.outcome.params.personId));
+    }
+    const world = structuredClone(state.world);
+    for (const id of met) adjustPair(world, playerOf(state).id, id, { closeness: 40 });
+    state = { world, pending: null };
+    for (let m = 0; m < 12; m++) {
+      for (const id of met) {
+        const r = run(state, { type: 'interact', personId: id, interactionId: 'chat' });
+        if (r.outcome.status === 'applied') state = r.state;
+      }
+      state = advanceMonths(state, 1);
+    }
+    for (const id of met) expect(state.world.characters[id]?.partnership, id).toBeNull();
   });
 });

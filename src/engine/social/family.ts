@@ -224,6 +224,25 @@ type NpcChoice = 'nothing' | 'seekPartner' | 'marry' | 'separate' | 'haveChild' 
  * + seeded noise; weighted selection, not guaranteed best). Close NPCs decide monthly,
  * relevant NPCs yearly with the same relative weights.
  */
+/** Closeness at which the player can ask someone on a date. */
+export const DATE_CLOSENESS = 45;
+
+/**
+ * Whether a single adult is a romantic prospect for the single adult player: not family, of a
+ * similar age (within ten years) and already getting close (closeness 30+). Such people do not
+ * go looking for someone else while the player is getting to know them.
+ */
+export function isRomanticProspect(world: World, player: Character, c: Character): boolean {
+  if (player.death !== null || c.death !== null || player.partnership || c.partnership)
+    return false;
+  const a = ageYears(world, player);
+  const b = ageYears(world, c);
+  if (a < ADULT_AGE || b < ADULT_AGE || Math.abs(a - b) > 10) return false;
+  if (kinship(world, player.id, c.id)) return false;
+  const rel = findRelationship(world, player.id, c.id);
+  return rel !== undefined && rel.closeness >= 30;
+}
+
 export function npcFamilyLife(world: World, c: Character, yearly: boolean): void {
   const age = ageYears(world, c);
   if (age < ADULT_AGE) return;
@@ -235,7 +254,9 @@ export function npcFamilyLife(world: World, c: Character, yearly: boolean): void
   const options: { value: NpcChoice; weight: number }[] = [
     { value: 'nothing', weight: yearly ? 100 : 1200 },
   ];
-  if (!p && age <= 55 && activeNpcCount(world) < MAX_ACTIVE_NPCS - 5) {
+  // Someone getting close to the single player waits to see where it goes.
+  const waiting = !p && player !== undefined && isRomanticProspect(world, player, c);
+  if (!p && !waiting && age <= 55 && activeNpcCount(world) < MAX_ACTIVE_NPCS - 5) {
     options.push({
       value: 'seekPartner',
       weight: 6 + Math.floor(c.traits.extraversion / 4) + (age >= 24 && age <= 36 ? 12 : 0),

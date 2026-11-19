@@ -144,4 +144,10 @@ export const enPlay: Record<string, string> = {
   'memory.tookCredit': 'They took credit for your work',
   'memory.reportedMe': 'You reported them to the manager',
   'memory.coveredForMe': 'You covered their shift',
+  // Dating
+  'out.foundSomeone':
+    'You met {name}, who seems interested in you. Spend time together to get closer.',
+  'out.noOneSpecial': 'No spark this time. Try again another day.',
+  'ntf.metSomeoneSpecial': 'You met {name}. There might be something there.',
+  'memory.interestedInYou': 'They were interested in you from the start',
 };

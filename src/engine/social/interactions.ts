@@ -10,6 +10,7 @@ import { payExpense, payerFor } from '../economy/finance';
 import type { Character, RelationType, World } from '../state/schema';
 import {
   ADULT_AGE,
+  DATE_CLOSENESS,
   canConceive,
   endPartnership,
   expect,
@@ -17,7 +18,7 @@ import {
   setPartnershipStatus,
   shareMoment,
 } from './family';
-import { addMemory } from './memories';
+import { addMemory, memoriesAbout } from './memories';
 import {
   CONTEXTUAL,
   CONTEXTUAL_BLOCK_MESSAGES,
@@ -225,7 +226,7 @@ export function interactionBlock(
       if (isFamily) return 'family';
       if (player.partnership) return 'alreadyPartnered';
       if (other.partnership) return 'theyArePartnered';
-      return rel.closeness < 45 ? 'notClose' : null;
+      return rel.closeness < DATE_CLOSENESS ? 'notClose' : null;
     case 'propose':
       if (!partner) return 'notPartner';
       return partner.status !== 'dating' || world.tick - partner.since < 6 ? 'notNow' : null;
@@ -490,10 +491,17 @@ export function interact(world: World, personId: string, id: InteractionId): Int
       });
       return result('mixed', 'int.endFriendship');
     case 'askOut': {
+      // Someone who is interested in you is more likely to say yes.
+      const interested = memoriesAbout(world, other.id, player.id).some(
+        (m) => m.key === 'interestedInYou',
+      );
       const accepts =
         roll <
         clamp(
-          Math.floor((chemistry + closeness) / 2) + Math.floor(player.stats.confidence / 40) - 15,
+          Math.floor((chemistry + closeness) / 2) +
+            Math.floor(player.stats.confidence / 40) -
+            15 +
+            (interested ? 15 : 0),
           5,
           90,
         );
@@ -648,6 +656,54 @@ export function meetNewPeople(world: World): { personId: string | null } {
     world,
     'social',
     'ntf.metSomeone',
+    { name: person.identity.firstName },
+    'person',
+    person.id,
+  );
+  return { personId: person.id };
+}
+
+/**
+ * Looking for love (single adults): dating apps, speed dating, a friend's introduction. More
+ * likely than going out to introduce someone, and the person is single, interested and a good
+ * match: closer to start with and better chemistry. They still decide for themselves later.
+ */
+export function lookForLove(world: World): { personId: string | null } {
+  const player = world.characters[world.activeCharacterId] as Character;
+  if (ageYears(world, player) < ADULT_AGE) throw new InteractionError('tooYoung');
+  if (player.partnership) throw new InteractionError('alreadyPartnered');
+  if (!spendHours(world, 6)) throw new InteractionError('noTime');
+  const times = world.activity.counts['look-for-love'] ?? 0;
+  world.activity.counts['look-for-love'] = times + 1;
+  changeNeed(player, 'social', 60);
+  const found = withRng(
+    world,
+    'social',
+    (rng) => rng.int(100) < Math.floor((85 * diminishingPercent(times)) / 100),
+  );
+  if (!found) return { personId: null };
+  const person = createPotentialPartner(world, player);
+  linkPair(world, player, person, 'acquaintance', 'acquaintance', {
+    closeness: withRng(world, 'social', (rng) => rng.range(38, 52)),
+  });
+  for (const rel of [
+    findRelationship(world, player.id, person.id),
+    findRelationship(world, person.id, player.id),
+  ])
+    if (rel) rel.chemistry = clamp(Math.max(rel.chemistry, 55) + 10, 0, 100);
+  addMemory(world, {
+    ownerId: person.id,
+    subjectIds: [player.id],
+    key: 'interestedInYou',
+    source: 'love:' + String(world.tick),
+    valence: 30,
+    salience: 40,
+    decay: 'fast',
+  });
+  addNotification(
+    world,
+    'social',
+    'ntf.metSomeoneSpecial',
     { name: person.identity.firstName },
     'person',
     person.id,

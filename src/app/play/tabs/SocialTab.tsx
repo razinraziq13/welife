@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { ChevronRight, Network, UserPlus } from 'lucide-react';
+import { ChevronRight, Heart, Network, UserPlus } from 'lucide-react';
 import type { PersonSummary } from '@engine/view';
 import { PageHeader } from '@app/components/PageHeader';
 import { StatBar } from '@app/components/StatBar';
@@ -148,6 +148,67 @@ export function SocialTab() {
           </ul>
         )}
       </Card>
+      {social.dating && (
+        <Card
+          title="Dating"
+          description={`You are single. Get close to someone (closeness ${String(social.dating.needed)}) and you can ask them on a date. People you are getting close to wait to see where it goes.`}
+        >
+          {social.dating.candidates.length === 0 ? (
+            <p className="text-sm text-muted">
+              No single people your age that you know yet. Look for love, or go out and meet people.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {social.dating.candidates.map((d) => {
+                const ready = d.closeness >= (social.dating?.needed ?? 45);
+                return (
+                  <li key={d.id}>
+                    <Link
+                      to={`${base}/people/${d.id}`}
+                      className="flex items-center gap-3 rounded-xl border border-border p-3 hover:bg-primary-soft"
+                    >
+                      <Heart
+                        aria-hidden="true"
+                        className={
+                          ready ? 'size-5 shrink-0 text-danger' : 'size-5 shrink-0 text-muted'
+                        }
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-medium text-fg">
+                          {d.name}, {d.age}
+                          {d.interested && (
+                            <span className="ml-2 rounded-full bg-accent-soft px-2 py-0.5 text-xs text-fg">
+                              Interested in you
+                            </span>
+                          )}
+                        </span>
+                        <span className="block text-xs text-muted">
+                          {ready
+                            ? 'Close enough to ask on a date.'
+                            : `Closeness ${String(d.closeness)} of ${String(social.dating?.needed ?? 45)}: spend time together.`}{' '}
+                          Chemistry {d.chemistry}.
+                        </span>
+                      </span>
+                      <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-muted" />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <Button
+            className="mt-3"
+            disabled={disabled}
+            onClick={() => void send({ type: 'lookForLove' })}
+          >
+            <Heart aria-hidden="true" className="size-4" /> Look for love (6 h)
+          </Button>
+          <p className="mt-1 text-xs text-muted">
+            Dating apps, friends of friends, speed dating: more likely than going out to introduce
+            someone single who is interested in you.
+          </p>
+        </Card>
+      )}
       {social.canMeetPeople && (
         <Card
           title="Meet new people"

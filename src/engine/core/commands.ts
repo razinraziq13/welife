@@ -118,6 +118,7 @@ import {
   INTERACTION_IDS,
   InteractionError,
   interact,
+  lookForLove,
   meetNewPeople,
   type InteractionResult,
 } from '../social/interactions';
@@ -160,6 +161,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
   // Social (Milestone 3)
   command('interact', { personId: EntityId, interactionId: z.enum(INTERACTION_IDS) }),
   command('meetPeople', {}),
+  command('lookForLove', {}),
   // Career play (gameplay expansion)
   command('workAction', { actionId: z.enum(WORK_ACTION_IDS) }),
   command('visitSalon', {
@@ -411,6 +413,7 @@ const done = (key: string, params: Record<string, string | number> = {}): Comman
 /** Actions that need freedom of movement (unavailable in custody, spec §4 Law). */
 const BLOCKED_IN_CUSTODY = new Set<string>([
   'meetPeople',
+  'lookForLove',
   'workAction',
   'joinClub',
   'applyStudy',
@@ -463,10 +466,18 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
       const r = performWorkAction(world, player, cmd.actionId);
       return done(r.key, r.params);
     }
+    case 'lookForLove': {
+      const found = lookForLove(world);
+      return done(found.personId ? 'out.foundSomeone' : 'out.noOneSpecial', {
+        personId: found.personId ?? '',
+        name: found.personId ? (world.characters[found.personId]?.identity.firstName ?? '') : '',
+      });
+    }
     case 'meetPeople': {
       const met = meetNewPeople(world);
       return done(met.personId ? 'out.metSomeone' : 'out.metNoOne', {
         personId: met.personId ?? '',
+        name: met.personId ? (world.characters[met.personId]?.identity.firstName ?? '') : '',
       });
     }
     case 'setStudyEffort':

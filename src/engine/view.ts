@@ -52,7 +52,7 @@ import {
   type Satisfaction,
   type WorkActionId,
 } from './career/workActions';
-import { familyHomeFor } from './social/family';
+import { ADULT_AGE, DATE_CLOSENESS, familyHomeFor } from './social/family';
 import {
   INTERACTIONS,
   INTERACTION_BLOCK_MESSAGES,
@@ -391,6 +391,19 @@ export interface SocialView {
   partner: (PersonSummary & { partnership: Partnership }) | null;
   expecting: { kind: string; dueTick: number }[];
   canMeetPeople: boolean;
+  /** Single adults only: looking for a partner. */
+  dating: {
+    canLookForLove: boolean;
+    needed: number;
+    candidates: {
+      id: string;
+      name: string;
+      age: number;
+      closeness: number;
+      chemistry: number;
+      interested: boolean;
+    }[];
+  } | null;
 }
 
 export interface GameView {
@@ -914,7 +927,37 @@ function socialView(world: World, c: Character): SocialView {
       .filter((e) => e.parentIds.includes(c.id))
       .map((e) => ({ kind: e.kind, dueTick: e.dueTick })),
     canMeetPeople: ageOf(c.birth, world.clock).years >= 16,
+    dating: datingView(world, c),
   };
+}
+
+/** Single people the single adult player could date, closest first (roadmap: dating depth). */
+function datingView(world: World, c: Character): SocialView['dating'] {
+  if (c.death !== null || c.partnership || ageOf(c.birth, world.clock).years < ADULT_AGE)
+    return null;
+  const candidates = sortedValues(world.relationships)
+    .filter((r) => r.aId === c.id)
+    .map((r) => ({ r, o: world.characters[r.bId] }))
+    .filter(({ o }) => o !== undefined && isRomanticProspectBase(world, c, o))
+    .map(({ r, o }) => ({
+      id: r.bId,
+      name: o ? displayName(o.identity, false) : '',
+      age: o ? ageOf(o.birth, world.clock).years : 0,
+      closeness: r.closeness,
+      chemistry: r.chemistry,
+      interested: memoriesAbout(world, r.bId, c.id).some((m) => m.key === 'interestedInYou'),
+    }))
+    .sort((a, b) => b.closeness - a.closeness || (a.id < b.id ? -1 : 1))
+    .slice(0, 6);
+  return { canLookForLove: true, needed: DATE_CLOSENESS, candidates };
+}
+
+/** Single adult, not family, within ten years of age (any closeness). */
+function isRomanticProspectBase(world: World, c: Character, o: Character | undefined): boolean {
+  if (o?.death !== null || o.partnership || o.tier === 'archived') return false;
+  const a = ageOf(c.birth, world.clock).years;
+  const b = ageOf(o.birth, world.clock).years;
+  return b >= ADULT_AGE && Math.abs(a - b) <= 10 && kinship(world, c.id, o.id) === null;
 }
 
 export function projectGame(state: SimState): GameView {
@@ -1079,7 +1122,11 @@ export function projectPerson(state: SimState, personId: string): PersonDetailVi
               id,
               hours: INTERACTIONS[id].hours,
               available: block === null,
-              reason: block ? INTERACTION_BLOCK_MESSAGES[block] : null,
+              reason: block
+                ? id === 'askOut' && block === 'notClose'
+                  ? `You need to be closer first: closeness ${String(DATE_CLOSENESS)} needed, you are at ${String(summary.closeness ?? 0)}.`
+                  : INTERACTION_BLOCK_MESSAGES[block]
+                : null,
             };
           }),
   };

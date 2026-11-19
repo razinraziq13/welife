@@ -221,3 +221,11 @@ This file records decisions that fill gaps in, or clarify, the specification.
 - Interaction chances combine closeness, trust, conflict, the other person's agreeableness and stress, and the player's social skill; money requests are 1% (under 13), 3% (13-17) or 15% (adults) of the median monthly wage, once per six months per relative.
 - Work actions: 3-8 hours, once a month each; overtime at time and a half; a paid role is 30% of the median wage; a course is 5%; a specialism needs 100 progress points.
 - Lifestyle costs: 0-25% of the median wage (holiday abroad 25%); projects advance 2-20 points a session from skills and discipline; a novel is published (25% of the median wage) at reading 45+, an app earns 35% at technology 45+.
+
+## Dating fixes (2026-11-19)
+
+| #   | Topic                   | Decision and reason                                                                                                                                                                                                                     |
+| --- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| E64 | Prospects wait          | A single adult NPC within ten years of the single adult player's age, not family, with closeness 30+, does not choose "seek a partner" in its yearly decisions. Before this, most people the player courted paired off within months.   |
+| E65 | Look for love           | 18+ and single, 6 hours: 85% chance (with monthly diminishing returns) to meet someone single and interested (closeness 38-52, chemistry at least 65, an "interested in you" memory that adds 15 to the chance they say yes to a date). |
+| E66 | Date threshold is shown | Asking someone on a date still needs closeness 45; the reason and the Dating card show the number needed and the current one.                                                                                                           |
