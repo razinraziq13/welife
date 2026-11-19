@@ -120,6 +120,7 @@ import {
   interact,
   lookForLove,
   meetNewPeople,
+  respondToDatingProfile,
   type InteractionResult,
 } from '../social/interactions';
 import {
@@ -162,6 +163,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
   command('interact', { personId: EntityId, interactionId: z.enum(INTERACTION_IDS) }),
   command('meetPeople', {}),
   command('lookForLove', {}),
+  command('respondToDatingProfile', { personId: EntityId, response: z.enum(['like', 'pass']) }),
   // Career play (gameplay expansion)
   command('workAction', { actionId: z.enum(WORK_ACTION_IDS) }),
   command('visitSalon', {
@@ -414,6 +416,7 @@ const done = (key: string, params: Record<string, string | number> = {}): Comman
 const BLOCKED_IN_CUSTODY = new Set<string>([
   'meetPeople',
   'lookForLove',
+  'respondToDatingProfile',
   'workAction',
   'joinClub',
   'applyStudy',
@@ -473,6 +476,11 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
         name: found.personId ? (world.characters[found.personId]?.identity.firstName ?? '') : '',
       });
     }
+    case 'respondToDatingProfile':
+      respondToDatingProfile(world, cmd.personId, cmd.response);
+      return done(cmd.response === 'like' ? 'out.datingAppMatch' : 'out.datingAppPass', {
+        name: world.characters[cmd.personId]?.identity.firstName ?? '',
+      });
     case 'meetPeople': {
       const met = meetNewPeople(world);
       return done(met.personId ? 'out.metSomeone' : 'out.metNoOne', {

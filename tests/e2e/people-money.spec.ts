@@ -119,9 +119,9 @@ test.describe('an adult life', () => {
     await expect(page.getByText('Professional reputation')).toBeVisible();
     await expectAccessible(page);
 
-    // Single adults can look for love from the Dating card.
+    // Single adults can find profiles from the Dating App.
     await page.goto(`/play/${saveId}/social`);
-    await expect(page.getByRole('heading', { level: 2, name: 'Dating' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Dating App' })).toBeVisible();
     await page.getByRole('button', { name: /Look for love/ }).click();
     await expect(page.getByText(/seems interested in you|No spark this time/)).toBeVisible();
     await expectAccessible(page);

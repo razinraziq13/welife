@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { ChevronRight, Heart, Network, UserPlus } from 'lucide-react';
-import type { PersonSummary } from '@engine/view';
+import type { GameView, PersonSummary } from '@engine/view';
 import { PageHeader } from '@app/components/PageHeader';
 import { StatBar } from '@app/components/StatBar';
 import { Avatar } from '@app/components/avatar/Avatar';
@@ -12,6 +12,7 @@ import { t } from '@app/i18n/en';
 import { formatShortMonth } from '@app/i18n/format';
 import { useGameStore } from '@app/stores/gameStore';
 import { ActivityList } from '../ActivityList';
+import { ActionButton } from '../ActionButton';
 import { tickToMonth } from '../widgets';
 
 const FAMILY = new Set([
@@ -60,6 +61,130 @@ export function PersonRow({ person, base }: { person: PersonSummary; base: strin
   );
 }
 
+function DatingApp({ view, base }: { view: GameView; base: string }) {
+  const send = useGameStore((s) => s.send);
+  const busy = useGameStore((s) => s.busy || s.advancing);
+  const dating = view.social.dating;
+  if (!dating || view.lifeStatus !== 'alive') return null;
+  const profile = dating.profiles[0];
+  const waiting = view.pendingEvent ? 'Make the waiting decision first.' : null;
+  const searchReason =
+    waiting ??
+    (view.time.totalHours - view.time.usedHours < 6
+      ? 'Looking for love takes 6 hours of free time.'
+      : null);
+  const person = profile && view.social.people.find((p) => p.id === profile.id);
+  return (
+    <Card
+      title="Dating App"
+      description="Discover singles, like or pass, and get to know your matches."
+    >
+      {profile ? (
+        <div className="rounded-xl border border-border p-3">
+          <div className="flex items-center gap-3">
+            {person && (
+              <Avatar
+                appearance={person.appearance}
+                stage={person.stage}
+                ageYears={person.age.years}
+                className="size-14"
+              />
+            )}
+            <div>
+              <h3 className="font-semibold text-fg">
+                {profile.name}, {profile.age}
+              </h3>
+              <p className="text-sm text-muted">
+                {profile.interests.map((interest) => t(`interest.${interest}`)).join(' · ')}
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <ActionButton
+              reason={waiting}
+              busy={busy}
+              onAct={() =>
+                void send({
+                  type: 'respondToDatingProfile',
+                  personId: profile.id,
+                  response: 'like',
+                })
+              }
+            >
+              <Heart aria-hidden="true" className="size-4" /> Like
+            </ActionButton>
+            <ActionButton
+              variant="secondary"
+              reason={waiting}
+              busy={busy}
+              onAct={() =>
+                void send({
+                  type: 'respondToDatingProfile',
+                  personId: profile.id,
+                  response: 'pass',
+                })
+              }
+            >
+              Pass for this month
+            </ActionButton>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm text-muted">No new profiles. Look for love to discover someone.</p>
+      )}
+      <ActionButton
+        className="mt-3"
+        variant="secondary"
+        reason={searchReason}
+        busy={busy}
+        onAct={() => void send({ type: 'lookForLove' })}
+      >
+        Look for love (6 h)
+      </ActionButton>
+      {dating.matches.length > 0 && (
+        <div className="mt-4 border-t border-border pt-3">
+          <h3 className="font-semibold text-fg">Matches</h3>
+          <ul className="divide-y divide-border">
+            {dating.matches.map((match) => (
+              <li key={match.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <Link
+                  to={`${base}/people/${match.id}`}
+                  className="font-medium text-primary underline"
+                >
+                  {match.name}, {match.age}
+                </Link>
+                <div className="flex flex-wrap gap-2">
+                  <ActionButton
+                    variant="secondary"
+                    size="sm"
+                    busy={busy}
+                    reason={waiting}
+                    onAct={() =>
+                      void send({ type: 'interact', personId: match.id, interactionId: 'chat' })
+                    }
+                  >
+                    Chat (2 h)
+                  </ActionButton>
+                  <ActionButton
+                    size="sm"
+                    busy={busy}
+                    reason={waiting ?? match.askOutReason}
+                    onAct={() =>
+                      void send({ type: 'interact', personId: match.id, interactionId: 'askOut' })
+                    }
+                  >
+                    Ask on a date (4 h)
+                  </ActionButton>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export function SocialTab() {
   const session = useGameStore((s) => s.session);
   const send = useGameStore((s) => s.send);
@@ -89,6 +214,7 @@ export function SocialTab() {
         title="Social"
         description="Family, friends, partners and everyone you know. People remember how you treat them."
       />
+      <DatingApp view={view} base={base} />
       {partner && (
         <Card title="Your partner">
           <ul>
@@ -196,17 +322,6 @@ export function SocialTab() {
               })}
             </ul>
           )}
-          <Button
-            className="mt-3"
-            disabled={disabled}
-            onClick={() => void send({ type: 'lookForLove' })}
-          >
-            <Heart aria-hidden="true" className="size-4" /> Look for love (6 h)
-          </Button>
-          <p className="mt-1 text-xs text-muted">
-            Dating apps, friends of friends, speed dating: more likely than going out to introduce
-            someone single who is interested in you.
-          </p>
         </Card>
       )}
       {social.canMeetPeople && (
