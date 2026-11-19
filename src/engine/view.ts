@@ -392,7 +392,6 @@ export interface FinanceView {
     lumpSumAge: number;
     lumpSumPercent: number;
     lumpSumMinor: bigint;
-    lumpSumTaken: boolean;
     /** Why the lump sum cannot be taken now, or null. */
     lumpSumBlock: string | null;
   };
@@ -920,7 +919,6 @@ function financeView(world: World, c: Character): FinanceView {
       lumpSumAge: LUMP_SUM_AGE,
       lumpSumPercent: LUMP_SUM_PERCENT,
       lumpSumMinor: lumpSumAmount(world, c),
-      lumpSumTaken: c.finance?.lumpSumTaken === true,
       lumpSumBlock: ((code) => (code ? FINANCE_MESSAGES[code] : null))(lumpSumBlock(world, c)),
     },
     netIncomeMinor: monthlyNetIncome(world, c),

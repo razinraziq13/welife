@@ -1333,11 +1333,12 @@ export function lumpSumAmount(world: World, c: Character): bigint {
  * Takes a quarter of the retirement fund as cash, once in a life, from age 55 (gameplay
  * expansion, decision E70). The rest stays invested and pays out monthly after retiring.
  */
-export function takePensionLumpSum(world: World, c: Character): bigint {
+export function takePensionLumpSum(world: World, c: Character): void {
   const block = lumpSumBlock(world, c);
-  if (block) throw new FinanceError(block);
   const finance = c.finance;
-  if (!finance?.retirementId || !finance.checkingId) throw new FinanceError('noAccount');
+  // lumpSumBlock already rejects missing accounts; the second half only narrows the types.
+  if (block || !finance?.retirementId || !finance.checkingId)
+    throw new FinanceError(block ?? 'noAccount');
   const amount = lumpSumAmount(world, c);
   post(world, 'tx.pensionLumpSum', [
     { accountId: finance.checkingId, debit: amount },
@@ -1345,7 +1346,6 @@ export function takePensionLumpSum(world: World, c: Character): bigint {
   ]);
   finance.lumpSumTaken = true;
   addBiography(world, c.id, 'money', 'bio.pensionLumpSum', { percent: LUMP_SUM_PERCENT });
-  return amount;
 }
 
 /** Moves the player into a rented home of their own (partner and children come along). */
