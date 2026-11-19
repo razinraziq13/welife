@@ -47,7 +47,7 @@ export function AdvanceButton({
       </Button>
       {!reason && (
         <p className="text-center text-xs text-muted">
-          {ADVANCE_MONTHS} months; stops early if a decision comes up.
+          {ADVANCE_MONTHS} months; stops early if a decision or job offer comes up.
         </p>
       )}
       {reason && (

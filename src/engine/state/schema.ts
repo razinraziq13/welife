@@ -756,6 +756,10 @@ export const JobApplicationSchema = z
     offerSalaryMinor: NonNegativeMinor.nullable(),
     offerExpiresTick: Tick.nullable(),
     negotiated: z.boolean(),
+    /** A rival employer approached the player with this offer (no application was made). */
+    headhunted: z.boolean().optional(),
+    /** The player already asked their current employer to match this offer. */
+    countered: z.boolean().optional(),
   })
   .strict();
 export type JobApplication = z.infer<typeof JobApplicationSchema>;

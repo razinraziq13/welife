@@ -204,7 +204,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
   command('prepareInterview', { applicationId: EntityId }),
   command('respondOffer', {
     applicationId: EntityId,
-    response: z.enum(['accept', 'negotiate', 'decline']),
+    response: z.enum(['accept', 'negotiate', 'decline', 'counter']),
   }),
   command('withdrawApplication', { applicationId: EntityId }),
   command('quitJob', {}),

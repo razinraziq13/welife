@@ -30,7 +30,10 @@ function month(state: SimState): SimState {
  * exports it as a save file, so end-to-end tests can import it instead of clicking through
  * two decades of months.
  */
-export async function adultSaveJson(seed = 'e2e-adult'): Promise<string> {
+export async function adultSaveJson(
+  seed = 'e2e-adult',
+  options: { rivalOffer?: boolean } = {},
+): Promise<string> {
   let state: SimState = {
     world: createWorld(`world-${seed}`, {
       seed,
@@ -60,6 +63,22 @@ export async function adultSaveJson(seed = 'e2e-adult'): Promise<string> {
     state = month(state);
   }
   for (let m = 0; m < 12; m++) state = month(state);
+  if (options.rivalOffer) {
+    // Make the worker someone rivals want, then play on until one approaches (real engine).
+    const approached = () =>
+      Object.values(state.world.jobs.applications).some(
+        (a) => a.headhunted === true && a.status === 'offered',
+      );
+    for (let m = 0; m < 60 && !approached(); m++) {
+      const p = player();
+      const job = p?.employmentId ? state.world.employment[p.employmentId] : undefined;
+      if (!p || !job) throw new Error('fixture: no job for a rival offer');
+      job.performance = 850;
+      p.career.reputation = 1000;
+      state = month(state);
+    }
+    if (!approached()) throw new Error('fixture: no rival offer');
+  }
   // Fixture only: an inheritance-sized gift so business and property can be tried in the UI.
   // It is booked against an equity account so the ledger still balances.
   const world = state.world;

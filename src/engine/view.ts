@@ -11,7 +11,12 @@ import {
   type UpcomingEntry,
 } from './calendar/calendar';
 import { timeBudgetFor, type TimeLine } from './calendar/time';
-import { experienceMonths, jobEligibility, type JobRejection } from './career/jobs';
+import {
+  counterOfferChance,
+  experienceMonths,
+  jobEligibility,
+  type JobRejection,
+} from './career/jobs';
 import { findOccupation, getOccupation, industryName, jobTitle } from './career/occupations';
 import { displayName } from './characters/names';
 import { lifeStage, type LifeStage } from './characters/stats';
@@ -277,6 +282,10 @@ export interface WorkView {
     offerSalaryMinor: bigint | null;
     offerExpiresTick: number | null;
     negotiated: boolean;
+    /** A rival approached you (gameplay expansion). */
+    headhunted: boolean;
+    /** Percent chance your employer matches it, or null when you cannot ask (any more). */
+    counterChance: number | null;
     referrerName: string | null;
   }[];
   retired: boolean;
@@ -705,6 +714,11 @@ function workView(world: World, c: Character): WorkView {
         offerSalaryMinor: a.offerSalaryMinor,
         offerExpiresTick: a.offerExpiresTick,
         negotiated: a.negotiated,
+        headhunted: a.headhunted === true,
+        counterChance:
+          a.headhunted === true && a.countered !== true && e?.status === 'active'
+            ? counterOfferChance(world, c, e)
+            : null,
         referrerName: a.referrerId
           ? (world.characters[a.referrerId]?.identity.firstName ?? null)
           : null,

@@ -256,6 +256,8 @@ export type JobRejection =
   | 'retired'
   | 'noChange'
   | 'noPreparation'
+  | 'notHeadhunted'
+  | 'alreadyCountered'
   | 'noWorkRights'
   | 'limitedWorkRights'
   | 'inCustody'
@@ -281,6 +283,9 @@ export const JOB_MESSAGES: Record<JobRejection, string> = {
   retired: 'You are retired.',
   noChange: 'That is already your setting.',
   noPreparation: 'There is no interview to prepare for.',
+  notHeadhunted:
+    'Only an offer from a company that approached you while you have a job can be used to ask for a match.',
+  alreadyCountered: 'You have already asked your employer to match this offer.',
 };
 
 export class JobError extends Error {
@@ -480,17 +485,64 @@ export function resolveInterview(world: World, applicationId: string, style: str
   }
 }
 
-export type OfferResponse = 'accept' | 'negotiate' | 'decline';
+export type OfferResponse = 'accept' | 'negotiate' | 'decline' | 'counter';
+
+/** Chance (percent) that the current employer matches a rival offer (gameplay expansion). */
+export function counterOfferChance(world: World, c: Character, e: Employment): number {
+  const manager = e.managerId ? findRelationship(world, c.id, e.managerId) : undefined;
+  return clamp(
+    30 +
+      Math.floor((e.performance - 500) / 10) +
+      Math.floor(c.career.reputation / 50) +
+      (manager ? Math.floor((manager.closeness - 50) / 3) : 0),
+    10,
+    85,
+  );
+}
+
+/**
+ * Asks the current employer to match a rival's offer. Matched: the salary rises to the offer
+ * and the rival offer is turned down. Refused: the offer stays open, the manager is a little
+ * put out, and it cannot be tried again for this offer.
+ */
+function counterOffer(
+  world: World,
+  c: Character,
+  app: JobApplication,
+  offer: bigint,
+): 'matched' | 'notMatched' {
+  const e = activeEmployment(world, c);
+  if (!app.headhunted || !e) throw new JobError('notHeadhunted');
+  if (app.countered) throw new JobError('alreadyCountered');
+  app.countered = true;
+  const chance = counterOfferChance(world, c, e);
+  if (withRng(world, 'career', (rng) => rng.int(100) < chance)) {
+    e.salaryMinor = maxBig(e.salaryMinor, offer);
+    app.status = 'declined';
+    changeStat(world, c, 'happiness', 40, 'work:counterOffer');
+    addBiography(world, c.id, 'work', 'bio.counterOffer', {
+      employer: e.terms.employer,
+      rival: app.terms.employer,
+    });
+    return 'matched';
+  }
+  if (e.managerId) {
+    const rel = findRelationship(world, c.id, e.managerId);
+    if (rel) rel.closeness = clamp(rel.closeness - 5, 0, 100);
+  }
+  return 'notMatched';
+}
 
 export function respondToOffer(
   world: World,
   c: Character,
   applicationId: string,
   response: OfferResponse,
-): 'hired' | 'improved' | 'withdrawn' | 'declined' | 'unchanged' {
+): 'hired' | 'improved' | 'withdrawn' | 'declined' | 'unchanged' | 'matched' | 'notMatched' {
   const app = world.jobs.applications[applicationId];
   if (app?.characterId !== c.id || app.status !== 'offered' || app.offerSalaryMinor === null)
     throw new JobError('noOffer');
+  if (response === 'counter') return counterOffer(world, c, app, app.offerSalaryMinor);
   if (response === 'decline') {
     app.status = 'declined';
     return 'declined';
@@ -801,7 +853,87 @@ function playerWorkMonth(world: World, c: Character): void {
     endEmployment(world, c, 'laidOff');
     changeStat(world, c, 'stress', 120, 'work:laidOff');
     changeStat(world, c, 'happiness', -100, 'work:laidOff');
+    return;
   }
+  maybeHeadhunt(world, c, e);
+}
+
+/** Months between rival approaches, at least. */
+export const HEADHUNT_COOLDOWN = 12;
+
+/**
+ * Monthly chance (percent) that a rival company approaches the player (gameplay expansion):
+ * 1-8%, higher with professional reputation, a specialism and strong performance. Zero when
+ * not eligible (see `maybeHeadhunt`).
+ */
+export function headhuntChance(world: World, c: Character, e: Employment): number {
+  const occupation = getOccupation(e.terms.occupationId);
+  if (occupation.hidden || e.terms.contract === 'internship' || e.terms.contract === 'casual')
+    return 0;
+  if (world.tick - e.startTick < 6 || e.performance < 450) return 0;
+  if (ageYears(world, c) >= getRules(c.countryCode).pension.stateAge) return 0;
+  const recent = sortedValues(world.jobs.applications).some(
+    (a) =>
+      a.characterId === c.id &&
+      a.headhunted === true &&
+      (a.status === 'offered' || world.tick - a.tick < HEADHUNT_COOLDOWN),
+  );
+  if (recent) return 0;
+  return clamp(
+    1 +
+      Math.floor(c.career.reputation / 150) +
+      (c.career.specialty ? 2 : 0) +
+      (e.performance >= 700 ? 1 : 0),
+    1,
+    8,
+  );
+}
+
+/** A rival company offers the same kind of job for 10-30% more (sometimes one level up). */
+function maybeHeadhunt(world: World, c: Character, e: Employment): void {
+  const chance = headhuntChance(world, c, e);
+  if (chance === 0 || !withRng(world, 'career', (rng) => rng.int(100) < chance)) return;
+  const occupation = getOccupation(e.terms.occupationId);
+  const step =
+    e.terms.level < occupation.maxLevel &&
+    e.performance >= 650 &&
+    withRng(world, 'career', (rng) => rng.int(100) < 30)
+      ? 1
+      : 0;
+  const contract: ContractType = e.terms.contract === 'fixedTerm' ? 'permanent' : e.terms.contract;
+  let terms = makeTerms(world, occupation, e.terms.level + step, contract, c.locationId);
+  for (let i = 0; i < 3 && terms.employer === e.terms.employer; i++)
+    terms = makeTerms(world, occupation, e.terms.level + step, contract, c.locationId);
+  if (terms.employer === e.terms.employer) return;
+  const raise = withRng(world, 'career', (rng) => rng.range(10, 30));
+  const offer = maxBig(e.salaryMinor + applyPercent(e.salaryMinor, raise), terms.salaryMinMinor);
+  // Their band stretches to fit: negotiating can still add up to 10% on top.
+  terms = { ...terms, salaryMaxMinor: maxBig(terms.salaryMaxMinor, applyPercent(offer, 110)) };
+  const app: JobApplication = {
+    id: nextId(world, 'app'),
+    postingId: nextId(world, 'job'),
+    characterId: c.id,
+    terms,
+    applicants: 0,
+    tick: world.tick,
+    status: 'offered',
+    interviewTick: null,
+    preparation: 0,
+    referrerId: null,
+    score: null,
+    offerSalaryMinor: offer,
+    offerExpiresTick: world.tick + 2,
+    negotiated: false,
+    headhunted: true,
+  };
+  world.jobs.applications[app.id] = app;
+  addNotification(
+    world,
+    'work',
+    'ntf.headhunted',
+    { employer: terms.employer, title: jobTitle(occupation, terms.level), percent: raise },
+    'career',
+  );
 }
 
 function pruneApplications(world: World): void {

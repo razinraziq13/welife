@@ -141,12 +141,17 @@ export const useGameStore = create<GameState>()((set, get) => ({
   /**
    * One click plays up to ADVANCE_MONTHS months (user decision, 2026-11-19). Each month is
    * still its own validated command with its own snapshot, so rewind, replay and the
-   * once-per-month guarantees are unchanged. It stops early when a decision is waiting, the
-   * life ends or a month is refused.
+   * once-per-month guarantees are unchanged. It stops early when a decision is waiting, a new
+   * job offer arrives (offers expire in two months), the life ends or a month is refused.
    */
   async advance() {
     if (get().advancing) return;
     set({ advancing: true });
+    const offers = (): string[] =>
+      (get().session?.view.work.applications ?? [])
+        .filter((a) => a.status === 'offered')
+        .map((a) => a.id);
+    const known = new Set(offers());
     try {
       for (let i = 0; i < ADVANCE_MONTHS; i++) {
         const view = get().session?.view;
@@ -154,6 +159,10 @@ export const useGameStore = create<GameState>()((set, get) => ({
         const outcome = await get().send({ type: 'advance', expectedTick: view.tick });
         if (outcome?.status !== 'applied' || outcome.kind !== 'advanced') break;
         set({ lastActivity: null });
+        if (offers().some((id) => !known.has(id))) {
+          set({ message: 'A job offer arrived. See Career to answer it.', messageKind: 'success' });
+          break;
+        }
       }
     } finally {
       set({ advancing: false });

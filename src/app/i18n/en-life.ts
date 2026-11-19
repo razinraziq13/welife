@@ -343,6 +343,9 @@ export const enLife: Record<string, string> = {
   'out.offer.withdrawn': 'They withdrew the offer.',
   'out.offer.declined': 'You declined the offer.',
   'out.offer.unchanged': 'They would not change their offer.',
+  'out.offer.matched': 'Your employer matched the offer: your pay has gone up and you are staying.',
+  'out.offer.notMatched':
+    'Your employer would not match it. The rival offer is still open if you want it.',
   'out.withdrawn': 'Application withdrawn.',
   'out.quit': 'You have left your job.',
   'out.workEffort': 'Work effort set to {valueName}.',
@@ -374,6 +377,8 @@ export const enLife: Record<string, string> = {
   'ntf.startedStudies': 'You started your {levelName} in {programName}.',
   'ntf.referral': '{name} put in a good word for you.',
   'ntf.jobOffer': 'Job offer: {title} at {employer}.',
+  'ntf.headhunted':
+    '{employer} wants to hire you as {title}, for {percent}% more than you earn now. See Career to answer.',
   'ntf.jobRejected': 'Not successful: {title} at {employer}.',
   'ntf.offerWithdrawn': '{employer} withdrew their offer.',
   'ntf.newJob': 'You started as {title} at {employer}.',
@@ -419,6 +424,7 @@ export const enLife: Record<string, string> = {
   'bio.joinedClub': 'Joined the {clubName}.',
   'bio.startedStudies': 'Began a {levelName} in {programName}.',
   'bio.newJob': 'Started work as {title} at {employer}.',
+  'bio.counterOffer': 'Got a raise from {employer} by showing them an offer from {rival}.',
   'bio.jobEnded.quit': 'Left the job as {title} at {employer}.',
   'bio.jobEnded.laidOff': 'Was laid off from {employer}.',
   'bio.jobEnded.dismissed': 'Was dismissed from {employer}.',

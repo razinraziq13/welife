@@ -15,6 +15,7 @@ import type { GameView } from '@engine/view';
 import { ActivityList } from '../ActivityList';
 import { tickToMonth } from '../widgets';
 import { CareerPlayCard } from '../CareerPlay';
+import { ActionButton } from '../ActionButton';
 
 function habitLevel(value: number): string {
   if (value >= 70) return 'Strong habit';
@@ -621,7 +622,9 @@ function ApplicationsCard({ view }: { view: GameView }) {
                 {a.title} · {a.employer}
               </p>
               <p className="text-muted">
-                {t(`jobStatus.${a.status}`)}
+                {a.headhunted && a.status === 'offered'
+                  ? 'They approached you: a rival company wants to hire you'
+                  : t(`jobStatus.${a.status}`)}
                 {a.status === 'interview' &&
                   a.interviewTick !== null &&
                   ` · ${monthOf(view, a.interviewTick)} · preparation ${String(a.preparation)}%`}
@@ -632,6 +635,12 @@ function ApplicationsCard({ view }: { view: GameView }) {
                   Offer: <Money minor={a.offerSalaryMinor} currency={currency} /> a month
                   {a.offerExpiresTick !== null &&
                     ` · reply by ${monthOf(view, a.offerExpiresTick)}`}
+                </p>
+              )}
+              {a.status === 'offered' && a.headhunted && view.work.job && (
+                <p className="text-xs text-muted">
+                  You earn <Money minor={view.work.job.salaryMinor} currency={currency} /> a month
+                  at {view.work.job.employer}. Accepting means leaving that job.
                 </p>
               )}
             </div>
@@ -671,6 +680,28 @@ function ApplicationsCard({ view }: { view: GameView }) {
                   >
                     Negotiate
                   </Button>
+                  {a.headhunted && view.work.job && (
+                    <ActionButton
+                      size="sm"
+                      variant="secondary"
+                      busy={disabled}
+                      reason={
+                        a.counterChance === null
+                          ? 'You have already asked your employer to match this offer.'
+                          : null
+                      }
+                      onAct={() =>
+                        void send({
+                          type: 'respondOffer',
+                          applicationId: a.id,
+                          response: 'counter',
+                        })
+                      }
+                    >
+                      Ask {view.work.job.employer} to match
+                      {a.counterChance !== null && ` (${String(a.counterChance)}% chance)`}
+                    </ActionButton>
+                  )}
                   <Button
                     size="sm"
                     variant="ghost"

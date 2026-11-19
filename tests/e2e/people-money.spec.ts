@@ -429,3 +429,44 @@ test.describe('legacy, media, achievements and the event creator (M7-M8)', () =>
     await expectAccessible(page);
   });
 });
+
+test.describe('rival job offers', () => {
+  test.describe.configure({ timeout: 120_000 });
+  let json = '';
+  test.beforeAll(async () => {
+    json = await adultSaveJson('e2e-rival', { rivalOffer: true });
+  });
+
+  test('a rival offer shows on Career and you can ask your employer to match it', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'rival.welife.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(json),
+    });
+    await expect(page).toHaveURL(/\/play\/[^/]+\/life$/);
+    const saveId = /\/play\/([^/]+)\//.exec(page.url())?.[1] ?? '';
+    await page.goto(`/play/${saveId}/career`);
+    await expect(page.getByText(/They approached you/)).toBeVisible();
+    await expect(page.getByText(/Accepting means leaving that job/)).toBeVisible();
+    await expectAccessible(page);
+    const match = page.getByRole('button', { name: /to match \(\d+% chance\)$/ });
+    await match.click();
+    const feedback = page.getByTestId('feedback');
+    await expect(feedback).toBeInViewport();
+    await expect(feedback).toContainText(/matched the offer|would not match it/);
+    if (((await feedback.textContent()) ?? '').includes('would not match')) {
+      // Refused: the offer is still open, and asking again explains why it cannot be done.
+      await expect(page.getByRole('button', { name: 'Accept' })).toBeVisible();
+      const again = page.getByRole('button', { name: /to match$/ });
+      await again.focus();
+      await page.keyboard.press('Enter');
+      await expect(feedback).toHaveAttribute('data-kind', 'error');
+      await expect(feedback).toContainText('already asked your employer');
+    } else {
+      await expect(page.getByText(/They approached you/)).toHaveCount(0);
+    }
+  });
+});
