@@ -5,6 +5,8 @@ an installable Progressive Web App for desktop, Android and iOS.
 
 > Status: **0.9.0 release candidate.** Milestones 0-8 are complete and Milestone 9 (integration, balance, release) is awaiting review. See [DEVELOPMENT_PROGRESS.md](DEVELOPMENT_PROGRESS.md), [CHANGELOG.md](CHANGELOG.md) and [docs/SECURITY.md](docs/SECURITY.md).
 
+**Play it:** https://razinraziq13.github.io/welife/ (works offline once loaded). On iPhone or iPad, open it in Safari and choose Share, then Add to Home Screen. On Android, use Chrome's Install app.
+
 ## Requirements
 
 - Node.js 22.22 or newer (developed on Node 26)

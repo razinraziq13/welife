@@ -7,6 +7,11 @@ import { aliases } from './aliases.ts';
 
 const THEME_COLOR = '#0e6e5c';
 const BACKGROUND_COLOR = '#f6f5f1';
+/**
+ * Where the app is served. '/' by default; the GitHub Pages build sets WELIFE_BASE=/welife/
+ * because a project site lives under the repository name.
+ */
+const BASE = process.env.WELIFE_BASE ?? '/';
 
 /**
  * Content Security Policy for production builds (docs/SECURITY.md). Everything is served from
@@ -50,6 +55,7 @@ function contentSecurityPolicy(): Plugin {
 }
 
 export default defineConfig({
+  base: BASE,
   resolve: { alias: aliases },
   worker: { format: 'es' },
   build: {
@@ -65,14 +71,14 @@ export default defineConfig({
       injectRegister: false,
       includeAssets: ['favicon.ico', 'favicon.svg', 'apple-touch-icon-180x180.png'],
       manifest: {
-        id: '/',
+        id: BASE,
         name: 'WeLife',
         short_name: 'WeLife',
         description: 'One Life. Endless Generations. An offline life simulator.',
         lang: 'en',
         dir: 'ltr',
-        start_url: '/',
-        scope: '/',
+        start_url: BASE,
+        scope: BASE,
         display: 'standalone',
         orientation: 'any',
         theme_color: THEME_COLOR,
@@ -92,7 +98,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,json,woff2}'],
-        navigateFallback: 'index.html',
+        navigateFallback: `${BASE}index.html`,
         cleanupOutdatedCaches: true,
         // Content packs will grow; keep generous but bounded.
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
