@@ -261,6 +261,7 @@ test.describe('companies and property (M5)', () => {
     await expectAccessible(page);
 
     await page.goto(`/play/${saveId}/finance`);
+    await page.getByText('Investments', { exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Investments' })).toBeVisible();
     await page.getByRole('link', { name: 'Open investments' }).click();
     await page.getByRole('link', { name: 'Crypto', exact: true }).click();
@@ -469,6 +470,7 @@ test.describe('retirement fund lump sum', () => {
   test('explains payouts and takes a one-off lump sum from 55', async ({ page }) => {
     const saveId = await importSave(page, json);
     await page.goto(`/play/${saveId}/finance`);
+    await page.getByText('Investments', { exact: true }).click();
     await expect(page.getByRole('heading', { level: 3, name: 'Taking money out' })).toBeVisible();
     await expect(page.getByText(/pays you a monthly income once you retire/)).toBeVisible();
     await expectAccessible(page);
@@ -496,6 +498,7 @@ test.describe('investments dashboard', () => {
   test('choose an investment, view monthly moves and trade Bitcoin', async ({ page }) => {
     const saveId = await importSave(page, json);
     await page.goto(`/play/${saveId}/finance`);
+    await page.getByText('Investments', { exact: true }).click();
     await page.getByRole('link', { name: 'Open investments' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Investments' })).toBeVisible();
     await page.getByRole('link', { name: 'Crypto', exact: true }).click();
@@ -534,6 +537,7 @@ test.describe('investments dashboard', () => {
   test('buy a bond, see its interest and sale price, sell it early', async ({ page }) => {
     const saveId = await importSave(page, json);
     await page.goto(`/play/${saveId}/finance`);
+    await page.getByText('Investments', { exact: true }).click();
     await page.getByRole('link', { name: 'Open investments' }).click();
     await page.getByRole('link', { name: 'Bonds', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Government bonds' })).toBeVisible();

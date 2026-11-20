@@ -831,8 +831,17 @@ function AssetsLinksCard({ view, base }: { view: GameView; base: string }) {
   );
 }
 
+const SECTIONS = [
+  { value: 'accounts', label: 'Accounts' },
+  { value: 'living', label: 'Living' },
+  { value: 'bank', label: 'Bank' },
+  { value: 'investments', label: 'Investments' },
+] as const;
+
+/** Money, one section at a time: accounts, living costs, loans and debt, investments. */
 export function FinanceTab() {
   const session = useGameStore((s) => s.session);
+  const [section, setSection] = useState<(typeof SECTIONS)[number]['value']>('accounts');
   if (!session) return null;
   const view = session.view;
   return (
@@ -841,6 +850,13 @@ export function FinanceTab() {
         title="Money"
         description="Every amount here comes from a balanced ledger of real transactions in your life."
       />
+      <ChoiceGroup
+        legend="Show"
+        name="money-section"
+        value={section}
+        onChange={setSection}
+        options={SECTIONS}
+      />
       <Link
         to={`/play/${session.saveId}/shopping`}
         className={buttonVariants({ variant: 'secondary', className: 'self-start' })}
@@ -848,22 +864,30 @@ export function FinanceTab() {
         <ShoppingBag aria-hidden="true" className="size-4" />
         Shopping: homes, cars and aircraft
       </Link>
-      <OverviewCard view={view} />
-      <InvestmentsCard view={view} />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <AccountsCard view={view} />
-        <HomeCard view={view} />
-      </div>
-      <CashFlowCard view={view} />
-      <TaxCard view={view} />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <LoansCard view={view} />
-        <InsuranceCard view={view} />
-      </div>
-      <AssetsLinksCard view={view} base={`/play/${session.saveId}`} />
-      <RetirementCard view={view} />
-      <TransactionsCard view={view} />
-      <EconomyCard view={view} />
+      {section === 'accounts' && (
+        <>
+          <OverviewCard view={view} />
+          <AccountsCard view={view} />
+          <CashFlowCard view={view} />
+          <TaxCard view={view} />
+          <TransactionsCard view={view} />
+        </>
+      )}
+      {section === 'living' && (
+        <>
+          <HomeCard view={view} />
+          <InsuranceCard view={view} />
+          <AssetsLinksCard view={view} base={`/play/${session.saveId}`} />
+          <EconomyCard view={view} />
+        </>
+      )}
+      {section === 'bank' && <LoansCard view={view} />}
+      {section === 'investments' && (
+        <>
+          <InvestmentsCard view={view} />
+          <RetirementCard view={view} />
+        </>
+      )}
     </div>
   );
 }
