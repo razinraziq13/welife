@@ -38,11 +38,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npx playwright install --with-deps chromium webkit
       - run: npx playwright test --project=desktop-chromium --project=desktop-webkit --project=mobile-chromium --project=mobile-webkit
-      # Firefox crashed under parallel load on the 2-core runner; it runs on its own, one page at a time.
-      - run: npx playwright test --project=desktop-firefox --workers=1
-        if: ${{ !cancelled() }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

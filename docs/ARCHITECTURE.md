@@ -154,12 +154,12 @@ are never applied silently. If service-worker registration fails, Home says so.
 
 ## Testing
 
-| Layer                                                          | Tool                                                                     | Location                                |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------- |
-| Unit (engine rules, schemas, property tests, avatar rendering) | Vitest, fast-check, react-dom/server                                     | `tests/unit`                            |
-| Integration (UI client ↔ real worker host ↔ IndexedDB)         | Vitest + fake-indexeddb                                                  | `tests/integration`                     |
-| End-to-end (production build + service worker)                 | Playwright: desktop Chromium/WebKit (+Firefox in CI), Pixel 7, iPhone 15 | `tests/e2e`                             |
-| Accessibility                                                  | axe-core (WCAG 2.2 A/AA) on every screen, light and dark                 | `tests/e2e`                             |
-| Performance                                                    | Monthly turn p95 in a 150-NPC world (engine)                             | `tests/unit/engine/performance.test.ts` |
-| Soak                                                           | 10,000 months, 10+ generations, bounded size (`npm run soak`)            | `tests/soak`                            |
-| Cross-browser determinism                                      | Browser play vs Node replay                                              | `tests/e2e/determinism.spec.ts`         |
+| Layer                                                          | Tool                                                          | Location                                |
+| -------------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------- |
+| Unit (engine rules, schemas, property tests, avatar rendering) | Vitest, fast-check, react-dom/server                          | `tests/unit`                            |
+| Integration (UI client ↔ real worker host ↔ IndexedDB)         | Vitest + fake-indexeddb                                       | `tests/integration`                     |
+| End-to-end (production build + service worker)                 | Playwright: desktop Chromium/WebKit, Pixel 7, iPhone 15       | `tests/e2e`                             |
+| Accessibility                                                  | axe-core (WCAG 2.2 A/AA) on every screen, light and dark      | `tests/e2e`                             |
+| Performance                                                    | Monthly turn p95 in a 150-NPC world (engine)                  | `tests/unit/engine/performance.test.ts` |
+| Soak                                                           | 10,000 months, 10+ generations, bounded size (`npm run soak`) | `tests/soak`                            |
+| Cross-browser determinism                                      | Browser play vs Node replay                                   | `tests/e2e/determinism.spec.ts`         |

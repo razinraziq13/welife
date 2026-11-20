@@ -21,7 +21,7 @@
 ## Commands
 
 - `npm run verify`: run before declaring any milestone done.
-- `npm run e2e`: runs Playwright against a production build. Firefox is opt-in locally (`WELIFE_E2E_FIREFOX=1`), because Windows security policy blocks its binary on this machine.
+- `npm run e2e`: runs Playwright against a production build. Browsers: Chromium and WebKit, desktop and mobile; Firefox is not tested (decision E73).
 
 ## Toolchain pins
 

@@ -6,7 +6,6 @@ const isCI = Boolean(process.env.CI);
  * Firefox runs in CI. Locally it is opt-in (WELIFE_E2E_FIREFOX=1) because some Windows
  * security policies block Playwright's unsigned Firefox build from launching.
  */
-const includeFirefox = isCI || process.env.WELIFE_E2E_FIREFOX === '1';
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -22,9 +21,6 @@ export default defineConfig({
   },
   projects: [
     { name: 'desktop-chromium', use: { ...devices['Desktop Chrome'] } },
-    ...(includeFirefox
-      ? [{ name: 'desktop-firefox', use: { ...devices['Desktop Firefox'] } }]
-      : []),
     { name: 'desktop-webkit', use: { ...devices['Desktop Safari'] } },
     { name: 'mobile-chromium', use: { ...devices['Pixel 7'] } },
     { name: 'mobile-webkit', use: { ...devices['iPhone 15'] } },

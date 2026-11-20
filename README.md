@@ -36,7 +36,7 @@ npm run dev                               # http://localhost:5173
 | `npm run verify`    | typecheck + lint + boundaries + format check + tests + build                 |
 | `npm run icons`     | Regenerates PNG/ICO icons from `public/favicon.svg`                          |
 
-Firefox end-to-end tests are opt-in locally: `WELIFE_E2E_FIREFOX=1 npm run e2e`.
+End-to-end tests cover Chromium and WebKit (desktop and mobile); Firefox is not tested.
 
 ## Project layout
 
