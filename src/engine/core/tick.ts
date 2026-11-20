@@ -16,6 +16,7 @@ import { processFinances, rescheduleStudentLoan } from '../economy/finance';
 import { processBonds } from '../economy/investments';
 import { processVehicles } from '../economy/vehicles';
 import { currencyReform } from '../economy/reform';
+import { processActing } from '../career/acting';
 import { processEducation } from '../education/school';
 import { processBusinesses } from '../business/business';
 import { processProperties } from '../property/property';
@@ -124,6 +125,7 @@ export function advanceMonth(committed: World): AdvanceResult {
     const worker = world.characters[world.activeCharacterId];
     const job = worker ? activeEmployment(world, worker) : null;
     if (worker && job) careerMonth(world, worker, job);
+    if (worker?.death === null) processActing(world, worker);
   }
   const player = world.characters[world.activeCharacterId];
   if (player) rescheduleStudentLoan(world, player);

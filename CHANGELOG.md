@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Acting career:** actors get a Casting board (film and TV castings with studio, director, character, script quality, pay and deadline), audition with an approach and get honest feedback, accept, negotiate or decline offers, then work through rehearsals, filming and post-production. Pay arrives at milestones less an agent's commission; films are reviewed by critics and audiences, TV seasons are renewed or cancelled, strong work can win a Silver Reel, and everything lands in your Filmography (Career, Acting).
+
 - **Lottery and casino:** adults can buy lottery tickets (jackpot one in ten million) and bet on red at roulette, from Money, Investments. Both lose money on average.
 
 - **Prices stay in today's money:** wages, house and car prices no longer multiply over the generations; only booms, slumps and policies move them, and interest rates are real rates. Saves already far in the future get a one-time currency reform on the next Advance, so they read in today's money too. A family can now give money from savings when its current account is empty.

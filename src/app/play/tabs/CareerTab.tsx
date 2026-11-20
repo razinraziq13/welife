@@ -9,7 +9,8 @@ import { ChoiceGroup } from '@app/components/ui/choice-group';
 import { ConfirmDialog } from '@app/components/ui/confirm-dialog';
 import { Switch } from '@app/components/ui/switch';
 import { SegmentBar } from '@app/components/ui/segment-bar';
-import { Briefcase, GraduationCap, Search, Signpost, Sparkles } from 'lucide-react';
+import { Briefcase, Clapperboard, GraduationCap, Search, Signpost, Sparkles } from 'lucide-react';
+import { ActingSection } from './ActingSection';
 import { t } from '@app/i18n/en';
 import { clubName, formatShortMonth, qualificationName } from '@app/i18n/format';
 import { useGameStore } from '@app/stores/gameStore';
@@ -921,6 +922,7 @@ const SECTIONS = [
   { value: 'job', label: 'Job', icon: Briefcase },
   { value: 'jobapp', label: 'Job App', icon: Search },
   { value: 'paths', label: 'Paths', icon: Signpost },
+  { value: 'acting', label: 'Acting', icon: Clapperboard },
   { value: 'study', label: 'Study', icon: GraduationCap },
   { value: 'skills', label: 'Skills', icon: Sparkles },
 ] as const;
@@ -935,9 +937,12 @@ export function CareerTab() {
   const working = c.age.years >= 13;
   // Open where the action is: a waiting offer, else your job, else school.
   const offer = view.work.applications.some((a) => a.status === 'offered');
-  const section: Section = picked ?? (!working ? 'study' : offer ? 'jobapp' : 'job');
+  const screen = view.work.career.screen;
+  const section: Section =
+    picked ?? (!working ? 'study' : offer ? 'jobapp' : screen?.isActor ? 'acting' : 'job');
+  // Acting appears once you take the actor path (and stays for your filmography).
   const items = working
-    ? SECTIONS
+    ? SECTIONS.filter((x) => x.value !== 'acting' || screen)
     : SECTIONS.filter((x) => x.value === 'study' || x.value === 'skills');
   return (
     <div className="flex flex-col gap-4">
@@ -981,6 +986,7 @@ export function CareerTab() {
           <JobBoardCard view={view} />
         </>
       )}
+      {working && section === 'acting' && screen && <ActingSection view={view} screen={screen} />}
       {working && section === 'paths' && <PathsCard view={view} base={`/play/${session.saveId}`} />}
       {section === 'skills' && (
         <>

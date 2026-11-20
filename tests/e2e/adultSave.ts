@@ -39,6 +39,8 @@ export async function adultSaveJson(
     age?: number;
     cashGiftMinor?: bigint;
     condition?: ConditionKind;
+    /** Start the actor path (skills raised to qualify) and play a month for castings. */
+    actor?: boolean;
   } = {},
 ): Promise<string> {
   let state: SimState = {
@@ -85,6 +87,16 @@ export async function adultSaveJson(
       state = month(state);
     }
     if (!approached()) throw new Error('fixture: no rival offer');
+  }
+  if (options.actor) {
+    const p = player();
+    if (p) {
+      p.skills.art = 700;
+      p.skills.socializing = 700;
+      p.career.reputation = 800;
+    }
+    state = send(state, { type: 'startCreativePath', occupationId: 'actor' });
+    state = month(state);
   }
   if (options.age !== undefined) {
     // Fixture only: make the adult older (e.g. to reach pension ages) without playing decades.

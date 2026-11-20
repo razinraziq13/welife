@@ -167,7 +167,7 @@ export function workActionBlock(
   const directing = e.terms.occupationId === 'film-director';
   const music = MUSIC.has(e.terms.occupationId);
   if (
-    (id === 'audition' && (directing || music)) ||
+    (id === 'audition' && (directing || music || e.terms.occupationId === 'actor')) ||
     (id === 'shootShortFilm' && !directing) ||
     ((id === 'playGig' || id === 'releaseSingle') && !music)
   )

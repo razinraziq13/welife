@@ -25,6 +25,17 @@ import {
 } from '../career/jobs';
 import { WORK_ACTION_IDS, WorkActionError, performWorkAction } from '../career/workActions';
 import {
+  ActingError,
+  PRODUCTION_ACTIONS,
+  answerRenewal,
+  audition,
+  changeAgent,
+  productionAction,
+  answerCastingOffer,
+  withdrawFromProduction,
+} from '../career/acting';
+import { AUDITION_APPROACHES } from '../state/schema';
+import {
   LifestyleError,
   findLifestyle,
   performLifestyle,
@@ -328,6 +339,15 @@ export const CommandSchema = z.discriminatedUnion('type', [
   command('buyVehicle', { offerId: EntityId }),
   command('sellVehicle', { accountId: EntityId }),
   command('buyLotteryTicket', {}),
+  command('audition', { listingId: EntityId, approach: z.enum(AUDITION_APPROACHES) }),
+  command('answerCasting', {
+    listingId: EntityId,
+    response: z.enum(['accept', 'negotiate', 'decline']),
+  }),
+  command('productionAction', { action: z.enum(PRODUCTION_ACTIONS) }),
+  command('leaveProduction', {}),
+  command('answerRenewal', { accept: z.boolean() }),
+  command('actingAgent', { sign: z.boolean() }),
   command('placeBet', { amountMinor: AmountMinor }),
   command('letProperty', { propertyId: EntityId, rentMinor: AmountMinor }),
   command('stopLetting', { propertyId: EntityId }),
@@ -474,6 +494,10 @@ const done = (key: string, params: Record<string, string | number> = {}): Comman
 
 /** Actions that need freedom of movement (unavailable in custody, spec §4 Law). */
 const BLOCKED_IN_CUSTODY = new Set<string>([
+  'audition',
+  'answerCasting',
+  'productionAction',
+  'actingAgent',
   'buyLotteryTicket',
   'placeBet',
   'meetPeople',
@@ -762,6 +786,23 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
     }
     case 'sellVehicle':
       return done('out.vehicleSold', { name: sellVehicle(world, player, cmd.accountId) });
+    case 'audition':
+      return done(`out.acting.${audition(world, player, cmd.listingId, cmd.approach).feedback}`);
+    case 'answerCasting':
+      return done(`out.acting.${answerCastingOffer(world, player, cmd.listingId, cmd.response)}`);
+    case 'productionAction':
+      return done(`out.acting.${productionAction(world, player, cmd.action)}`);
+    case 'leaveProduction':
+      withdrawFromProduction(world, player);
+      return done('out.acting.left');
+    case 'answerRenewal':
+      answerRenewal(world, player, cmd.accept);
+      return done(cmd.accept ? 'out.acting.renewed' : 'out.acting.leftShow');
+    case 'actingAgent': {
+      const yes = changeAgent(world, player, cmd.sign);
+      if (!cmd.sign) return done('out.acting.agentFired');
+      return done(yes ? 'out.acting.agentSigned' : 'out.acting.agentDeclined');
+    }
     case 'buyLotteryTicket': {
       const prize = buyLotteryTicket(world, player);
       return done(prize > 0n ? 'out.lotteryWon' : 'out.lotteryLost', { amount: prize.toString() });
@@ -934,6 +975,7 @@ const DOMAIN_ERRORS = [
   PropertyError,
   VehicleError,
   GamblingError,
+  ActingError,
   InvestmentError,
   MigrationError,
   HealthError,

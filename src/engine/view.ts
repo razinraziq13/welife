@@ -70,6 +70,7 @@ import {
   type Satisfaction,
   type WorkActionId,
 } from './career/workActions';
+import { projectActing } from './career/acting';
 import { ADULT_AGE, DATE_CLOSENESS, familyHomeFor } from './social/family';
 import { datingProfileTraits } from './social/datingPreferences';
 import {
@@ -239,6 +240,8 @@ export interface JobView {
 }
 
 export interface CareerView {
+  /** The acting career: casting board, production and filmography (E89). */
+  screen: ReturnType<typeof projectActing>;
   track: CareerTrack | null;
   /** Performing track: screen credits, the role auditions now offer, the current production. */
   acting: {
@@ -666,6 +669,7 @@ function careerView(world: World, c: Character, e: Employment | undefined): Care
   const track = e ? careerTrack(e) : null;
   return {
     track,
+    screen: projectActing(world, c),
     acting:
       track === 'performing'
         ? {

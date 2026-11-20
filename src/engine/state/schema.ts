@@ -307,6 +307,103 @@ export const AppearanceSchema = z
   .strict();
 export type Appearance = z.infer<typeof AppearanceSchema>;
 
+export const ACTING_FORMATS = ['film', 'tv'] as const;
+export const ACTING_GENRES = [
+  'drama',
+  'comedy',
+  'action',
+  'thriller',
+  'romance',
+  'family',
+] as const;
+export const PROMINENCES = ['background', 'supporting', 'lead'] as const;
+export const AUDITION_APPROACHES = ['restrained', 'energetic', 'comedic', 'character'] as const;
+export type AuditionApproach = (typeof AUDITION_APPROACHES)[number];
+
+/** What a production is, shared by casting listings, the current production and credits. */
+const ProductionInfo = {
+  title: z.string().min(1).max(60),
+  format: z.enum(ACTING_FORMATS),
+  genre: z.enum(ACTING_GENRES),
+  studio: z.string().min(1).max(60),
+  director: z.string().max(80),
+  character: z.string().min(1).max(80),
+  prominence: z.enum(PROMINENCES),
+  /** Script quality, 0-100. */
+  script: Percent,
+  budget: z.enum(['indie', 'studio']),
+};
+
+export const CastingListingSchema = z
+  .object({
+    id: Id,
+    ...ProductionInfo,
+    /** A past director who asked for you (their NPC id), else a new director. */
+    directorId: Id.nullable(),
+    /** Filming months (TV: one season). */
+    months: z.number().int().min(1).max(6),
+    /** Film: the whole fee; TV: pay per month of filming. */
+    payMinor: NonNegativeMinor,
+    deadlineTick: Tick,
+    status: z.enum(['open', 'offered', 'rejected']),
+    feedback: z.string().max(60).nullable(),
+    negotiated: z.boolean(),
+  })
+  .strict();
+
+export const ProductionSchema = z
+  .object({
+    ...ProductionInfo,
+    stage: z.enum(['rehearsal', 'filming', 'post', 'renewal']),
+    monthsLeft: z.number().int().min(0).max(12),
+    months: z.number().int().min(1).max(6),
+    payMinor: NonNegativeMinor,
+    earnedMinor: NonNegativeMinor,
+    /** Preparation for the role, 0-100. */
+    prep: Percent,
+    /** Publicity done for the release, 0-100. */
+    promo: Percent,
+    season: z.number().int().min(1).max(30),
+    castId: Id,
+    directorId: Id,
+    startTick: Tick,
+  })
+  .strict();
+
+export const CreditSchema = z
+  .object({
+    ...ProductionInfo,
+    startTick: Tick,
+    endTick: Tick,
+    seasons: z.number().int().min(1).max(30),
+    earnedMinor: NonNegativeMinor,
+    /** Critics' and audiences' verdicts, 0-100. */
+    critics: Percent,
+    audience: Percent,
+    award: z.enum(['nominated', 'won']).nullable(),
+    coStar: z.string().max(80),
+  })
+  .strict();
+
+export const ActingSchema = z
+  .object({
+    /** How widely known you are, 0-1000 (industry reputation is `career.reputation`). */
+    recognition: Fixed,
+    /** How strong critics think your completed work is, 0-1000. */
+    critics: Fixed,
+    board: z.array(CastingListingSchema).max(8),
+    production: ProductionSchema.nullable(),
+    filmography: z.array(CreditSchema).max(80),
+    agent: z
+      .object({ id: Id, name: z.string().max(80), commissionPct: Percent, skill: Percent })
+      .strict()
+      .nullable(),
+  })
+  .strict();
+export type ActingState = z.infer<typeof ActingSchema>;
+export type CastingListing = z.infer<typeof CastingListingSchema>;
+export type Production = z.infer<typeof ProductionSchema>;
+
 export const IdentitySchema = z
   .object({
     firstName: z.string().min(1).max(40),
@@ -537,6 +634,8 @@ export const CharacterSchema = z
           })
           .strict()
           .optional(),
+        /** The acting career (decision E89): casting board, production, filmography. */
+        acting: ActingSchema.optional(),
       })
       .strict()
       .default({ reputation: 200, specialty: null, specialtyProgress: 0 }),
