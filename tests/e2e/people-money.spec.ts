@@ -250,9 +250,13 @@ test.describe('companies and property (M5)', () => {
 
     await page.goto(`/play/${saveId}/finance`);
     await expect(page.getByRole('heading', { level: 2, name: 'Investments' })).toBeVisible();
-    await page.getByRole('textbox', { name: /^Invest [(]/ }).fill('500');
-    await page.getByRole('button', { name: 'Buy', exact: true }).click();
-    await expect(page.getByText('Investment bought.')).toBeVisible();
+    await page.getByText('Bitcoin', { exact: true }).click();
+    await page.getByLabel(/^Buy Bitcoin/).fill('500');
+    await page
+      .getByRole('region', { name: 'Investments', exact: true })
+      .getByRole('button', { name: 'Buy', exact: true })
+      .click();
+    await expect(page.getByTestId('feedback')).toContainText('Investment bought');
   });
 });
 
