@@ -1,24 +1,24 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { CarFront, Helicopter, Plane } from 'lucide-react';
+import { Car, CarFront, Helicopter, Home, Plane } from 'lucide-react';
 import type { VehicleKind } from '@engine/state/schema';
 import type { GameView } from '@engine/view';
 import { Money } from '@app/components/Money';
 import { PageHeader } from '@app/components/PageHeader';
 import { buttonVariants } from '@app/components/ui/button';
 import { Card } from '@app/components/ui/card';
-import { ChoiceGroup } from '@app/components/ui/choice-group';
+import { SegmentBar } from '@app/components/ui/segment-bar';
 import { ConfirmDialog } from '@app/components/ui/confirm-dialog';
 import { useGameStore } from '@app/stores/gameStore';
 import { ActionButton } from '../ActionButton';
 import { PropertyListingsCard } from '../screens/PropertyScreen';
 
 const categories = [
-  { value: 'houses', label: 'Property' },
-  { value: 'used', label: 'Used cars' },
-  { value: 'new', label: 'New cars' },
-  { value: 'aeroplane', label: 'Aeroplanes' },
-  { value: 'helicopter', label: 'Helicopters' },
+  { value: 'houses', label: 'Property', icon: Home },
+  { value: 'used', label: 'Used cars', icon: CarFront },
+  { value: 'new', label: 'New cars', icon: Car },
+  { value: 'aeroplane', label: 'Aeroplanes', icon: Plane },
+  { value: 'helicopter', label: 'Helicopters', icon: Helicopter },
 ] as const;
 type Category = (typeof categories)[number]['value'];
 type Offer = GameView['enterprise']['vehicles']['offers'][number];
@@ -209,13 +209,7 @@ export function ShoppingTab() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title="Shopping" />
-      <ChoiceGroup
-        legend="Shop for"
-        name="shopping-category"
-        value={category}
-        onChange={setCategory}
-        options={categories}
-      />
+      <SegmentBar label="Shop for" items={categories} value={category} onChange={setCategory} />
       {category === 'houses' ? (
         <>
           <PropertyListingsCard view={view} />
