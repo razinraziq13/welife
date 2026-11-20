@@ -63,6 +63,13 @@ export const router = createBrowserRouter(
                 import('@app/play/tabs/FinanceTab').then((m) => ({ Component: m.FinanceTab })),
             },
             {
+              path: 'finance/investments/:category?/:asset?',
+              lazy: () =>
+                import('@app/play/screens/InvestmentsScreen').then((m) => ({
+                  Component: m.InvestmentsScreen,
+                })),
+            },
+            {
               path: 'social',
               lazy: () =>
                 import('@app/play/tabs/SocialTab').then((m) => ({ Component: m.SocialTab })),

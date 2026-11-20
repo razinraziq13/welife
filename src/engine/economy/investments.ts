@@ -1,7 +1,7 @@
 import { sortedValues } from '../core/data';
 import { divRound, monthlyInterest } from '../core/money';
 import { addNotification, ageYears } from '../core/world';
-import type { Account, Character, Fund, World } from '../state/schema';
+import { FUNDS, type Account, type Character, type Fund, type World } from '../state/schema';
 import { currencyFor } from './finance';
 import { balanceOf, categoryAccount, openAccount, post } from './ledger';
 
@@ -12,7 +12,13 @@ import { balanceOf, categoryAccount, openAccount, post } from './ledger';
  */
 
 export type InvestmentRejection =
-  'tooYoung' | 'noAccount' | 'invalid' | 'insufficientFunds' | 'nothingToSell' | 'noBond';
+  | 'tooYoung'
+  | 'noAccount'
+  | 'invalid'
+  | 'insufficientFunds'
+  | 'nothingToSell'
+  | 'noBond'
+  | 'emptyPortfolio';
 
 export const INVESTMENT_MESSAGES: Record<InvestmentRejection, string> = {
   tooYoung: 'You must be 18 or older to invest.',
@@ -21,6 +27,7 @@ export const INVESTMENT_MESSAGES: Record<InvestmentRejection, string> = {
   insufficientFunds: 'There is not enough money in your current account.',
   nothingToSell: 'You do not hold that much in this fund.',
   noBond: 'You do not hold that bond.',
+  emptyPortfolio: 'You have no investments to sell.',
 };
 
 export class InvestmentError extends Error {
@@ -174,6 +181,19 @@ export function sellBond(world: World, c: Character, accountId: string): void {
     });
   post(world, 'tx.bondSold', entries);
   account.closedTick = world.tick;
+}
+
+/** Command execution commits these sales together from a single copy of the world. */
+export function liquidateInvestments(world: World, c: Character): void {
+  const positions = FUNDS.flatMap((fund) => {
+    const amount = fundAccount(world, c.id, fund)?.balance ?? 0n;
+    return amount > 0n ? [{ fund, amount }] : [];
+  });
+  const bonds = playerBonds(world, c.id);
+  if (positions.length === 0 && bonds.length === 0) throw new InvestmentError('emptyPortfolio');
+
+  for (const { fund, amount } of positions) sellFund(world, c, fund, amount);
+  for (const bond of bonds) sellBond(world, c, bond.id);
 }
 
 /** Monthly: each bond pays its interest into the owner's current account and repays at the end. */

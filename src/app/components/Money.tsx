@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { formatMoney, formatSignedMoney, toMinorString, type CurrencyLike } from '@app/i18n/format';
 import { cn } from '@app/lib/cn';
 import { Button } from './ui/button';
@@ -39,6 +39,7 @@ export function AmountForm({
   submitLabel,
   disabled = false,
   disabledReason,
+  preview,
   onSubmit,
 }: {
   label: string;
@@ -46,12 +47,14 @@ export function AmountForm({
   submitLabel: string;
   disabled?: boolean;
   disabledReason?: string | null;
+  preview?: (amountMinor: bigint) => ReactNode;
   onSubmit: (minor: string) => Promise<unknown>;
 }) {
   const id = useId();
   const errorId = useId();
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const previewMinor = preview && !disabled ? toMinorString(value, currency) : null;
   return (
     <form
       className="flex flex-wrap items-end gap-2"
@@ -97,6 +100,9 @@ export function AmountForm({
         </p>
       )}
       {disabled && disabledReason && <p className="w-full text-xs text-muted">{disabledReason}</p>}
+      {preview && previewMinor && (
+        <p className="w-full text-sm text-muted">{preview(BigInt(previewMinor))}</p>
+      )}
     </form>
   );
 }
