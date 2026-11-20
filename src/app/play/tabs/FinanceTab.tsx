@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { Link } from 'react-router';
-import { ShoppingBag } from 'lucide-react';
+import { ChartLine, Home, Landmark, ShoppingBag, Wallet } from 'lucide-react';
 import { amortisedPayment } from '@engine/core/money';
 import { HOME_SIZES, LIFESTYLES } from '@engine/state/schema';
 import type { GameView } from '@engine/view';
@@ -10,6 +10,7 @@ import { AmountForm, Money } from '@app/components/Money';
 import { Button, buttonVariants } from '@app/components/ui/button';
 import { Card } from '@app/components/ui/card';
 import { ChoiceGroup } from '@app/components/ui/choice-group';
+import { cn } from '@app/lib/cn';
 import { ConfirmDialog } from '@app/components/ui/confirm-dialog';
 import { t } from '@app/i18n/en';
 import {
@@ -832,11 +833,14 @@ function AssetsLinksCard({ view, base }: { view: GameView; base: string }) {
 }
 
 const SECTIONS = [
-  { value: 'accounts', label: 'Accounts' },
-  { value: 'living', label: 'Living' },
-  { value: 'bank', label: 'Bank' },
-  { value: 'investments', label: 'Investments' },
+  { value: 'accounts', label: 'Accounts', icon: Wallet },
+  { value: 'living', label: 'Living', icon: Home },
+  { value: 'bank', label: 'Bank', icon: Landmark },
+  { value: 'investments', label: 'Investments', icon: ChartLine },
 ] as const;
+/** Same segmented bar as the Investments screen. */
+const SEGMENT =
+  'flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-0.5 text-xs font-medium sm:flex-row sm:gap-2 sm:px-2 sm:text-sm';
 
 /** Money, one section at a time: accounts, living costs, loans and debt, investments. */
 export function FinanceTab() {
@@ -850,20 +854,37 @@ export function FinanceTab() {
         title="Money"
         description="Every amount here comes from a balanced ledger of real transactions in your life."
       />
-      <ChoiceGroup
-        legend="Show"
-        name="money-section"
-        value={section}
-        onChange={setSection}
-        options={SECTIONS}
-      />
-      <Link
-        to={`/play/${session.saveId}/shopping`}
-        className={buttonVariants({ variant: 'secondary', className: 'self-start' })}
+      <nav
+        aria-label="Money sections"
+        className="grid grid-cols-5 rounded-xl border border-border bg-surface p-1"
       >
-        <ShoppingBag aria-hidden="true" className="size-4" />
-        Shopping: homes, cars and aircraft
-      </Link>
+        {SECTIONS.map(({ value, label, icon: Icon }) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={section === value}
+            onClick={() => {
+              setSection(value);
+            }}
+            className={cn(
+              SEGMENT,
+              section === value
+                ? 'bg-primary-soft font-semibold text-fg'
+                : 'text-muted hover:bg-surface-2 hover:text-fg',
+            )}
+          >
+            <Icon aria-hidden="true" className="size-4 shrink-0" />
+            {label}
+          </button>
+        ))}
+        <Link
+          to={`/play/${session.saveId}/shopping`}
+          className={cn(SEGMENT, 'text-muted hover:bg-surface-2 hover:text-fg')}
+        >
+          <ShoppingBag aria-hidden="true" className="size-4 shrink-0" />
+          Shopping
+        </Link>
+      </nav>
       {section === 'accounts' && (
         <>
           <OverviewCard view={view} />

@@ -320,7 +320,7 @@ export function InvestmentsScreen() {
         to={finance}
         className="inline-flex min-h-11 w-fit items-center gap-2 px-1 text-sm font-medium text-primary hover:underline"
       >
-        <ArrowLeft aria-hidden="true" className="size-4" /> Back to Finance
+        <ArrowLeft aria-hidden="true" className="size-4" /> Back to Money
       </Link>
       <PageHeader title={selected && unlocked ? t(`fund.${selected.id}`) : 'Investments'} />
       {unlocked ? (
