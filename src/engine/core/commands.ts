@@ -34,7 +34,26 @@ import {
   answerCastingOffer,
   withdrawFromProduction,
 } from '../career/acting';
-import { AUDITION_APPROACHES } from '../state/schema';
+import {
+  AUDITION_APPROACHES,
+  MUSIC_GENRES,
+  PROMO_LEVELS,
+  RELEASE_TYPES,
+  SONG_MOODS,
+  STUDIOS,
+} from '../state/schema';
+import {
+  MusicError,
+  abandonSong,
+  answerLabel,
+  musicOf,
+  playShow,
+  recordSong,
+  rehearseLive,
+  releaseMusic,
+  startSong,
+  writeSession,
+} from '../career/music';
 import {
   LifestyleError,
   findLifestyle,
@@ -348,6 +367,25 @@ export const CommandSchema = z.discriminatedUnion('type', [
   command('leaveProduction', {}),
   command('answerRenewal', { accept: z.boolean() }),
   command('actingAgent', { sign: z.boolean() }),
+  command('startSong', {
+    title: z.string().trim().min(1).max(60),
+    genre: z.enum(MUSIC_GENRES),
+    mood: z.enum(SONG_MOODS),
+    coWrite: z.boolean(),
+  }),
+  command('writeSong', { songId: EntityId }),
+  command('abandonSong', { songId: EntityId }),
+  command('recordSong', { songId: EntityId, studio: z.enum(STUDIOS) }),
+  command('releaseMusic', {
+    title: z.string().trim().max(60),
+    kind: z.enum(RELEASE_TYPES),
+    viaLabel: z.boolean(),
+    promo: z.enum(PROMO_LEVELS),
+  }),
+  command('rehearseLive', {}),
+  command('playShow', { venueId: EntityId }),
+  command('answerLabel', { response: z.enum(['accept', 'negotiate', 'decline']) }),
+  command('setMusicAutopilot', { value: z.boolean() }),
   command('placeBet', { amountMinor: AmountMinor }),
   command('letProperty', { propertyId: EntityId, rentMinor: AmountMinor }),
   command('stopLetting', { propertyId: EntityId }),
@@ -494,6 +532,12 @@ const done = (key: string, params: Record<string, string | number> = {}): Comman
 
 /** Actions that need freedom of movement (unavailable in custody, spec §4 Law). */
 const BLOCKED_IN_CUSTODY = new Set<string>([
+  'startSong',
+  'writeSong',
+  'recordSong',
+  'releaseMusic',
+  'rehearseLive',
+  'playShow',
   'audition',
   'answerCasting',
   'productionAction',
@@ -803,6 +847,43 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
       if (!cmd.sign) return done('out.acting.agentFired');
       return done(yes ? 'out.acting.agentSigned' : 'out.acting.agentDeclined');
     }
+    case 'startSong':
+      return done('out.music.started', {
+        title: startSong(world, player, cmd.title, cmd.genre, cmd.mood, cmd.coWrite).title,
+      });
+    case 'writeSong': {
+      const song = writeSession(world, player, cmd.songId);
+      return done(song.progress >= 100 ? 'out.music.finished' : 'out.music.wrote', {
+        title: song.title,
+        progress: song.progress,
+      });
+    }
+    case 'abandonSong':
+      abandonSong(player, cmd.songId);
+      return done('out.music.abandoned');
+    case 'recordSong':
+      return done('out.music.recording', {
+        title: recordSong(world, player, cmd.songId, cmd.studio).title,
+      });
+    case 'releaseMusic':
+      return done('out.music.released', {
+        title: releaseMusic(world, player, cmd.title, cmd.kind, cmd.viaLabel, cmd.promo).title,
+      });
+    case 'rehearseLive':
+      return done('out.music.rehearsed', { prep: rehearseLive(world, player) });
+    case 'playShow': {
+      const r = playShow(world, player, cmd.venueId);
+      return done(r.net >= 0n ? 'out.music.showProfit' : 'out.music.showLoss', {
+        venue: r.venue,
+        attendance: r.attendance,
+        amount: (r.net >= 0n ? r.net : -r.net).toString(),
+      });
+    }
+    case 'answerLabel':
+      return done(`out.music.${answerLabel(world, player, cmd.response)}`);
+    case 'setMusicAutopilot':
+      musicOf(player).autopilot = cmd.value;
+      return done(cmd.value ? 'out.music.autopilotOn' : 'out.music.autopilotOff');
     case 'buyLotteryTicket': {
       const prize = buyLotteryTicket(world, player);
       return done(prize > 0n ? 'out.lotteryWon' : 'out.lotteryLost', { amount: prize.toString() });
@@ -976,6 +1057,7 @@ const DOMAIN_ERRORS = [
   VehicleError,
   GamblingError,
   ActingError,
+  MusicError,
   InvestmentError,
   MigrationError,
   HealthError,

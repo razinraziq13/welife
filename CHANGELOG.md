@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Music career:** musicians write original songs over several sessions (alone or co-writing with another musician for half the credit), record them at a home, independent or professional studio, and release singles, EPs or albums independently or through a label (advance, recoupment, royalty share, releases owed, exclusive). Releases earn capped monthly royalties while they last, compete on a monthly chart with fictional artists and can win a Golden Note; live shows come from a venue board that grows with your fans. An optional simulated mode runs routine music work each month (Career, Music).
+
 - **Acting: industry outlook.** One genre is in fashion each year: more castings come in it and its releases draw bigger audiences, but fashion changes yearly.
 
 - **Acting: typecasting and legacy.** With three or more credits mostly in one genre, casting knows you for it: those parts are easier to win, others harder. A person's filmography and awards show on their profile, also after they die.

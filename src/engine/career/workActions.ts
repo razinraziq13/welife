@@ -169,10 +169,10 @@ export function workActionBlock(
   if (
     (id === 'audition' && (directing || music || e.terms.occupationId === 'actor')) ||
     (id === 'shootShortFilm' && !directing) ||
-    ((id === 'playGig' || id === 'releaseSingle') && !music)
+    id === 'playGig' ||
+    id === 'releaseSingle'
   )
     return 'otherTrack';
-  if (id === 'releaseSingle' && c.career.contract) return 'releasing';
   if (id === 'audition' && c.career.contract) return 'underContract';
   if (world.activity.tick === world.tick && (world.activity.counts[countKey(id)] ?? 0) > 0)
     return 'doneThisMonth';
@@ -182,7 +182,6 @@ export function workActionBlock(
   if (id === 'studySpecialty' && c.career.specialty !== null) return 'specialised';
   if (id === 'upskillCourse' && !canPay(world, c, courseFee(world, c))) return 'cannotAfford';
   if (id === 'shootShortFilm' && !canPay(world, c, filmBudget(world, c))) return 'cannotAfford';
-  if (id === 'releaseSingle' && !canPay(world, c, studioBudget(world, c))) return 'cannotAfford';
   return null;
 }
 

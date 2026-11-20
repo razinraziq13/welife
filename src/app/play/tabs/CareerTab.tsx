@@ -9,7 +9,16 @@ import { ChoiceGroup } from '@app/components/ui/choice-group';
 import { ConfirmDialog } from '@app/components/ui/confirm-dialog';
 import { Switch } from '@app/components/ui/switch';
 import { SegmentBar } from '@app/components/ui/segment-bar';
-import { Briefcase, Clapperboard, GraduationCap, Search, Signpost, Sparkles } from 'lucide-react';
+import {
+  Briefcase,
+  Clapperboard,
+  GraduationCap,
+  Music,
+  Search,
+  Signpost,
+  Sparkles,
+} from 'lucide-react';
+import { MusicSection } from './MusicSection';
 import { ActingSection } from './ActingSection';
 import { t } from '@app/i18n/en';
 import { clubName, formatShortMonth, qualificationName } from '@app/i18n/format';
@@ -923,6 +932,7 @@ const SECTIONS = [
   { value: 'jobapp', label: 'Job App', icon: Search },
   { value: 'paths', label: 'Paths', icon: Signpost },
   { value: 'acting', label: 'Acting', icon: Clapperboard },
+  { value: 'music', label: 'Music', icon: Music },
   { value: 'study', label: 'Study', icon: GraduationCap },
   { value: 'skills', label: 'Skills', icon: Sparkles },
 ] as const;
@@ -938,11 +948,21 @@ export function CareerTab() {
   // Open where the action is: a waiting offer, else your job, else school.
   const offer = view.work.applications.some((a) => a.status === 'offered');
   const screen = view.work.career.screen;
+  const music = view.work.career.music;
   const section: Section =
-    picked ?? (!working ? 'study' : offer ? 'jobapp' : screen?.isActor ? 'acting' : 'job');
-  // Acting appears once you take the actor path (and stays for your filmography).
+    picked ??
+    (!working
+      ? 'study'
+      : offer
+        ? 'jobapp'
+        : screen?.isActor
+          ? 'acting'
+          : music?.isMusician
+            ? 'music'
+            : 'job');
+  // Acting and Music appear once you take that path (and stay for your record).
   const items = working
-    ? SECTIONS.filter((x) => x.value !== 'acting' || screen)
+    ? SECTIONS.filter((x) => (x.value !== 'acting' || screen) && (x.value !== 'music' || music))
     : SECTIONS.filter((x) => x.value === 'study' || x.value === 'skills');
   return (
     <div className="flex flex-col gap-4">
@@ -987,6 +1007,7 @@ export function CareerTab() {
         </>
       )}
       {working && section === 'acting' && screen && <ActingSection view={view} screen={screen} />}
+      {working && section === 'music' && music && <MusicSection music={music} />}
       {working && section === 'paths' && <PathsCard view={view} base={`/play/${session.saveId}`} />}
       {section === 'skills' && (
         <>

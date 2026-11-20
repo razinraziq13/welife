@@ -41,6 +41,8 @@ export async function adultSaveJson(
     condition?: ConditionKind;
     /** Start the actor path (skills raised to qualify) and play a month for castings. */
     actor?: boolean;
+    /** Start the musician path (music skill raised to qualify) and play a month. */
+    musician?: boolean;
   } = {},
 ): Promise<string> {
   let state: SimState = {
@@ -96,6 +98,12 @@ export async function adultSaveJson(
       p.career.reputation = 800;
     }
     state = send(state, { type: 'startCreativePath', occupationId: 'actor' });
+    state = month(state);
+  }
+  if (options.musician) {
+    const p = player();
+    if (p) p.skills.music = 700;
+    state = send(state, { type: 'startCreativePath', occupationId: 'musician' });
     state = month(state);
   }
   if (options.age !== undefined) {

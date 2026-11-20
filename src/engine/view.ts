@@ -71,6 +71,7 @@ import {
   type WorkActionId,
 } from './career/workActions';
 import { knownFor, projectActing } from './career/acting';
+import { projectMusic } from './career/music';
 import { ADULT_AGE, DATE_CLOSENESS, familyHomeFor } from './social/family';
 import { datingProfileTraits } from './social/datingPreferences';
 import {
@@ -242,6 +243,8 @@ export interface JobView {
 export interface CareerView {
   /** The acting career: casting board, production and filmography (E89). */
   screen: ReturnType<typeof projectActing>;
+  /** The music career: songs, releases, label, live shows and the chart (E90). */
+  music: ReturnType<typeof projectMusic>;
   track: CareerTrack | null;
   /** Performing track: screen credits, the role auditions now offer, the current production. */
   acting: {
@@ -670,6 +673,7 @@ function careerView(world: World, c: Character, e: Employment | undefined): Care
   return {
     track,
     screen: projectActing(world, c),
+    music: projectMusic(world, c),
     acting:
       track === 'performing'
         ? {

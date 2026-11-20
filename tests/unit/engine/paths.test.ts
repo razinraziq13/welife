@@ -48,28 +48,15 @@ describe('Career paths: start freelance as musician, actor or director', () => {
     expect(checkLedger(shot.state.world)).toEqual([]);
   }, 60_000);
 
-  it('musicians play paid gigs and release singles that pay royalties', () => {
-    let state = checked(adult('paths-music', 800), {
+  it('musicians make music from Career, Music, not the one-click gig and single', () => {
+    const state = checked(adult('paths-music', 800), {
       type: 'startCreativePath',
       occupationId: 'musician',
     }).state;
-    const p = () => playerOf(state);
-    expect(workActionBlock(state.world, p(), 'audition')).toBe('otherTrack');
-    const gig = checked(state, { type: 'workAction', actionId: 'playGig' });
-    expect(gig.outcome.status).toBe('applied');
-    state = advanceMonths(gig.state, 1);
-    for (let i = 0; i < 24 && !p().career.contract; i++) {
-      p().stats.energy = 1000;
-      state = checked(state, { type: 'workAction', actionId: 'releaseSingle' }).state;
-      if (!p().career.contract) state = advanceMonths(state, 1);
-    }
-    expect(p().career.contract?.kind).toBe('single');
-    expect(workActionBlock(state.world, p(), 'releaseSingle')).toBe('releasing');
-    const next = advanceMonths(state, 1);
-    const royalties = Object.values(next.world.ledger.journal)
-      .flat()
-      .filter((t) => t.kind === 'tx.royalties');
-    expect(royalties.length).toBe(1);
-    expect(checkLedger(next.world)).toEqual([]);
+    const p = playerOf(state);
+    expect(workActionBlock(state.world, p, 'audition')).toBe('otherTrack');
+    expect(workActionBlock(state.world, p, 'playGig')).toBe('otherTrack');
+    expect(workActionBlock(state.world, p, 'releaseSingle')).toBe('otherTrack');
+    expect(projectGame(state).work.career.music?.isMusician).toBe(true);
   }, 60_000);
 });

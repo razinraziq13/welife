@@ -404,6 +404,123 @@ export type ActingState = z.infer<typeof ActingSchema>;
 export type CastingListing = z.infer<typeof CastingListingSchema>;
 export type Production = z.infer<typeof ProductionSchema>;
 
+export const MUSIC_GENRES = [
+  'pop',
+  'rock',
+  'hiphop',
+  'jazz',
+  'electronic',
+  'folk',
+  'classical',
+  'country',
+  'rnb',
+] as const;
+export const SONG_MOODS = ['upbeat', 'melancholy', 'romantic', 'defiant', 'dreamy'] as const;
+export const STUDIOS = ['home', 'independent', 'professional'] as const;
+export const RELEASE_TYPES = ['single', 'ep', 'album'] as const;
+export const VENUE_KINDS = ['cafe', 'club', 'festival', 'theatre', 'arena'] as const;
+export const PROMO_LEVELS = ['none', 'small', 'big'] as const;
+
+export const SongSchema = z
+  .object({
+    id: Id,
+    title: z.string().min(1).max(60),
+    genre: z.enum(MUSIC_GENRES),
+    mood: z.enum(SONG_MOODS),
+    /** Co-writer (an NPC) and their name as credited; null when written alone. */
+    coWriterId: Id.nullable(),
+    coWriter: z.string().max(80),
+    /** The player's songwriting share in basis points; the co-writer has the rest. */
+    shareBp: z.number().int().min(0).max(10_000),
+    progress: Percent,
+    quality: Percent,
+    /** Recording quality once recorded, 0-100. */
+    production: Percent,
+    status: z.enum(['draft', 'recording', 'recorded', 'released']),
+    studio: z.enum(STUDIOS).nullable(),
+    createdTick: Tick,
+  })
+  .strict();
+
+export const MusicReleaseSchema = z
+  .object({
+    id: Id,
+    title: z.string().min(1).max(60),
+    type: z.enum(RELEASE_TYPES),
+    songIds: z.array(Id).min(1).max(8),
+    /** The label that put it out (kept after the deal ends); null when independent. */
+    label: z.string().max(60).nullable(),
+    /** The artist's share of royalties after any label, percent. */
+    artistPct: Percent,
+    tick: Tick,
+    appeal: Percent,
+    critics: Percent,
+    /** How much it is being listened to now, 0-100; decays month by month. */
+    momentum: Percent,
+    /** Best chart position (1-10); 0 if it never charted. */
+    peakRank: z.number().int().min(0).max(10),
+    grossMinor: NonNegativeMinor,
+    paidMinor: NonNegativeMinor,
+    award: z.enum(['nominated', 'won']).nullable(),
+  })
+  .strict();
+
+export const VenueOfferSchema = z
+  .object({
+    id: Id,
+    venue: z.string().min(1).max(60),
+    kind: z.enum(VENUE_KINDS),
+    capacity: z.number().int().min(1).max(100_000),
+    ticketMinor: NonNegativeMinor,
+    /** Sound, crew and travel, paid when you play. */
+    costMinor: NonNegativeMinor,
+    minSongs: z.number().int().min(1).max(12),
+    minFans: z.number().int().min(0),
+  })
+  .strict();
+
+export const LabelDealSchema = z
+  .object({
+    name: z.string().min(1).max(60),
+    artistPct: Percent,
+    advanceMinor: NonNegativeMinor,
+    releasesOwed: z.number().int().min(0).max(5),
+  })
+  .strict();
+
+export const MusicSchema = z
+  .object({
+    songs: z.array(SongSchema).max(60),
+    releases: z.array(MusicReleaseSchema).max(60),
+    fans: z.number().int().min(0).max(100_000_000),
+    /** Wider public recognition and critics' view of your work, 0-1000. */
+    recognition: Fixed,
+    critics: Fixed,
+    /** Readiness for live shows, 0-100. */
+    prep: Percent,
+    label: LabelDealSchema.extend({ unrecoupedMinor: NonNegativeMinor, endTick: Tick })
+      .strict()
+      .nullable(),
+    labelOffer: LabelDealSchema.extend({ expiresTick: Tick, negotiated: z.boolean() })
+      .strict()
+      .nullable(),
+    venues: z.array(VenueOfferSchema).max(5),
+    /** Last month's chart, top 10. */
+    chart: z
+      .array(
+        z
+          .object({ title: z.string().max(60), artist: z.string().max(80), player: z.boolean() })
+          .strict(),
+      )
+      .max(10),
+    /** Simulated mode: routine writing, recording, releasing and shows run themselves. */
+    autopilot: z.boolean(),
+  })
+  .strict();
+export type MusicState = z.infer<typeof MusicSchema>;
+export type Song = z.infer<typeof SongSchema>;
+export type MusicRelease = z.infer<typeof MusicReleaseSchema>;
+
 export const IdentitySchema = z
   .object({
     firstName: z.string().min(1).max(40),
@@ -636,6 +753,8 @@ export const CharacterSchema = z
           .optional(),
         /** The acting career (decision E89): casting board, production, filmography. */
         acting: ActingSchema.optional(),
+        /** The music career (decision E90): songs, releases, label, live shows. */
+        music: MusicSchema.optional(),
       })
       .strict()
       .default({ reputation: 200, specialty: null, specialtyProgress: 0 }),
