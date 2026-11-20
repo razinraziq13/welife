@@ -129,6 +129,10 @@ export const LIFESTYLE: readonly LifestyleDefinition[] = [
   def('call-relatives', 'family', 8, 1, 5, 0, { recurring: true, freeInCustody: true }),
   def('host-party', 'social', 18, 6, 60, 5, { oncePerMonth: true }),
   def('community-group', 'social', 14, 4, 30, 0, { recurring: true }),
+  // Volunteering (Career Expansion: political track record). Builds community standing.
+  def('food-bank', 'social', 16, 5, 40, 0, { recurring: true }),
+  def('clinic-volunteer', 'social', 16, 4, 30, 0, { recurring: true }),
+  def('neighbourhood-cleanup', 'social', 12, 4, 50, 0, { oncePerMonth: true }),
   def('write-novel', 'projects', 14, 8, 50, 0, {
     recurring: true,
     freeInCustody: true,
@@ -293,6 +297,11 @@ function finishProject(world: World, c: Character, id: string): LifestyleResult 
 }
 
 /** Performs a lifestyle activity. Throws LifestyleError when it is unavailable. */
+/** Adds to community standing (0-1000), which gives a campaign a head start. */
+function community(c: Character, gain: number): void {
+  c.career.community = clamp((c.career.community ?? 0) + gain, 0, 1000);
+}
+
 export function performLifestyle(world: World, id: string): LifestyleResult {
   const c = activeCharacter(world);
   ensureActivityMonth(world);
@@ -451,6 +460,24 @@ export function performLifestyle(world: World, id: string): LifestyleResult {
       stat('happiness', 30);
       changeNeed(c, 'social', 150);
       return done(friends > 0 ? 'life.host-party' : 'life.host-party.quiet', { count: friends });
+    }
+    case 'food-bank':
+      community(c, scale(40));
+      stat('happiness', 20);
+      changeSkill(world, c, 'socializing', scale(10), cause);
+      return done('life.food-bank');
+    case 'clinic-volunteer':
+      community(c, scale(30));
+      changeSkill(world, c, 'socializing', scale(15), cause);
+      return done('life.clinic-volunteer');
+    case 'neighbourhood-cleanup': {
+      // Organising goes better with social skill; a poor turnout still counts a little.
+      const turnout =
+        withRng(world, 'social', (rng) => rng.int(100)) <
+        clamp(40 + Math.floor(c.skills.socializing / 20), 40, 90);
+      community(c, turnout ? 60 : 15);
+      stat('reputation', turnout ? 20 : 0);
+      return done(turnout ? 'life.neighbourhood-cleanup' : 'life.neighbourhood-cleanup.quiet');
     }
     case 'community-group':
       changeSkill(world, c, 'socializing', scale(15), cause);

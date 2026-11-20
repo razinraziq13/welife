@@ -202,6 +202,8 @@ export interface CivicView {
   politics: {
     rules: Institutions['politics'];
     voter: boolean;
+    /** Community standing from volunteering, 0-1000 (adds early campaign support). */
+    communityStanding: number;
     offices: {
       level: OfficeLevel;
       title: string;
@@ -484,6 +486,7 @@ export function projectCivic(world: World, c: Character): CivicView {
     },
     politics: {
       rules: politicsRules,
+      communityStanding: c.career.community ?? 0,
       voter:
         politicsRules.voteAge !== null &&
         age >= politicsRules.voteAge &&

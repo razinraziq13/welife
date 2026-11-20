@@ -251,7 +251,15 @@ export function seekOffice(world: World, c: Character, level: OfficeLevel): Poli
     level,
     electionTick:
       world.tick + (office.selection === 'election' ? CAMPAIGN_MONTHS[level] : APPOINTMENT_MONTHS),
-    support: clamp(150 + Math.floor(c.stats.reputation / 4) + family, 0, 1000),
+    // Volunteering pays off: community standing adds up to 100 points of early support.
+    support: clamp(
+      150 +
+        Math.floor(c.stats.reputation / 4) +
+        family +
+        Math.floor((c.career.community ?? 0) / 10),
+      0,
+      1000,
+    ),
     spentMinor: fee,
     actions: 0,
   };

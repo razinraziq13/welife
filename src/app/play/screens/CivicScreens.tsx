@@ -1038,6 +1038,14 @@ export function PoliticsScreen() {
         />
         {p.rules.note && <p className="mt-2 text-sm text-muted">{p.rules.note}</p>}
       </Card>
+      <Card title="Community standing">
+        <StatBar label="Community standing" value={p.communityStanding} />
+        <p className="mt-2 text-sm text-muted">
+          Volunteering builds it: a food bank, a community clinic or a neighbourhood clean-up
+          (Activities, Social). When you run for office it gives your campaign up to 10 points of
+          early support, so a track record helps before you stand.
+        </p>
+      </Card>
       {parties.length > 0 && (
         <Card title="Party">
           {career?.partyName ? (

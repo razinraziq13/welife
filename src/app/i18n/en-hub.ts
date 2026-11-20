@@ -29,6 +29,9 @@ export const enHub: Record<string, string> = {
   'activity.call-relatives': 'Call relatives',
   'activity.host-party': 'Host a party',
   'activity.community-group': 'Join a community group',
+  'activity.food-bank': 'Volunteer at a food bank',
+  'activity.clinic-volunteer': 'Help at a community clinic',
+  'activity.neighbourhood-cleanup': 'Organise a neighbourhood clean-up',
   'activity.write-novel': 'Write a novel',
   'activity.build-app': 'Build an app',
   'activity.learn-language': 'Learn a language',
@@ -54,6 +57,9 @@ export const enHub: Record<string, string> = {
   'activityHint.call-relatives': 'Keeps distant family close.',
   'activityHint.host-party': 'Brings your friends together.',
   'activityHint.community-group': 'Meet people; builds your reputation.',
+  'activityHint.food-bank': 'Builds community standing, which helps a future campaign.',
+  'activityHint.clinic-volunteer': 'Builds community standing; learn what residents care about.',
+  'activityHint.neighbourhood-cleanup': 'Big boost to community standing if people turn up.',
   'activityHint.write-novel': 'A project over many months. Skilled writers get published.',
   'activityHint.build-app': 'A project over many months. Good apps earn money.',
   'activityHint.learn-language': 'A project over many months.',
@@ -82,6 +88,13 @@ export const enHub: Record<string, string> = {
   'life.host-party': 'Your party brought {count} friends together. A great night.',
   'life.host-party.quiet': 'You hosted a party. It was quiet, but you enjoyed it.',
   'life.community-group': 'You joined in with a local community group.',
+  'life.food-bank': 'You sorted and handed out food parcels. Residents and organisers noticed.',
+  'life.clinic-volunteer':
+    'You helped run a registration drive and heard what worries residents most.',
+  'life.neighbourhood-cleanup':
+    'Neighbours turned out and the street looks better. People will remember who organised it.',
+  'life.neighbourhood-cleanup.quiet':
+    'Only a few people came, but you made a start. Better turnout next time.',
   'life.driving-licence.passed': 'You passed your driving test!',
   'life.driving-licence.failed': 'You did not pass this time. You can try again next month.',
   'life.review-finances': 'You went through your finances. Knowing where you stand helps.',

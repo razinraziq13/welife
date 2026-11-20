@@ -522,6 +522,8 @@ export const CharacterSchema = z
         reputation: Fixed,
         specialty: z.string().max(40).nullable(),
         specialtyProgress: Percent,
+        /** Community standing from volunteering, 0-1000 (optional: older saves lack it). */
+        community: Fixed.optional(),
       })
       .strict()
       .default({ reputation: 200, specialty: null, specialtyProgress: 0 }),
