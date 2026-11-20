@@ -289,7 +289,8 @@ export type JobRejection =
   | 'noWorkRights'
   | 'limitedWorkRights'
   | 'inCustody'
-  | 'record';
+  | 'record'
+  | 'notLicensed';
 
 export const JOB_MESSAGES: Record<JobRejection, string> = {
   tooYoung: 'You are too young to work here.',
@@ -300,6 +301,8 @@ export const JOB_MESSAGES: Record<JobRejection, string> = {
   inSchool: 'While at school you can only take part-time or casual work.',
   unknownPosting: 'That job is no longer advertised.',
   notQualified: 'You do not have the qualifications this job requires.',
+  notLicensed:
+    'This role needs admission or registration: after the degree, finish supervised training as a trainee, then pass the licensing exam (Career, Cases). A serious unspent conviction suspends it.',
   notSkilled: 'Your skills are not yet strong enough for this job.',
   notExperienced: 'This role needs more experience in the industry.',
   alreadyApplied: 'You have already applied for this job.',
@@ -359,6 +362,11 @@ export function jobEligibility(world: World, c: Character, terms: JobTerms): Job
     return 'inSchool';
   if (c.finance?.retired) return 'retired';
   if (!meetsEducation(occupation, c.education.qualifications)) return 'notQualified';
+  if (
+    occupation.licence &&
+    (c.flags[occupation.licence] !== true || hasUnspentConviction(world, c.id, 'serious'))
+  )
+    return 'notLicensed';
   const skillAverage = Math.floor(
     occupation.skills.reduce((s, k) => s + c.skills[k], 0) / occupation.skills.length,
   );

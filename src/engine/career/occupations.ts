@@ -67,6 +67,8 @@ export interface OccupationDefinition {
   minExperienceMonths: number;
   /** Not advertised on the job board (family roles). */
   hidden: boolean;
+  /** Character flag a practitioner must hold (admission or registration; decision E93). */
+  licence: string | null;
 }
 
 type Row = [
@@ -78,7 +80,13 @@ type Row = [
   skills: SkillKey[],
   pay: number,
   maxLevel: number,
-  options?: { teen?: boolean; minSkill?: number; hidden?: boolean; minExperienceMonths?: number },
+  options?: {
+    teen?: boolean;
+    minSkill?: number;
+    hidden?: boolean;
+    minExperienceMonths?: number;
+    licence?: string;
+  },
 ];
 
 const ROWS: Row[] = [
@@ -715,7 +723,19 @@ const ROWS: Row[] = [
   // Legal services
   ['legal-assistant', 'Legal assistant', 'legal', 'diploma', 'law', ['reading', 'logic'], 100, 3],
   ['paralegal', 'Paralegal', 'legal', 'diploma', 'law', ['reading', 'logic'], 115, 3],
-  ['lawyer', 'Lawyer', 'legal', 'bachelor', 'law', ['reading', 'logic', 'socializing'], 220, 4],
+  [
+    'lawyer',
+    'Lawyer',
+    'legal',
+    'bachelor',
+    'law',
+    ['reading', 'logic', 'socializing'],
+    220,
+    4,
+    { licence: 'licence.law' },
+  ],
+  // Supervised training after the law degree, before admission (decision E93).
+  ['trainee-lawyer', 'Trainee lawyer', 'legal', 'bachelor', 'law', ['reading', 'logic'], 130, 0],
   ['court-clerk', 'Court clerk', 'legal', 'upperSecondary', null, ['reading', 'logic'], 95, 3],
   ['legal-translator', 'Legal translator', 'legal', 'bachelor', 'humanities', ['reading'], 130, 3],
   [
@@ -727,6 +747,7 @@ const ROWS: Row[] = [
     ['reading', 'business', 'logic'],
     300,
     4,
+    { licence: 'licence.law' },
   ],
   // Professional services
   [
@@ -1417,7 +1438,7 @@ const ROWS: Row[] = [
     ['reading', 'socializing'],
     840,
     0,
-    { minSkill: 570, minExperienceMonths: 120 },
+    { minSkill: 570, minExperienceMonths: 120, licence: 'licence.law' },
   ],
   [
     'school-principal',
@@ -1491,6 +1512,7 @@ export const OCCUPATIONS: readonly OccupationDefinition[] = ROWS.map(
     minSkill: options?.minSkill ?? 0,
     minExperienceMonths: options?.minExperienceMonths ?? 0,
     hidden: options?.hidden ?? false,
+    licence: options?.licence ?? null,
   }),
 );
 

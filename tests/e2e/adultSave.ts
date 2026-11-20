@@ -4,6 +4,8 @@ import { createWorld } from '../../src/engine/characters/create';
 import { execute, type Command, type SimState } from '../../src/engine/core/commands';
 import { getEvent } from '../../src/engine/content';
 import { diagnose } from '../../src/engine/civics/health';
+import { endEmployment, makeTerms, startEmployment } from '../../src/engine/career/jobs';
+import { getOccupation } from '../../src/engine/career/occupations';
 import type { ConditionKind } from '../../src/engine/state/schema';
 import { WeLifeDatabase } from '../../src/persistence/db';
 import { createSave } from '../../src/persistence/saves';
@@ -43,6 +45,8 @@ export async function adultSaveJson(
     actor?: boolean;
     /** Start the musician path (music skill raised to qualify) and play a month. */
     musician?: boolean;
+    /** Fixture only: a qualified, admitted professional in this role (e.g. lawyer). */
+    profession?: { occupationId: string; qualification: string; licence: string | null };
   } = {},
 ): Promise<string> {
   let state: SimState = {
@@ -104,6 +108,26 @@ export async function adultSaveJson(
     const p = player();
     if (p) p.skills.music = 700;
     state = send(state, { type: 'startCreativePath', occupationId: 'musician' });
+    state = month(state);
+  }
+  if (options.profession) {
+    const p = player();
+    if (p) {
+      const job = options.profession;
+      if (p.employmentId) endEmployment(state.world, p, 'quit');
+      p.education.qualifications = [...p.education.qualifications, job.qualification];
+      if (job.licence) p.flags[job.licence] = true;
+      for (const k of ['reading', 'logic', 'socializing', 'science', 'care'] as const)
+        p.skills[k] = 700;
+      const terms = makeTerms(
+        state.world,
+        getOccupation(job.occupationId),
+        0,
+        'permanent',
+        p.locationId,
+      );
+      startEmployment(state.world, p, terms, terms.salaryMinMinor);
+    }
     state = month(state);
   }
   if (options.age !== undefined) {

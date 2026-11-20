@@ -72,6 +72,7 @@ import {
 } from './career/workActions';
 import { knownFor, projectActing } from './career/acting';
 import { projectMusic } from './career/music';
+import { projectCasework } from './career/casework';
 import { ADULT_AGE, DATE_CLOSENESS, familyHomeFor } from './social/family';
 import { datingProfileTraits } from './social/datingPreferences';
 import {
@@ -245,6 +246,8 @@ export interface CareerView {
   screen: ReturnType<typeof projectActing>;
   /** The music career: songs, releases, label, live shows and the chart (E90). */
   music: ReturnType<typeof projectMusic>;
+  /** Professional casework: legal cases, stories, patients (E93). */
+  casework: ReturnType<typeof projectCasework>;
   track: CareerTrack | null;
   /** Performing track: screen credits, the role auditions now offer, the current production. */
   acting: {
@@ -674,6 +677,7 @@ function careerView(world: World, c: Character, e: Employment | undefined): Care
     track,
     screen: projectActing(world, c),
     music: projectMusic(world, c),
+    casework: projectCasework(world, c),
     acting:
       track === 'performing'
         ? {

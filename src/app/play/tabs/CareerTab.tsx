@@ -14,11 +14,13 @@ import {
   Clapperboard,
   GraduationCap,
   Music,
+  Scale,
   Search,
   Signpost,
   Sparkles,
 } from 'lucide-react';
 import { MusicSection } from './MusicSection';
+import { CASE_WORDS, CaseworkSection } from './CaseworkSection';
 import { ActingSection } from './ActingSection';
 import { t } from '@app/i18n/en';
 import { clubName, formatShortMonth, qualificationName } from '@app/i18n/format';
@@ -933,6 +935,7 @@ const SECTIONS = [
   { value: 'paths', label: 'Paths', icon: Signpost },
   { value: 'acting', label: 'Acting', icon: Clapperboard },
   { value: 'music', label: 'Music', icon: Music },
+  { value: 'cases', label: 'Cases', icon: Scale },
   { value: 'study', label: 'Study', icon: GraduationCap },
   { value: 'skills', label: 'Skills', icon: Sparkles },
 ] as const;
@@ -949,6 +952,7 @@ export function CareerTab() {
   const offer = view.work.applications.some((a) => a.status === 'offered');
   const screen = view.work.career.screen;
   const music = view.work.career.music;
+  const casework = view.work.career.casework;
   const section: Section =
     picked ??
     (!working
@@ -959,10 +963,21 @@ export function CareerTab() {
           ? 'acting'
           : music?.isMusician
             ? 'music'
-            : 'job');
-  // Acting and Music appear once you take that path (and stay for your record).
+            : casework && !casework.block
+              ? 'cases'
+              : 'job');
+  // Acting, Music and Cases appear once you are in that line of work (and stay for your record).
   const items = working
-    ? SECTIONS.filter((x) => (x.value !== 'acting' || screen) && (x.value !== 'music' || music))
+    ? SECTIONS.filter(
+        (x) =>
+          (x.value !== 'acting' || screen) &&
+          (x.value !== 'music' || music) &&
+          (x.value !== 'cases' || casework),
+      ).map((x) =>
+        x.value === 'cases' && casework
+          ? { ...x, label: CASE_WORDS[casework.profession].section }
+          : x,
+      )
     : SECTIONS.filter((x) => x.value === 'study' || x.value === 'skills');
   return (
     <div className="flex flex-col gap-4">
@@ -1008,6 +1023,9 @@ export function CareerTab() {
       )}
       {working && section === 'acting' && screen && <ActingSection view={view} screen={screen} />}
       {working && section === 'music' && music && <MusicSection music={music} />}
+      {working && section === 'cases' && casework && (
+        <CaseworkSection view={view} work={casework} />
+      )}
       {working && section === 'paths' && <PathsCard view={view} base={`/play/${session.saveId}`} />}
       {section === 'skills' && (
         <>

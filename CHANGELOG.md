@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Lawyers: admission and cases.** Practising as a lawyer now needs a law degree and admission: work as a trainee lawyer for your country's supervised months, then pass the licensing exam (a law diploma leads to paralegal work, never practice; a serious unspent conviction suspends it). Admitted lawyers get a case board in Career, Cases: take a client's case, examine the evidence, talk to the client and prepare, then settle or go to a hearing; the result and its main reason are explained and kept in your career record.
+
 - **Business: market research.** Commission a customer survey (10% of the local median wage, paid by the company, once a month) for a likely demand range next month at your price and at 10% cheaper or dearer, next to what your free staff can serve.
 
 - **Business: client contracts.** Consultancies, software studios and contractors now win client briefs: sign with a lean or thorough scope, put staff on the project (they leave walk-in work), get 30% up front and the rest on delivery less 10% for each month late. Happy clients come back with bigger briefs; work three months late is cancelled. A hired manager signs fitting work for you.

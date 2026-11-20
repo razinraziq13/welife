@@ -43,6 +43,14 @@ import {
   STUDIOS,
 } from '../state/schema';
 import {
+  CaseworkError,
+  declineCase,
+  resolveCase,
+  takeCase,
+  takeLicenceExam,
+  workOnCase,
+} from '../career/casework';
+import {
   MusicError,
   abandonSong,
   answerLabel,
@@ -395,6 +403,11 @@ export const CommandSchema = z.discriminatedUnion('type', [
   command('playShow', { venueId: EntityId }),
   command('answerLabel', { response: z.enum(['accept', 'negotiate', 'decline']) }),
   command('setMusicAutopilot', { value: z.boolean() }),
+  command('takeCase', { caseId: EntityId }),
+  command('declineCase', { caseId: EntityId }),
+  command('workOnCase', { caseId: EntityId, action: z.enum(['examine', 'clarify', 'prepare']) }),
+  command('resolveCase', { caseId: EntityId, optionId: z.string().min(1).max(20) }),
+  command('takeLicenceExam', { profession: z.enum(['law', 'medicine']) }),
   command('placeBet', { amountMinor: AmountMinor }),
   command('letProperty', { propertyId: EntityId, rentMinor: AmountMinor }),
   command('stopLetting', { propertyId: EntityId }),
@@ -541,6 +554,10 @@ const done = (key: string, params: Record<string, string | number> = {}): Comman
 
 /** Actions that need freedom of movement (unavailable in custody, spec §4 Law). */
 const BLOCKED_IN_CUSTODY = new Set<string>([
+  'takeCase',
+  'workOnCase',
+  'resolveCase',
+  'takeLicenceExam',
   'startSong',
   'writeSong',
   'recordSong',
@@ -896,6 +913,23 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
     }
     case 'answerLabel':
       return done(`out.music.${answerLabel(world, player, cmd.response)}`);
+    case 'takeCase':
+      return done('out.case.taken', { title: takeCase(world, player, cmd.caseId).title });
+    case 'declineCase':
+      declineCase(player, cmd.caseId);
+      return done('out.case.declined');
+    case 'workOnCase':
+      return done(`out.case.${workOnCase(world, player, cmd.caseId, cmd.action)}`);
+    case 'resolveCase': {
+      const r = resolveCase(world, player, cmd.caseId, cmd.optionId);
+      return done(`out.case.${r.outcome}`, { title: r.title, why: r.why });
+    }
+    case 'takeLicenceExam':
+      return done(
+        takeLicenceExam(world, player, cmd.profession)
+          ? 'out.licence.passed'
+          : 'out.licence.failed',
+      );
     case 'setMusicAutopilot':
       musicOf(player).autopilot = cmd.value;
       return done(cmd.value ? 'out.music.autopilotOn' : 'out.music.autopilotOff');
@@ -1073,6 +1107,7 @@ const DOMAIN_ERRORS = [
   GamblingError,
   ActingError,
   MusicError,
+  CaseworkError,
   InvestmentError,
   MigrationError,
   HealthError,

@@ -521,6 +521,69 @@ export type MusicState = z.infer<typeof MusicSchema>;
 export type Song = z.infer<typeof SongSchema>;
 export type MusicRelease = z.infer<typeof MusicReleaseSchema>;
 
+export const PROFESSIONS = ['law', 'media', 'medicine'] as const;
+export type Profession = (typeof PROFESSIONS)[number];
+
+export const CaseSchema = z
+  .object({
+    id: Id,
+    profession: z.enum(PROFESSIONS),
+    kind: z.string().min(1).max(40),
+    title: z.string().min(1).max(80),
+    /** The client, source or patient (an NPC once the case is taken on). */
+    party: z.string().max(80),
+    partyId: Id.nullable(),
+    items: z
+      .array(
+        z
+          .object({
+            label: z.string().min(1).max(60),
+            status: z.enum(['unreviewed', 'corroborated', 'contested']),
+            /** Hidden truth: whether it holds up once examined. Never shown before then. */
+            strong: z.boolean(),
+          })
+          .strict(),
+      )
+      .min(2)
+      .max(5),
+    prep: Percent,
+    trust: Percent,
+    routine: z.boolean(),
+    status: z.enum(['offer', 'active']),
+    expiresTick: Tick,
+    deadlineTick: Tick,
+  })
+  .strict();
+export type ProfessionalCase = z.infer<typeof CaseSchema>;
+
+export const CaseworkSchema = z
+  .object({
+    cases: z.array(CaseSchema).max(6),
+    record: z
+      .array(
+        z
+          .object({
+            profession: z.enum(PROFESSIONS),
+            title: z.string().max(80),
+            party: z.string().max(80),
+            option: z.string().max(20),
+            outcome: z.enum(['good', 'mixed', 'poor']),
+            /** Published or concluded with unchecked or disputed items (a correction risk). */
+            unverified: z.boolean(),
+            tick: Tick,
+          })
+          .strict(),
+      )
+      .max(60),
+    /** Professional integrity and the trust of clients, sources or patients, 0-1000. */
+    integrity: Fixed,
+    trust: Fixed,
+    /** Last licensing exam per profession (one attempt every six months). */
+    examTick: z.record(z.string().max(20), Tick),
+  })
+  .strict();
+export type Casework = z.infer<typeof CaseworkSchema>;
+
 export const IdentitySchema = z
   .object({
     firstName: z.string().min(1).max(40),
@@ -755,6 +818,8 @@ export const CharacterSchema = z
         acting: ActingSchema.optional(),
         /** The music career (decision E90): songs, releases, label, live shows. */
         music: MusicSchema.optional(),
+        /** Professional casework: legal cases, news stories, patient cases (decision E93). */
+        casework: CaseworkSchema.optional(),
       })
       .strict()
       .default({ reputation: 200, specialty: null, specialtyProgress: 0 }),

@@ -697,7 +697,11 @@ function releaseOrEnd(world: World, c: Character, p: Production): void {
     return;
   }
   const { critics, audience, awardRoll } = verdict(world, c, p);
-  pay(world, c, applyPercent(p.payMinor, FILM_MILESTONES.release), 'tx.actingRelease');
+  // The last milestone is what is left, so rounding never pays more or less than the fee.
+  const paidSoFar =
+    applyPercent(p.payMinor, FILM_MILESTONES.signing) +
+    applyPercent(p.payMinor, FILM_MILESTONES.wrap);
+  pay(world, c, p.payMinor - paidSoFar, 'tx.actingRelease');
   // Box-office bonus (this game's rule): a studio hit pays the cast 20% more.
   if (p.budget === 'studio' && audience >= 70)
     pay(world, c, applyPercent(p.payMinor, 20), 'tx.actingBonus');
