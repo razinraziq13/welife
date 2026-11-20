@@ -36,7 +36,9 @@ interface GameState {
   open: (saveId: string) => Promise<void>;
   close: () => void;
   send: (body: CommandBody) => Promise<CommandOutcome | null>;
-  advance: () => Promise<void>;
+  advance: (months?: number) => Promise<void>;
+  /** Starts a new timeline from the month `months` before the current one. */
+  rewindMonths: (months: number) => Promise<void>;
   choose: (instanceId: string, choiceId: string) => Promise<void>;
   act: (activityId: string) => Promise<void>;
   markRead: (ids: string[] | 'all') => Promise<void>;
@@ -144,7 +146,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
    * once-per-month guarantees are unchanged. It stops early when a decision is waiting, a new
    * job offer arrives (offers expire in two months), the life ends or a month is refused.
    */
-  async advance() {
+  async advance(months = ADVANCE_MONTHS) {
     if (get().advancing) return;
     set({ advancing: true });
     const offers = (): string[] =>
@@ -153,7 +155,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
         .map((a) => a.id);
     const known = new Set(offers());
     try {
-      for (let i = 0; i < ADVANCE_MONTHS; i++) {
+      for (let i = 0; i < months; i++) {
         const view = get().session?.view;
         if (view?.lifeStatus !== 'alive' || view.pendingEvent) break;
         const outcome = await get().send({ type: 'advance', expectedTick: view.tick });
@@ -217,6 +219,19 @@ export const useGameStore = create<GameState>()((set, get) => ({
       });
     } catch (error) {
       set({ busy: false, message: describeError(error), messageKind: 'error' });
+    }
+  },
+
+  async rewindMonths(months) {
+    const { saveId, session } = get();
+    if (!saveId || !session) return;
+    try {
+      const { lineage } = await getEngine().call('timeline.get', { saveId });
+      const target = lineage.findLast((s) => s.tick <= session.view.tick - months);
+      if (target) await get().rewind(target.id);
+      else set({ message: 'There is no earlier month to go back to.', messageKind: 'error' });
+    } catch (error) {
+      set({ message: describeError(error), messageKind: 'error' });
     }
   },
 

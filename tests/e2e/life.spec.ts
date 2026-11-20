@@ -221,3 +221,17 @@ test('the New Life wizard is accessible (WCAG A/AA)', async ({ page }) => {
     if (step < 3) await page.getByRole('button', { name: 'Next' }).click();
   }
 });
+
+test('step one month forward and back beside Advance', async ({ page }) => {
+  await createLife(page, { seed: 'e2e-rewind' });
+  await advanceOnce(page);
+  const advance = page.getByTestId('advance-month').locator('visible=true').first();
+  const start = await advance.textContent();
+  const steps = page.getByRole('group', { name: 'Step through time' }).locator('visible=true');
+  await steps.getByRole('button', { name: '+1 mo' }).click();
+  await expect(advance).not.toHaveText(start ?? '');
+  await expect(advance).toBeEnabled();
+  await steps.getByRole('button', { name: '−1 mo' }).click();
+  await expect(page.getByTestId('feedback')).toContainText('Rewound to a new timeline');
+  await expect(advance).toHaveText(start ?? '');
+});
