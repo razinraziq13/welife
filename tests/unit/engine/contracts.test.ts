@@ -96,3 +96,19 @@ describe('client contracts for project firms (E91)', () => {
     expect(checkLedger(state.world)).toEqual([]);
   }, 120_000);
 });
+
+describe('market research (E92)', () => {
+  it('a paid survey gives demand ranges that fall as the price rises, once a month', () => {
+    const state = advanceMonths(consultancy('research-survey'), 1);
+    const b = firm(state);
+    const cashBefore = state.world.ledger.accounts[b.cashAccountId]?.balance ?? 0n;
+    const done = checked(state, { type: 'researchMarket', businessId: b.id }).state;
+    const r = firm(done).research;
+    if (!r) throw new Error('no research');
+    expect(r.demand[0]).toBeLessThanOrEqual(r.demand[1]);
+    expect(r.cheaper[1]).toBeGreaterThanOrEqual(r.dearer[1]);
+    expect(done.world.ledger.accounts[b.cashAccountId]?.balance).toBeLessThan(cashBefore);
+    expect(run(done, { type: 'researchMarket', businessId: b.id }).outcome.status).toBe('rejected');
+    expect(checkLedger(done.world)).toEqual([]);
+  }, 120_000);
+});

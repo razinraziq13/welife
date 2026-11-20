@@ -71,6 +71,9 @@ export const enEnterprise: Record<string, string> = {
   'out.propertyListed': 'Property put up for sale.',
   'out.propertyUnlisted': 'Property taken off the market.',
   'out.fundBought': 'Investment bought.',
+  'out.marketResearched': 'The survey is in: see Market research for the likely demand.',
+  'tx.marketResearch': 'Market research',
+  'category.research': 'Market research',
   'out.clientSigned':
     'Contract signed. The advance is in the business account and the team has started.',
   'out.clientDeclined': 'You turned the brief down.',

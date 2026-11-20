@@ -12,6 +12,7 @@ import {
   refPrice,
   setupCost,
   contractBlock,
+  researchCost,
   staffOnContracts,
   takesContracts,
 } from './business/business';
@@ -86,6 +87,9 @@ export interface CompanyView {
   goods: boolean;
   /** Extra products and last month's results (goods businesses). */
   products: NonNullable<Business['products']>;
+  /** Latest market research and what a new survey costs (E92). */
+  research: Business['research'] | null;
+  researchCostMinor: bigint;
   /** Client contracts for project firms (E91); null for other businesses. */
   contracts:
     | (NonNullable<Business['contracts']> & {
@@ -235,6 +239,8 @@ function companyView(world: World, player: Character, b: Business): CompanyView 
     unit: type.unit,
     goods: type.goods,
     products: b.products ?? [],
+    research: b.research ?? null,
+    researchCostMinor: researchCost(world, b),
     contracts: takesContracts(b)
       ? {
           ...(b.contracts ?? { offers: [], active: [], delivered: 0, late: 0, cancelled: 0 }),

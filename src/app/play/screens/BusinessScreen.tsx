@@ -523,6 +523,7 @@ function ManageCard({
   const playerCur = { ...view.country.currency };
   return (
     <>
+      <ResearchCard company={company} view={view} />
       {company.contracts && <ContractsCard company={company} view={view} />}
       {company.goods && <ProductsCard company={company} />}
       <Card title="How it is run">
@@ -1176,6 +1177,62 @@ function ContractsCard({ company, view }: { company: CompanyView; view: GameView
             );
           })}
         </ul>
+      )}
+    </Card>
+  );
+}
+
+/** Market research (E92): a paid survey gives demand ranges, never exact answers. */
+function ResearchCard({ company, view }: { company: CompanyView; view: GameView }) {
+  const { send, disabled } = useAct();
+  const r = company.research;
+  const fresh = r?.tick === view.tick;
+  const range = ([low, high]: [number, number]) =>
+    `${low.toLocaleString()} to ${high.toLocaleString()} ${company.unit}`;
+  return (
+    <Card
+      title="Market research"
+      description="A customer survey at your first outlet estimates next month's demand. Rivals and the economy keep moving, so treat it as a range, not a promise."
+    >
+      {r ? (
+        <dl className="flex flex-col gap-1 text-sm">
+          <div className="flex flex-wrap justify-between gap-2">
+            <dt className="text-muted">At your price ({r.pricePercent}% of the usual)</dt>
+            <dd className="font-semibold text-fg">{range(r.demand)}</dd>
+          </div>
+          <div className="flex flex-wrap justify-between gap-2">
+            <dt className="text-muted">10% cheaper</dt>
+            <dd className="text-fg">{range(r.cheaper)}</dd>
+          </div>
+          <div className="flex flex-wrap justify-between gap-2">
+            <dt className="text-muted">10% dearer</dt>
+            <dd className="text-fg">{range(r.dearer)}</dd>
+          </div>
+          <div className="flex flex-wrap justify-between gap-2">
+            <dt className="text-muted">What your free staff can serve</dt>
+            <dd className="text-fg">
+              {r.capacity.toLocaleString()} {company.unit}
+            </dd>
+          </div>
+          <p className="text-xs text-muted">Surveyed {month(view, r.tick)}.</p>
+        </dl>
+      ) : (
+        <p className="text-sm text-muted">No research yet.</p>
+      )}
+      <Button
+        size="sm"
+        variant="secondary"
+        className="mt-3"
+        disabled={disabled || fresh}
+        onClick={() => {
+          void send({ type: 'researchMarket', businessId: company.id });
+        }}
+      >
+        Commission a survey (<Money minor={company.researchCostMinor} currency={company.currency} />
+        )
+      </Button>
+      {fresh && (
+        <p className="mt-1 text-xs text-muted">You already commissioned research this month.</p>
       )}
     </Card>
   );

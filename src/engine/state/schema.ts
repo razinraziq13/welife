@@ -1334,6 +1334,18 @@ export const BusinessSchema = z
       )
       .max(4)
       .optional(),
+    /** The latest market research at the first outlet (decision E92). */
+    research: z
+      .object({
+        tick: Tick,
+        pricePercent: z.number().int().min(50).max(250),
+        demand: z.tuple([z.number().int().min(0), z.number().int().min(0)]),
+        cheaper: z.tuple([z.number().int().min(0), z.number().int().min(0)]),
+        dearer: z.tuple([z.number().int().min(0), z.number().int().min(0)]),
+        capacity: z.number().int().min(0),
+      })
+      .strict()
+      .optional(),
     /** Client contracts (project firms: consultancy, software, contractor; decision E91). */
     contracts: z
       .object({

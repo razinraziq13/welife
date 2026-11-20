@@ -73,7 +73,8 @@ export type BusinessRejection =
   | 'wrongType'
   | 'notInterested'
   | 'loanRefused'
-  | 'unknownLoan';
+  | 'unknownLoan'
+  | 'researched';
 
 export const BUSINESS_MESSAGES: Record<BusinessRejection, string> = {
   tooYoung: 'You must be 18 or older to run a company.',
@@ -97,6 +98,7 @@ export const BUSINESS_MESSAGES: Record<BusinessRejection, string> = {
   notInterested: 'Investors want to see a profitable track record first (at least six months).',
   loanRefused: 'The bank will not lend that much to this company.',
   unknownLoan: 'Unknown loan.',
+  researched: 'You already commissioned research this month.',
 };
 
 export class BusinessError extends Error {
@@ -1027,6 +1029,29 @@ interface BranchResult {
   overloaded: boolean;
 }
 
+/** Units customers want this month at an outlet, at a given price (pure; no randomness). */
+function branchDemand(
+  world: World,
+  business: Business,
+  type: BusinessType,
+  locationId: string,
+  pricePercent: number,
+): number {
+  const mine = offerScore(business.quality, business.brand, pricePercent, type.elasticity);
+  let others = 0;
+  let outlets = 1;
+  for (const c of competitorsAt(world, type.id, locationId)) {
+    others += offerScore(c.quality, c.brand, c.pricePercent, type.elasticity) * c.size;
+    outlets += c.size;
+  }
+  // Difficulty (spec §4): Challenging raises competition, Casual eases it (PROPOSED TUNING).
+  const rivalry =
+    world.rules.difficulty === 'challenging' ? 120 : world.rules.difficulty === 'casual' ? 85 : 100;
+  others = Math.floor((others * rivalry) / 100);
+  const market = marketUnits(world, type, locationId, outlets);
+  return Math.floor((market * mine) / (mine + others));
+}
+
 function runBranch(
   world: World,
   business: Business,
@@ -1040,19 +1065,7 @@ function runBranch(
     applyPercent(refPrice(world, type, branch.locationId), type.unitCostPercent),
     SUPPLIERS[business.supplier].costPercent,
   );
-  const mine = offerScore(business.quality, business.brand, branch.pricePercent, type.elasticity);
-  let others = 0;
-  let outlets = 1;
-  for (const c of competitorsAt(world, type.id, branch.locationId)) {
-    others += offerScore(c.quality, c.brand, c.pricePercent, type.elasticity) * c.size;
-    outlets += c.size;
-  }
-  // Difficulty (spec §4): Challenging raises competition, Casual eases it (PROPOSED TUNING).
-  const rivalry =
-    world.rules.difficulty === 'challenging' ? 120 : world.rules.difficulty === 'casual' ? 85 : 100;
-  others = Math.floor((others * rivalry) / 100);
-  const market = marketUnits(world, type, branch.locationId, outlets);
-  const demanded = Math.floor((market * mine) / (mine + others));
+  const demanded = branchDemand(world, business, type, branch.locationId, branch.pricePercent);
   // Staff on client projects (first outlet) are not free for walk-in work.
   const onContracts = branch === business.branches[0] ? staffOnContracts(business) : 0;
   const capacity = Math.max(0, branch.staff - onContracts) * type.capacityPerStaff;
@@ -1650,4 +1663,46 @@ function runContracts(world: World, business: Business, type: BusinessType): big
     if (fit) signContract(world, business, fit, 'thorough');
   }
   return income;
+}
+
+// ----------------------------------------------------------------------------------------
+// Market research (decision E92): an estimate with a range, never the hidden answer
+// ----------------------------------------------------------------------------------------
+
+/** Research costs 10% of the local median monthly wage, paid by the company. */
+export function researchCost(world: World, business: Business): bigint {
+  return applyPercent(medianWage(world, business.countryCode), 10);
+}
+
+/**
+ * A customer survey at the first outlet: likely demand next month at today's price and at
+ * 10% cheaper or dearer, each as a range (the survey is off by up to 8%, then +/-15%).
+ * Rivals and the economy keep moving, so it narrows uncertainty rather than removing it.
+ */
+export function researchMarket(world: World, player: Character, businessId: string): void {
+  const business = requireOwned(world, player, businessId);
+  const branch = business.branches[0];
+  if (!branch) throw new BusinessError('invalid');
+  if (business.research?.tick === world.tick) throw new BusinessError('researched');
+  const cost = researchCost(world, business);
+  if (balanceOf(world, business.cashAccountId) < cost) throw new BusinessError('businessCash');
+  const payer = { ownerId: business.id, checkingId: business.cashAccountId, savingsId: null };
+  payExpense(world, payer, 'research', cost, 'tx.marketResearch', { business: business.name });
+  const type = getBusinessType(business.typeId);
+  const bias = withRng(world, 'business', (rng) => 100 + rng.range(-8, 8));
+  const band = (pricePercent: number): [number, number] => {
+    const centre = Math.floor(
+      (branchDemand(world, business, type, branch.locationId, pricePercent) * bias) / 100,
+    );
+    return [Math.floor((centre * 85) / 100), Math.ceil((centre * 115) / 100)];
+  };
+  const p = branch.pricePercent;
+  business.research = {
+    tick: world.tick,
+    pricePercent: p,
+    demand: band(p),
+    cheaper: band(Math.max(50, p - 10)),
+    dearer: band(Math.min(250, p + 10)),
+    capacity: Math.max(0, branch.staff - staffOnContracts(business)) * type.capacityPerStaff,
+  };
 }

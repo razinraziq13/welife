@@ -258,6 +258,11 @@ test.describe('companies and property (M5)', () => {
       )
       .toBe('done');
     await expect(page.getByRole('table', { name: 'Operating statement' })).toBeVisible();
+    // Consultancies win client briefs; any business can commission market research.
+    await expect(page.getByRole('heading', { level: 2, name: 'Client contracts' })).toBeVisible();
+    await page.getByRole('button', { name: /^Commission a survey/ }).click();
+    await expect(page.getByTestId('feedback')).toContainText('The survey is in');
+    await expect(page.getByText(/^At your price/)).toBeVisible();
 
     await page.goto(`/play/${saveId}/property`);
     await expect(page.getByRole('heading', { level: 1, name: 'Property' })).toBeVisible();
