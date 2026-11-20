@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Long-term conditions:** asthma and other chronic conditions now flare up some months instead of draining health every month, and can be cured with an expensive therapy or operation from the Health care screen.
+
 - **Vehicles:** cars, planes and helicopters now lose value each month and cost money to run; sell them from Shopping for what they are worth now.
 
 - **Hair fix:** new characters (you, your family and everyone you meet) start with a hairstyle typical for their gender; boys no longer get long straight hair, a bob or a ponytail by default. Existing characters keep their hair; visit the barber to change it.

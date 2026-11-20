@@ -498,6 +498,7 @@ export function HealthScreen() {
                   <span className="font-normal text-muted">
                     · {t(`conditionStatus.${c.status}`)}
                     {c.chronic ? ' · long-term' : ''}
+                    {c.procedure ? ` · ${t(`cure.${c.kind}`)}` : ''}
                     {c.status === 'waiting'
                       ? `, treatment from ${month(view, c.waitUntilTick)}`
                       : ''}
@@ -528,6 +529,48 @@ export function HealthScreen() {
                     >
                       Private care now: <Money minor={c.privateMinor} currency={cur} />
                     </Button>
+                  </div>
+                )}
+                {c.cure && (c.status === 'untreated' || c.status === 'managed') && (
+                  <div className="mt-3">
+                    <p className="text-xs text-muted">
+                      {t(`cure.${c.kind}`)}: {String(c.cure.months)}{' '}
+                      {c.cure.months === 1 ? 'month' : 'months'}, {String(c.cure.percent)}% chance
+                      of curing it for good.
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={disabled}
+                        onClick={() =>
+                          void send({
+                            type: 'treatCondition',
+                            conditionId: c.id,
+                            care: 'public',
+                            cure: true,
+                          })
+                        }
+                      >
+                        Cure with public care: <Money minor={c.cure.public} currency={cur} />
+                        {c.waitMonths > 0 ? `, wait ${String(c.waitMonths)} months` : ''}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={disabled}
+                        onClick={() =>
+                          void send({
+                            type: 'treatCondition',
+                            conditionId: c.id,
+                            care: 'private',
+                            cure: true,
+                          })
+                        }
+                      >
+                        Cure privately now: <Money minor={c.cure.private} currency={cur} />
+                      </Button>
+                    </div>
                   </div>
                 )}
                 {c.kind === 'flu' && c.status === 'untreated' && (

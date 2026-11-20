@@ -544,6 +544,44 @@ describe('healthcare, law and religion', () => {
     expect(state.world.civics.conditions[a.id]?.status).not.toBe('waiting');
   }, 60_000);
 
+  it('long-term conditions flare up some months, not every month, and can be cured at a price', () => {
+    let state = aged(newState({ seed: 'asthma', countryCode: 'GB' }), 30);
+    state = giveMoney(state, 50_000_000n);
+    const a = diagnose(state.world, me(state.world), 'asthma');
+    state = checked(state, { type: 'treatCondition', conditionId: a.id, care: 'private' }).state;
+    for (let i = 0; i < 24; i++) state = monthChecked(state);
+    expect(state.world.civics.conditions[a.id]?.status).toBe('managed');
+    const flares = state.world.notifications.filter(
+      (n) => n.messageKey === 'ntf.flareUp' && n.targetId === a.id,
+    ).length;
+    expect(flares).toBeGreaterThan(0);
+    expect(flares).toBeLessThan(12);
+
+    const flu = diagnose(state.world, me(state.world), 'flu');
+    const noCure = run(state, {
+      type: 'treatCondition',
+      conditionId: flu.id,
+      care: 'private',
+      cure: true,
+    });
+    expect(noCure.outcome.status).toBe('rejected');
+    const cure = checked(state, {
+      type: 'treatCondition',
+      conditionId: a.id,
+      care: 'private',
+      cure: true,
+    }).state;
+    expect(cure.world.civics.conditions[a.id]).toMatchObject({
+      status: 'treating',
+      procedure: true,
+    });
+    state = cure;
+    for (let i = 0; i < 7; i++) state = monthChecked(state);
+    const after = state.world.civics.conditions[a.id];
+    expect(after?.procedure).toBeUndefined();
+    expect(after === undefined || ['resolved', 'managed'].includes(after.status)).toBe(true);
+  }, 60_000);
+
   it('a case is heard with the chosen lawyer and plea; convictions are recorded with a spent date', () => {
     let state = aged(newState({ seed: 'court', countryCode: 'CA' }), 30);
     state = giveMoney(state, 2_000_000n);

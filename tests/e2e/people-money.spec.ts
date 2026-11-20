@@ -577,3 +577,18 @@ test.describe('Shopping', () => {
     await expect(page.getByText('Vehicles you buy appear here.')).toBeVisible();
   });
 });
+
+test.describe('Health care', () => {
+  test('a long-term condition can be cured with an expensive treatment', async ({ page }) => {
+    const saveId = await importSave(
+      page,
+      await adultSaveJson('e2e-asthma', { condition: 'asthma' }),
+    );
+    await page.goto(`/play/${saveId}/health`);
+    await expect(page.getByText(/Biologic therapy: 6 months, 60% chance/)).toBeVisible();
+    await expectAccessible(page);
+    await page.getByRole('button', { name: /^Cure privately now/ }).click();
+    await expect(page.getByTestId('feedback')).toContainText('Private treatment has started.');
+    await expect(page.getByText(/In treatment · long-term · Biologic therapy/)).toBeVisible();
+  });
+});

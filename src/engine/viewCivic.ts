@@ -12,7 +12,7 @@ import {
   type Religion,
 } from './world/institutions';
 import { getRules } from './world/rules';
-import { CONDITIONS, careQuote, publicWaitMonths } from './civics/health';
+import { CONDITIONS, careQuote, cureQuote, publicWaitMonths } from './civics/health';
 import { CASE_RULES, legalAidEligible, privateLawyerFee } from './civics/law';
 import {
   MIGRATION_MESSAGES,
@@ -95,6 +95,8 @@ export interface ConditionView {
   publicMinor: bigint;
   privateMinor: bigint;
   waitMonths: number;
+  procedure: boolean;
+  cure: ReturnType<typeof cureQuote>;
 }
 
 export interface CaseView {
@@ -255,6 +257,8 @@ function conditionView(world: World, c: Character, h: HealthCondition): Conditio
     publicMinor: quote.public,
     privateMinor: quote.private,
     waitMonths: quote.waitMonths,
+    procedure: h.procedure === true,
+    cure: cureQuote(world, c, h),
   };
 }
 

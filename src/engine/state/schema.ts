@@ -1248,6 +1248,8 @@ export const HealthConditionSchema = z
     waitUntilTick: Tick.nullable(),
     treatmentEndTick: Tick.nullable(),
     resolvedTick: Tick.nullable(),
+    /** The current treatment is the curing therapy or operation (optional: older saves). */
+    procedure: z.literal(true).optional(),
   })
   .strict();
 export type HealthCondition = z.infer<typeof HealthConditionSchema>;

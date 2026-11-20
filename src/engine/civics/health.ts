@@ -33,7 +33,12 @@ export interface ConditionRule {
   medicationPercent: number;
   /** Clears up by itself after this many months (null = never). */
   selfLimitingMonths: number | null;
+  /** Chronic only: a costly therapy or operation that can end the condition for good. */
+  cure?: { costPercent: number; months: number; percent: number };
 }
+
+/** Long-term conditions come and go: chance a month brings a flare-up, percent. */
+const FLARE_PERCENT = { untreated: 40, managed: 10 } as const;
 
 export const CONDITIONS: Record<ConditionKind, ConditionRule> = {
   flu: {
@@ -95,6 +100,7 @@ export const CONDITIONS: Record<ConditionKind, ConditionRule> = {
     drain: [25, 4],
     medicationPercent: 4,
     selfLimitingMonths: null,
+    cure: { costPercent: 500, months: 6, percent: 60 },
   },
   hypertension: {
     kind: 'hypertension',
@@ -107,6 +113,7 @@ export const CONDITIONS: Record<ConditionKind, ConditionRule> = {
     drain: [15, 2],
     medicationPercent: 2,
     selfLimitingMonths: null,
+    cure: { costPercent: 400, months: 2, percent: 55 },
   },
   diabetes: {
     kind: 'diabetes',
@@ -119,6 +126,7 @@ export const CONDITIONS: Record<ConditionKind, ConditionRule> = {
     drain: [25, 5],
     medicationPercent: 6,
     selfLimitingMonths: null,
+    cure: { costPercent: 1200, months: 3, percent: 60 },
   },
   depression: {
     kind: 'depression',
@@ -143,6 +151,7 @@ export const CONDITIONS: Record<ConditionKind, ConditionRule> = {
     drain: [45, 8],
     medicationPercent: 8,
     selfLimitingMonths: null,
+    cure: { costPercent: 2500, months: 3, percent: 75 },
   },
   seriousIllness: {
     kind: 'seriousIllness',
@@ -159,13 +168,14 @@ export const CONDITIONS: Record<ConditionKind, ConditionRule> = {
 };
 
 export type HealthRejection =
-  'unknownCondition' | 'alreadyTreated' | 'privateInCustody' | 'notTreatable';
+  'unknownCondition' | 'alreadyTreated' | 'privateInCustody' | 'notTreatable' | 'noCure';
 
 export const HEALTH_MESSAGES: Record<HealthRejection, string> = {
   unknownCondition: 'There is no such condition.',
   alreadyTreated: 'This is already being treated.',
   privateInCustody: 'Only public care is available in custody.',
   notTreatable: 'This clears up by itself; there is nothing to treat.',
+  noCure: 'There is no cure for this; it can only be treated.',
 };
 
 export class HealthError extends Error {
@@ -186,7 +196,25 @@ export function publicWaitMonths(world: World, c: Character): number {
 
 export function treatmentCost(world: World, c: Character, condition: HealthCondition): bigint {
   const rule = CONDITIONS[condition.kind];
-  return applyPercent(medianWage(world, c.countryCode), rule.costPercent);
+  const percent = condition.procedure && rule.cure ? rule.cure.costPercent : rule.costPercent;
+  return applyPercent(medianWage(world, c.countryCode), percent);
+}
+
+/** What the cure would cost after coverage, or null when the condition has none. */
+export function cureQuote(
+  world: World,
+  c: Character,
+  condition: HealthCondition,
+): { public: bigint; private: bigint; percent: number; months: number } | null {
+  const cure = CONDITIONS[condition.kind].cure;
+  if (!cure) return null;
+  const gross = treatmentCost(world, c, { ...condition, procedure: true });
+  return {
+    public: dueAfterCoverage(world, c, gross, 'public'),
+    private: dueAfterCoverage(world, c, gross, 'private'),
+    percent: cure.percent,
+    months: cure.months,
+  };
 }
 
 /** What the person would pay for each kind of care, after coverage and insurance. */
@@ -246,22 +274,27 @@ function startTreatment(world: World, c: Character, h: HealthCondition): void {
   payMedicalCost(world, c, treatmentCost(world, c, h), h.id, h.care ?? 'public');
   h.status = 'treating';
   h.waitUntilTick = null;
-  h.treatmentEndTick = world.tick + rule.treatmentMonths;
+  h.treatmentEndTick =
+    world.tick + (h.procedure && rule.cure ? rule.cure.months : rule.treatmentMonths);
 }
 
-/** Starts treatment now (private) or joins the public waiting list. */
+/** Starts treatment (with `cure`, the curing therapy or operation) now or after the public wait. */
 export function treat(
   world: World,
   c: Character,
   conditionId: string,
   care: 'public' | 'private',
+  cure = false,
 ): void {
   const h = world.civics.conditions[conditionId];
   if (h?.characterId !== c.id || h.status === 'resolved') throw new HealthError('unknownCondition');
-  if (h.status !== 'untreated') throw new HealthError('alreadyTreated');
+  if (cure && !CONDITIONS[h.kind].cure) throw new HealthError('noCure');
+  if (h.status !== 'untreated' && !(cure && h.status === 'managed'))
+    throw new HealthError('alreadyTreated');
   if (care === 'private' && inCustody(world, c)) throw new HealthError('privateInCustody');
   if (h.kind === 'flu') throw new HealthError('notTreatable');
   h.care = care;
+  if (cure) h.procedure = true;
   const wait = care === 'public' ? publicWaitMonths(world, c) : 0;
   if (wait > 0) {
     h.status = 'waiting';
@@ -313,8 +346,25 @@ export function processHealth(world: World): void {
       startTreatment(world, c, h);
       addNotification(world, 'health', 'ntf.treatmentStarted', { kind: h.kind }, 'health', h.id);
     }
+    const unwell = h.status === 'untreated' || h.status === 'waiting';
+    // Long-term conditions only take health in the months they flare up (milder when managed).
+    const flare =
+      rule.chronic && h.status !== 'treating'
+        ? withRng(
+            world,
+            'civics',
+            (rng) => rng.int(100) < FLARE_PERCENT[unwell ? 'untreated' : 'managed'],
+          )
+        : null;
+    if (flare) addNotification(world, 'health', 'ntf.flareUp', { kind: h.kind }, 'health', h.id);
     const drain =
-      h.status === 'untreated' || h.status === 'waiting' ? rule.drain[0] : rule.drain[1];
+      flare === false
+        ? 0
+        : unwell
+          ? rule.drain[0]
+          : flare
+            ? Math.floor(rule.drain[0] / 2)
+            : rule.drain[1];
     const scaled = Math.floor((drain * (500 + h.severity)) / 1000);
     if (scaled > 0) changeStat(world, c, 'health', -scaled, `condition:${h.kind}`);
     if (h.kind === 'depression') {
@@ -326,7 +376,19 @@ export function processHealth(world: World): void {
       h.treatmentEndTick !== null &&
       world.tick >= h.treatmentEndTick
     ) {
-      if (rule.chronic) {
+      if (h.procedure && rule.cure) {
+        const cured = rule.cure.percent;
+        delete h.procedure;
+        if (withRng(world, 'civics', (rng) => rng.int(100) < cured)) {
+          h.status = 'resolved';
+          h.resolvedTick = world.tick;
+          changeStat(world, c, 'health', 80, `cured:${h.kind}`);
+          addNotification(world, 'health', 'ntf.conditionCured', { kind: h.kind }, 'health', h.id);
+        } else {
+          h.status = 'managed';
+          addNotification(world, 'health', 'ntf.cureFailed', { kind: h.kind }, 'health', h.id);
+        }
+      } else if (rule.chronic) {
         h.status = 'managed';
         addNotification(world, 'health', 'ntf.conditionManaged', { kind: h.kind }, 'health', h.id);
       } else if (withRng(world, 'civics', (rng) => rng.int(100) < rule.curePercent)) {

@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { createWorld } from '../../src/engine/characters/create';
 import { execute, type Command, type SimState } from '../../src/engine/core/commands';
 import { getEvent } from '../../src/engine/content';
+import { diagnose } from '../../src/engine/civics/health';
+import type { ConditionKind } from '../../src/engine/state/schema';
 import { WeLifeDatabase } from '../../src/persistence/db';
 import { createSave } from '../../src/persistence/saves';
 import { exportSave } from '../../src/persistence/bundle';
@@ -32,7 +34,12 @@ function month(state: SimState): SimState {
  */
 export async function adultSaveJson(
   seed = 'e2e-adult',
-  options: { rivalOffer?: boolean; age?: number; cashGiftMinor?: bigint } = {},
+  options: {
+    rivalOffer?: boolean;
+    age?: number;
+    cashGiftMinor?: bigint;
+    condition?: ConditionKind;
+  } = {},
 ): Promise<string> {
   let state: SimState = {
     world: createWorld(`world-${seed}`, {
@@ -103,6 +110,7 @@ export async function adultSaveJson(
     };
     checking.balance += gift;
   }
+  if (adult && options.condition) diagnose(world, adult, options.condition);
   const db = new WeLifeDatabase(`fixture-${randomUUID()}`);
   try {
     const saveId = await createSave(db, state.world, 'Robin, grown up');

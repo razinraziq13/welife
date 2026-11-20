@@ -344,7 +344,11 @@ export const CommandSchema = z.discriminatedUnion('type', [
   }),
   command('withdrawVisa', { applicationId: EntityId }),
   command('relocate', { locationId: EntityId }),
-  command('treatCondition', { conditionId: EntityId, care: z.enum(['public', 'private']) }),
+  command('treatCondition', {
+    conditionId: EntityId,
+    care: z.enum(['public', 'private']),
+    cure: z.boolean().optional(),
+  }),
   command('hireLawyer', { caseId: EntityId, lawyer: z.enum(['none', 'legalAid', 'private']) }),
   command('setPlea', { caseId: EntityId, plea: z.enum(['guilty', 'notGuilty', 'settle']) }),
   command('setReligion', { religion: z.enum(RELIGIONS) }),
@@ -793,7 +797,7 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
       relocate(world, player, cmd.locationId);
       return done('out.relocated', { locationId: cmd.locationId });
     case 'treatCondition':
-      treat(world, player, cmd.conditionId, cmd.care);
+      treat(world, player, cmd.conditionId, cmd.care, cmd.cure);
       return done(cmd.care === 'public' ? 'out.treatmentPublic' : 'out.treatmentPrivate');
     case 'hireLawyer':
       hireLawyer(world, player, cmd.caseId, cmd.lawyer);
