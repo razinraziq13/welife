@@ -67,6 +67,10 @@ function Overview({ view, screen }: { view: GameView; screen: Screen }) {
       <StatBar label="Industry reputation" value={view.work.career.reputation} />
       <StatBar label="Recognition" value={screen.recognition} />
       <StatBar label="Critical standing" value={screen.critics} />
+      <p className="mt-2 text-sm text-fg">
+        Industry outlook: {screen.trending} is in fashion this year. More castings come in it and
+        audiences turn out for it, but fashion changes each year.
+      </p>
       {screen.knownFor && (
         <p className="mt-2 text-sm text-fg">
           Casting knows you for {screen.knownFor}: those parts are easier to win, other genres
@@ -272,6 +276,7 @@ function CastingBoard({ view, screen }: { view: GameView; screen: Screen }) {
                   <p className="text-sm text-fg">
                     {l.character} · {l.prominence} role
                     {l.directorId ? ' · the director asked for you' : ''}
+                    {l.genre === screen.trending ? ' · in fashion' : ''}
                   </p>
                   <p className="text-sm text-muted">
                     {l.studio} ({l.budget === 'studio' ? 'studio budget' : 'independent'}), directed

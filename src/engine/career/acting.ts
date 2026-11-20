@@ -174,6 +174,15 @@ export function knownFor(a: ActingState): (typeof ACTING_GENRES)[number] | null 
   const best = ACTING_GENRES.find((g) => (counts.get(g) ?? 0) * 2 > a.filmography.length);
   return best ?? null;
 }
+/**
+ * Industry outlook: one genre is in fashion each calendar year (seeded, no stored state).
+ * More castings come in it and its releases draw bigger audiences, but fashion moves on.
+ */
+export function trendingGenre(world: World): (typeof ACTING_GENRES)[number] {
+  const rng = Rng.fromSeed(`${world.seed}:trend:${String(world.clock.year)}`);
+  return ACTING_GENRES[rng.int(ACTING_GENRES.length)] ?? 'drama';
+}
+const TREND_AUDIENCE = 10;
 const TYPECAST_BONUS = 10;
 const TYPECAST_PENALTY = 8;
 const count = (world: World, key: string) =>
@@ -238,7 +247,7 @@ function refreshBoard(world: World, c: Character): void {
       id: nextId(world, 'cast'),
       title: `${rng.pick(WORDS_A)} ${rng.pick(WORDS_B)}`,
       format,
-      genre: rng.pick(ACTING_GENRES),
+      genre: rng.int(3) === 0 ? trendingGenre(world) : rng.pick(ACTING_GENRES),
       studio: rng.pick(STUDIOS),
       director: invited
         ? nameOf(world, invited)
@@ -592,6 +601,7 @@ function verdict(world: World, c: Character, p: Production) {
           (p.budget === 'studio' ? 25 : 5) +
           Math.floor(p.promo / 5) +
           Math.floor(a.recognition / 40) +
+          (p.genre === trendingGenre(world) ? TREND_AUDIENCE : 0) +
           rng.range(-15, 15),
         0,
         100,
@@ -775,6 +785,7 @@ export function projectActing(world: World, c: Character) {
   return {
     isActor: isActor(world, c),
     knownFor: knownFor(a),
+    trending: trendingGenre(world),
     recognition: a.recognition,
     critics: a.critics,
     auditionsLeft: Math.max(0, AUDITIONS_PER_MONTH - count(world, 'audition')),

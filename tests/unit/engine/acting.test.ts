@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { applyPercent } from '@engine/core/money';
 import { actingRole, workActionBlock } from '@engine/career/workActions';
 import { balanceOf, checkLedger } from '@engine/economy/ledger';
 import type { SimState } from '@engine/core/commands';
 import { checked, findWork } from '../../helpers/reconcile';
 import { advanceMonths, newState, playerOf, run } from '../../helpers/sim';
 import { projectGame, projectPerson } from '@engine/view';
-import { knownFor } from '@engine/career/acting';
+import { knownFor, trendingGenre } from '@engine/career/acting';
 
 /** An adult re-cast as an actor, rested, with a strong reputation. */
 function actor(seed: string, occupationId = 'actor'): SimState {
@@ -140,7 +141,7 @@ describe('acting career: casting board to filmography (E89)', () => {
       expect(acting.production.stage).toBe('renewal');
       const pay = acting.production.payMinor;
       state = checked(state, { type: 'answerRenewal', accept: true }).state;
-      expect(playerOf(state).career.acting?.production?.payMinor).toBe(pay + pay / 10n);
+      expect(playerOf(state).career.acting?.production?.payMinor).toBe(pay + applyPercent(pay, 10));
       expect(playerOf(state).career.acting?.production?.season).toBe(2);
     } else {
       expect(acting?.filmography[0]?.format).toBe('tv');
@@ -250,5 +251,19 @@ describe('typecasting and acting legacy (E89)', () => {
     const profile = projectPerson(state, other.id);
     expect(profile?.acting?.filmography).toHaveLength(3);
     expect(profile?.acting?.knownFor).toBe('comedy');
+  });
+});
+
+describe('industry outlook (E89)', () => {
+  it('one genre is in fashion each year, the same on replay, and fashion moves on', () => {
+    const { world } = newState({ seed: 'acting-trend' });
+    const year = world.clock.year;
+    const seen = new Set<string>();
+    for (let y = 0; y < 12; y++) {
+      world.clock = { ...world.clock, year: year + y };
+      expect(trendingGenre(world)).toBe(trendingGenre(structuredClone(world)));
+      seen.add(trendingGenre(world));
+    }
+    expect(seen.size).toBeGreaterThan(1);
   });
 });
