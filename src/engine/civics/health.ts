@@ -210,8 +210,8 @@ export function cureQuote(
   if (!cure) return null;
   const gross = treatmentCost(world, c, { ...condition, procedure: true });
   return {
-    public: dueAfterCoverage(world, c, gross, 'public'),
-    private: dueAfterCoverage(world, c, gross, 'private'),
+    public: medicalDue(world, c, gross, 'public'),
+    private: medicalDue(world, c, gross, 'private'),
     percent: cure.percent,
     months: cure.months,
   };
@@ -225,20 +225,10 @@ export function careQuote(
 ): { public: bigint; private: bigint; waitMonths: number } {
   const gross = treatmentCost(world, c, condition);
   return {
-    public: dueAfterCoverage(world, c, gross, 'public'),
-    private: dueAfterCoverage(world, c, gross, 'private'),
+    public: medicalDue(world, c, gross, 'public'),
+    private: medicalDue(world, c, gross, 'private'),
     waitMonths: publicWaitMonths(world, c),
   };
-}
-
-/** What the patient would pay (after coverage and insurance). */
-export function dueAfterCoverage(
-  world: World,
-  c: Character,
-  gross: bigint,
-  care: 'public' | 'private',
-): bigint {
-  return medicalDue(world, c, gross, care);
 }
 
 function active(world: World, c: Character): HealthCondition[] {
@@ -347,24 +337,14 @@ export function processHealth(world: World): void {
       addNotification(world, 'health', 'ntf.treatmentStarted', { kind: h.kind }, 'health', h.id);
     }
     const unwell = h.status === 'untreated' || h.status === 'waiting';
+    let drain = unwell ? rule.drain[0] : rule.drain[1];
     // Long-term conditions only take health in the months they flare up (milder when managed).
-    const flare =
-      rule.chronic && h.status !== 'treating'
-        ? withRng(
-            world,
-            'civics',
-            (rng) => rng.int(100) < FLARE_PERCENT[unwell ? 'untreated' : 'managed'],
-          )
-        : null;
-    if (flare) addNotification(world, 'health', 'ntf.flareUp', { kind: h.kind }, 'health', h.id);
-    const drain =
-      flare === false
-        ? 0
-        : unwell
-          ? rule.drain[0]
-          : flare
-            ? Math.floor(rule.drain[0] / 2)
-            : rule.drain[1];
+    if (rule.chronic && h.status !== 'treating') {
+      const odds = FLARE_PERCENT[unwell ? 'untreated' : 'managed'];
+      const flare = withRng(world, 'civics', (rng) => rng.int(100) < odds);
+      if (flare) addNotification(world, 'health', 'ntf.flareUp', { kind: h.kind }, 'health', h.id);
+      drain = !flare ? 0 : unwell ? rule.drain[0] : Math.floor(rule.drain[0] / 2);
+    }
     const scaled = Math.floor((drain * (500 + h.severity)) / 1000);
     if (scaled > 0) changeStat(world, c, 'health', -scaled, `condition:${h.kind}`);
     if (h.kind === 'depression') {

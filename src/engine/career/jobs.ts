@@ -36,8 +36,8 @@ import {
  * performance, manager relations, reviews, promotions and layoffs. PROPOSED TUNING.
  */
 
-export const MAX_POSTINGS = 30;
-export const MAX_ACTIVE_APPLICATIONS = 5;
+const MAX_POSTINGS = 30;
+const MAX_ACTIVE_APPLICATIONS = 5;
 const EMPLOYER_PREFIX = [
   'Apex',
   'Blue Harbour',
