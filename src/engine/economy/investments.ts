@@ -6,8 +6,8 @@ import { currencyFor } from './finance';
 import { balanceOf, categoryAccount, openAccount, post } from './ledger';
 
 /**
- * Investment funds (spec §4 step 5 "investment prices"): a stock index fund and a bond fund
- * in the player's country. Holdings are valued at market every month (gains and losses are
+ * Market investments (spec §4 step 5 "investment prices") in the player's country.
+ * Holdings are valued at market every month (gains and losses are
  * booked, like the retirement fund), so net worth always reflects current prices.
  */
 

@@ -14,7 +14,7 @@ import {
 } from './business/business';
 import { BUSINESS_TYPES, getBusinessType } from './business/catalog';
 import { displayName } from './characters/names';
-import { convert } from './economy/economy';
+import { convert, marketPoint } from './economy/economy';
 import {
   BOND_TERMS,
   bondSaleValue,
@@ -28,7 +28,14 @@ import { rateFor } from './economy/finance';
 import { RENOVATION, depositPercent, marketRent } from './property/property';
 import { COUNTRIES, getCountry, getLocation } from './world/countries';
 import { MARKETS_SOURCE, countryMarket } from './world/markets';
-import type { Business, Character, Statement, World } from './state/schema';
+import {
+  FUNDS,
+  type Business,
+  type Character,
+  type Fund,
+  type Statement,
+  type World,
+} from './state/schema';
 
 /** Read-only projection of companies, property and investments (Milestone 5). */
 
@@ -165,6 +172,12 @@ export interface EnterpriseView {
     bondsCostMinor: bigint | null;
     stockIndexBp: number;
     bondIndexBp: number;
+    markets: {
+      id: Fund;
+      balanceMinor: bigint;
+      costMinor: bigint | null;
+      history: { tick: number; indexBp: number }[];
+    }[];
     /** Government bonds on offer now: term and annual yield. */
     bondOffers: { termMonths: number; yieldBp: number }[];
     /** Bonds held: face value, fixed rate, monthly interest, maturity and today's sale price. */
@@ -375,6 +388,17 @@ export function projectEnterprise(world: World, player: Character): EnterpriseVi
       bondsMinor: fundAccount(world, player.id, 'bonds')?.balance ?? 0n,
       stocksCostMinor: fundAccount(world, player.id, 'stocks')?.costMinor ?? null,
       bondsCostMinor: fundAccount(world, player.id, 'bonds')?.costMinor ?? null,
+      markets: FUNDS.map((id) => {
+        const economy = world.economy[player.countryCode];
+        const history = economy?.marketHistory ?? [marketPoint(economy, world.tick)];
+        const position = fundAccount(world, player.id, id);
+        return {
+          id,
+          balanceMinor: position?.balance ?? 0n,
+          costMinor: position?.costMinor ?? null,
+          history: history.map((point) => ({ tick: point.tick, indexBp: point.indices[id] })),
+        };
+      }),
       bondOffers: BOND_TERMS.map((termMonths) => ({
         termMonths,
         yieldBp: bondYieldBp(world, player.countryCode, termMonths),

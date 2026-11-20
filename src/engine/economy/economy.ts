@@ -1,10 +1,11 @@
 import { clamp, sortedKeys } from '../core/data';
 import { applyBp, divRound } from '../core/money';
+import { Rng } from '../core/rng';
 import { withRng } from '../core/world';
 import { getCountry } from '../world/countries';
 import { USD_MICRO_PER_MAJOR } from '../world/markets';
 import { baseMedianWage, getRules } from '../world/rules';
-import type { Economy, World } from '../state/schema';
+import { MARKET_HISTORY_LIMIT, type Economy, type MarketPoint, type World } from '../state/schema';
 
 /**
  * Aggregate background economy per country (spec §4: background population is aggregate;
@@ -42,8 +43,8 @@ export function ensureEconomy(world: World, code: string): Economy {
 export interface MarketMove {
   /** Monthly stock (and retirement) fund return in basis points (can be negative). */
   returnBp: number;
-  /** Monthly bond fund return, basis points. */
-  bondReturnBp: number;
+  /** The same prices that mark positions and appear in market charts. */
+  fundPrices: { before: MarketPoint['indices']; after: MarketPoint['indices'] };
   /** Monthly change in house prices, basis points. */
   houseReturnBp: number;
 }
@@ -55,12 +56,33 @@ function grow(value: number, bp: number, min: number, max: number): number {
   return clamp(value + Number(divRound(BigInt(value) * BigInt(bp), 10_000n)), min, max);
 }
 
+export function marketPoint(economy: Economy | undefined, tick: number): MarketPoint {
+  const previous = economy?.marketHistory?.at(-1)?.indices;
+  return {
+    tick,
+    indices: {
+      stocks: economy?.marketIndexBp ?? 10_000,
+      bonds: economy?.bondIndexBp ?? 10_000,
+      technology: previous?.technology ?? 10_000,
+      consumer: previous?.consumer ?? 10_000,
+      selara: previous?.selara ?? 10_000,
+      meranti: previous?.meranti ?? 10_000,
+      bitcoin: previous?.bitcoin ?? 10_000,
+    },
+  };
+}
+
 /** Step 5 (economy part): one month of every tracked country's economy. */
 export function advanceEconomies(world: World): Map<string, MarketMove> {
   const moves = new Map<string, MarketMove>();
+  // Crypto uses the same seeded monthly movement everywhere, without consuming economy draws.
+  const crypto = Rng.fromSeed(`${world.seed}:bitcoin:${String(world.tick)}`);
+  const bitcoinMove =
+    crypto.range(-1_500, 1_500) + (crypto.int(12) === 0 ? crypto.range(-2_500, 2_500) : 0);
   for (const code of sortedKeys(world.economy)) {
     const e = world.economy[code];
     if (!e) continue;
+    const previous = marketPoint(e, Math.max(0, world.tick - 1));
     const base = getRules(code).rates;
     const noise = withRng(world, 'economy', (rng) => ({
       cycle: rng.range(-7, 7),
@@ -124,6 +146,32 @@ export function advanceEconomies(world: World): Map<string, MarketMove> {
     // currencies drift against higher inflation (simulated exchange rates, decision R5).
     const bondReturnBp = Math.trunc(e.policyRateBp / 12) + noise.bond;
     e.bondIndexBp = grow(e.bondIndexBp, bondReturnBp, 500, 10_000_000);
+    const sectors = Rng.fromSeed(`${world.seed}:sectors:${code}:${String(world.tick)}`);
+    const technologyMove = 60 + e.cycle * 3 + sectors.range(-850, 850);
+    const consumerMove = 40 + e.cycle + sectors.range(-170, 170);
+    const after = {
+      stocks: e.marketIndexBp,
+      bonds: e.bondIndexBp,
+      technology: grow(previous.indices.technology, technologyMove, 500, 100_000_000),
+      consumer: grow(previous.indices.consumer, consumerMove, 500, 100_000_000),
+      selara: grow(
+        previous.indices.selara,
+        technologyMove + sectors.range(-650, 650),
+        500,
+        100_000_000,
+      ),
+      meranti: grow(
+        previous.indices.meranti,
+        consumerMove + sectors.range(-400, 400),
+        500,
+        100_000_000,
+      ),
+      bitcoin: grow(previous.indices.bitcoin, bitcoinMove, 500, 100_000_000),
+    };
+    e.marketHistory = [
+      ...(e.marketHistory ?? [previous]),
+      { tick: world.tick, indices: after },
+    ].slice(-MARKET_HISTORY_LIMIT);
     const houseReturnBp =
       Math.trunc(base.inflationBp / 12) +
       10 +
@@ -133,7 +181,7 @@ export function advanceEconomies(world: World): Map<string, MarketMove> {
     e.housePriceBp = grow(e.housePriceBp, houseReturnBp, 500, 10_000_000);
     const fxChange = -Math.trunc((e.inflationBp - WORLD_INFLATION_BP) / 12) + noise.fx;
     e.fxIndexBp = grow(e.fxIndexBp, fxChange, 100, 1_000_000);
-    moves.set(code, { returnBp, bondReturnBp, houseReturnBp });
+    moves.set(code, { returnBp, fundPrices: { before: previous.indices, after }, houseReturnBp });
   }
   return moves;
 }

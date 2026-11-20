@@ -11,7 +11,6 @@ import { Card } from '@app/components/ui/card';
 import { ChoiceGroup } from '@app/components/ui/choice-group';
 import { ConfirmDialog } from '@app/components/ui/confirm-dialog';
 import { t } from '@app/i18n/en';
-import { cn } from '@app/lib/cn';
 import {
   countryName,
   formatBp,
@@ -23,6 +22,7 @@ import {
 import { useGameStore } from '@app/stores/gameStore';
 import { tickToMonth } from '../widgets';
 import { ActionButton } from '../ActionButton';
+import { InvestmentMarket } from '../InvestmentMarket';
 
 function useAct() {
   const send = useGameStore((s) => s.send);
@@ -721,55 +721,15 @@ function InvestmentsCard({ view }: { view: GameView }) {
   const { send, disabled } = useAct();
   const inv = view.enterprise.investments;
   const cur = { ...view.finance.currency };
-  const [fund, setFund] = useState<'stocks' | 'bonds'>('stocks');
   const [term, setTerm] = useState<12 | 60 | 120>(60);
   const [selling, setSelling] = useState<(typeof inv.bonds)[number] | null>(null);
   if (view.character.age.years < 18) return null;
   return (
     <Card
       title="Investments"
-      description="Index funds whose prices are simulated each month. Values can fall as well as rise."
+      description="Compare simulated stocks, funds and Bitcoin. Market values update each game month."
     >
-      <dl className="text-sm">
-        <Row label={t('fund.stocks')}>{<Money minor={inv.stocksMinor} currency={cur} />}</Row>
-        <GainLine value={inv.stocksMinor} cost={inv.stocksCostMinor} cur={cur} />
-        <Row label={t('fund.bonds')}>{<Money minor={inv.bondsMinor} currency={cur} />}</Row>
-        <GainLine value={inv.bondsMinor} cost={inv.bondsCostMinor} cur={cur} />
-      </dl>
-      <div className="mt-3 flex flex-col gap-3">
-        <ChoiceGroup
-          legend="Fund"
-          name="fund"
-          value={fund}
-          onChange={setFund}
-          options={[
-            {
-              value: 'stocks',
-              label: t('fund.stocks'),
-              description: 'Higher growth, bigger swings.',
-            },
-            {
-              value: 'bonds',
-              label: t('fund.bonds'),
-              description: 'Steadier, follows interest rates.',
-            },
-          ]}
-        />
-        <AmountForm
-          label="Invest"
-          currency={cur}
-          submitLabel="Buy"
-          disabled={disabled}
-          onSubmit={(minor) => send({ type: 'buyFund', fund, amountMinor: minor })}
-        />
-        <AmountForm
-          label="Sell"
-          currency={cur}
-          submitLabel="Sell"
-          disabled={disabled}
-          onSubmit={(minor) => send({ type: 'sellFund', fund, amountMinor: minor })}
-        />
-      </div>
+      <InvestmentMarket view={view} disabled={disabled} />
 
       <div className="mt-5 border-t border-border pt-3">
         <h3 className="text-sm font-semibold text-fg">Government bonds</h3>
@@ -844,28 +804,6 @@ function InvestmentsCard({ view }: { view: GameView }) {
         stops.
       </ConfirmDialog>
     </Card>
-  );
-}
-
-/** "Put in £X · up £Y (+Z%)" under a fund; nothing for holdings bought before this was tracked. */
-function GainLine({
-  value,
-  cost,
-  cur,
-}: {
-  value: bigint;
-  cost: bigint | null;
-  cur: GameView['finance']['currency'];
-}) {
-  if (cost === null || cost === 0n) return null;
-  const gain = value - cost;
-  const percent = Number((gain * 1000n) / cost) / 10;
-  return (
-    <p className={cn('-mt-1 mb-1 text-right text-xs', gain < 0n ? 'text-danger' : 'text-muted')}>
-      Put in <Money minor={cost} currency={cur} /> · {gain < 0n ? 'down' : 'up'}{' '}
-      <Money minor={gain < 0n ? -gain : gain} currency={cur} /> ({gain < 0n ? '' : '+'}
-      {percent.toFixed(1)}%)
-    </p>
   );
 }
 

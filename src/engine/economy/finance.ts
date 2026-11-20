@@ -14,15 +14,16 @@ import { changeStat } from '../characters/stats';
 import { findClub } from '../education/catalog';
 import { getCountry, getLocation } from '../world/countries';
 import { getRules } from '../world/rules';
-import type {
-  Account,
-  Character,
-  Household,
-  HomeSize,
-  Lifestyle,
-  Policy,
-  WealthTier,
-  World,
+import {
+  FUNDS,
+  type Account,
+  type Character,
+  type Household,
+  type HomeSize,
+  type Lifestyle,
+  type Policy,
+  type WealthTier,
+  type World,
 } from '../state/schema';
 import { medianWage, savingsRateBp, type MarketMove } from './economy';
 import {
@@ -603,28 +604,43 @@ function growAccounts(
           },
         ]);
     } else if ((account.type === 'retirement' || account.type === 'investment') && market) {
-      const change = applyBp(
-        account.balance,
-        account.type === 'investment' && account.category === 'bonds'
-          ? market.bondReturnBp
-          : market.returnBp,
-      );
+      const fund =
+        account.type === 'investment' ? FUNDS.find((id) => id === account.category) : undefined;
+      const change = fund
+        ? divRound(
+            account.balance *
+              BigInt(market.fundPrices.after[fund] - market.fundPrices.before[fund]),
+            BigInt(market.fundPrices.before[fund]),
+          )
+        : applyBp(account.balance, market.returnBp);
+      const kind = fund ? 'tx.investmentReturn' : 'tx.fundReturn';
+      const options = fund ? { params: { fund } } : {};
       if (change > 0n)
-        post(world, 'tx.fundReturn', [
-          { accountId: account.id, debit: change },
-          {
-            accountId: categoryAccount(world, ownerId, 'income', 'investment', cur),
-            credit: change,
-          },
-        ]);
+        post(
+          world,
+          kind,
+          [
+            { accountId: account.id, debit: change },
+            {
+              accountId: categoryAccount(world, ownerId, 'income', 'investment', cur),
+              credit: change,
+            },
+          ],
+          options,
+        );
       else if (change < 0n)
-        post(world, 'tx.fundReturn', [
-          {
-            accountId: categoryAccount(world, ownerId, 'expense', 'investmentLoss', cur),
-            debit: -change,
-          },
-          { accountId: account.id, credit: -change },
-        ]);
+        post(
+          world,
+          kind,
+          [
+            {
+              accountId: categoryAccount(world, ownerId, 'expense', 'investmentLoss', cur),
+              debit: -change,
+            },
+            { accountId: account.id, credit: -change },
+          ],
+          options,
+        );
     }
   }
 }

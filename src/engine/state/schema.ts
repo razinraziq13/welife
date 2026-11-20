@@ -903,6 +903,24 @@ export const PolicySchema = z
   .strict();
 export type Policy = z.infer<typeof PolicySchema>;
 
+export const FUNDS = [
+  'stocks',
+  'technology',
+  'consumer',
+  'selara',
+  'meranti',
+  'bonds',
+  'bitcoin',
+] as const;
+export type Fund = (typeof FUNDS)[number];
+export const MARKET_HISTORY_LIMIT = 25;
+
+const MarketPointSchema = z.strictObject({
+  tick: Tick,
+  indices: z.record(z.enum(FUNDS), z.number().int().min(500).max(100_000_000)),
+});
+export type MarketPoint = z.infer<typeof MarketPointSchema>;
+
 /** Aggregate background economy per country (spec §4: simulated after the start date). */
 export const EconomySchema = z
   .object({
@@ -925,6 +943,8 @@ export const EconomySchema = z
     housePriceBp: z.number().int().min(500).max(10_000_000),
     /** Bond fund index against the start level, basis points. */
     bondIndexBp: z.number().int().min(500).max(10_000_000),
+    /** Monthly closes, beginning when this version first tracks the market. */
+    marketHistory: z.array(MarketPointSchema).max(MARKET_HISTORY_LIMIT).optional(),
   })
   .strict();
 export type Economy = z.infer<typeof EconomySchema>;
@@ -1482,9 +1502,6 @@ export const PackRecordSchema = z
   })
   .strict();
 export type PackRecord = z.infer<typeof PackRecordSchema>;
-
-export const FUNDS = ['stocks', 'bonds'] as const;
-export type Fund = (typeof FUNDS)[number];
 
 export const RNG_STREAMS = [
   'creation',
