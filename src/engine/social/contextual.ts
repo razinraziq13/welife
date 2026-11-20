@@ -234,7 +234,7 @@ export function contextualBlock(
       if (!job) return 'noJob';
       if (job.managerId !== other.id) return 'notYourManager';
       if (job.terms.level >= getOccupation(job.terms.occupationId).maxLevel) return 'topLevel';
-      if (world.tick - job.startTick < 12) return 'notLongEnough';
+      if (world.tick - (job.levelStartTick ?? job.startTick) < 12) return 'notLongEnough';
       if (job.performance < 600) return 'performanceTooLow';
       return monthsSince(world, other.id, player.id, 'askedForPromotion') < 12 ? 'tooSoon' : null;
     }

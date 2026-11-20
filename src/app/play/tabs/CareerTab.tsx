@@ -555,6 +555,7 @@ function JobBoardCard({ view }: { view: GameView }) {
   const currency = view.country.currency;
   const ids = { min: useId(), max: useId(), field: useId(), industry: useId(), contract: useId() };
   const [onlyQualified, setOnlyQualified] = useState(false);
+  const [onlyExperienced, setOnlyExperienced] = useState(false);
   const [minPay, setMinPay] = useState('');
   const [maxPay, setMaxPay] = useState('');
   const [field, setField] = useState('');
@@ -568,6 +569,7 @@ function JobBoardCard({ view }: { view: GameView }) {
     .filter(
       (p) =>
         (!onlyQualified || p.block === null) &&
+        (!onlyExperienced || p.experiencedHire) &&
         (minPay === '' || major(p.salaryMaxMinor) >= Number(minPay)) &&
         (maxPay === '' || major(p.salaryMinMinor) <= Number(maxPay)) &&
         (field === '' || p.field === field || p.field === null) &&
@@ -620,6 +622,11 @@ function JobBoardCard({ view }: { view: GameView }) {
             label="Only jobs I qualify for"
             checked={onlyQualified}
             onChange={setOnlyQualified}
+          />
+          <Switch
+            label="Executive and specialist openings only"
+            checked={onlyExperienced}
+            onChange={setOnlyExperienced}
           />
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {(
@@ -704,6 +711,12 @@ function JobBoardCard({ view }: { view: GameView }) {
                     {p.field ? ` (${p.field})` : ''} · {p.applicants} other applicants · closes{' '}
                     {monthOf(view, p.expiresTick)}
                   </p>
+                  {p.experienceNeeded > 0 && (
+                    <p className="text-xs text-muted">
+                      Requires {p.experienceNeeded / 12}{' '}
+                      {p.experienceNeeded === 12 ? 'year' : 'years'} in {p.industry.toLowerCase()}.
+                    </p>
+                  )}
                   {reason && <p className="text-xs font-medium text-muted">{reason}</p>}
                 </div>
                 <Button

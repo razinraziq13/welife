@@ -3,6 +3,15 @@ import { checkInvariants } from '@engine/core/invariants';
 import { checkLedger } from '@engine/economy/ledger';
 import { applyPercent } from '@engine/core/money';
 import {
+  experienceMonths,
+  jobEligibility,
+  makeTerms,
+  promote,
+  refreshJobMarket,
+  startEmployment,
+} from '@engine/career/jobs';
+import { getOccupation } from '@engine/career/occupations';
+import {
   careerMonth,
   careerTrack,
   jobSatisfaction,
@@ -36,6 +45,63 @@ function jobOf(state: SimState): Employment {
 }
 
 describe('career simulation (gameplay expansion, feature 6)', () => {
+  it('advertises a rotating set of full-time executive and specialist jobs', () => {
+    const state = newState({ seed: 'executive-board' });
+    const { world } = state;
+    const player = playerOf(state);
+    player.birth.year -= 35;
+    const seniorJobs = [];
+    for (let tick = 0; tick < 8; tick++) {
+      world.tick = tick;
+      refreshJobMarket(world);
+      const senior = Object.values(world.jobs.postings).find(
+        (posting) =>
+          posting.postedTick === tick &&
+          getOccupation(posting.terms.occupationId).minExperienceMonths > 0,
+      );
+      if (!senior) throw new Error('expected a senior opening');
+      expect(senior.terms.contract).toBe('permanent');
+      seniorJobs.push(senior.terms.occupationId);
+    }
+    expect(new Set(seniorJobs).size).toBe(8);
+    expect(seniorJobs).toContain('chief-executive');
+    expect(seniorJobs).toContain('chief-technology-officer');
+  });
+
+  it('requires ten years of relevant experience for CEO and keeps that experience after a promotion', () => {
+    const state = newState({ seed: 'executive-career' });
+    const { world } = state;
+    const player = playerOf(state);
+    player.birth.year -= 40;
+    player.education.qualifications.push('bachelor:business');
+    player.skills.leadership = 650;
+    player.skills.business = 650;
+    const ceo = makeTerms(
+      world,
+      getOccupation('chief-executive'),
+      0,
+      'permanent',
+      player.locationId,
+    );
+    const consulting = makeTerms(
+      world,
+      getOccupation('management-consultant'),
+      0,
+      'permanent',
+      player.locationId,
+    );
+    expect(ceo.salaryMinMinor).toBeGreaterThan(consulting.salaryMaxMinor);
+    expect(jobEligibility(world, player, ceo)).toBe('notExperienced');
+    const employment = startEmployment(world, player, consulting, consulting.salaryMinMinor);
+    world.tick = 119;
+    expect(jobEligibility(world, player, ceo)).toBe('notExperienced');
+    world.tick = 120;
+    promote(world, player, employment, true);
+    expect(employment.levelStartTick).toBe(120);
+    expect(experienceMonths(world, player.id, 'consulting')).toBe(120);
+    expect(jobEligibility(world, player, ceo)).toBeNull();
+  });
+
   it('each career has its own track', () => {
     const e = (industryId: string, occupationId = 'x') =>
       ({ terms: { industryId, occupationId } }) as Employment;

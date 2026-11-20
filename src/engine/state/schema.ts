@@ -785,6 +785,8 @@ export const EmploymentSchema = z
     performance: Fixed,
     managerId: Id.nullable(),
     startTick: Tick,
+    /** Time at the current grade, separate from total time with the employer. */
+    levelStartTick: Tick.optional(),
     endTick: Tick.nullable(),
     status: z.enum(['active', 'ended']),
     endReason: z

@@ -139,6 +139,14 @@ test.describe('an adult life', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Career' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: /Your job|Work/ })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: 'Job App' })).toBeVisible();
+    const jobApp = page.getByRole('region', { name: 'Job App' });
+    const experienced = jobApp.getByRole('switch', {
+      name: 'Executive and specialist openings only',
+    });
+    await experienced.click();
+    await expect(experienced).toBeChecked();
+    await expect(jobApp.getByText(/Requires \d+ years in/).first()).toBeVisible();
+    await experienced.click();
     await expect(page.getByRole('heading', { level: 2, name: 'Choose a path' })).toBeVisible();
     for (const path of ['Musician', 'Actor', 'Film director'])
       await expect(

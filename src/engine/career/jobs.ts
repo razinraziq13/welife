@@ -1,5 +1,6 @@
 import { clamp, sortedKeys, sortedValues } from '../core/data';
 import { applyBp, applyPercent, divRound, maxBig, minBig } from '../core/money';
+import { seedFromString } from '../core/rng';
 import { addBiography, addNotification, ageYears, nextId, withRng } from '../core/world';
 import { changeSkill, changeStat } from '../characters/stats';
 import { medianWage } from '../economy/economy';
@@ -35,7 +36,7 @@ import {
  * performance, manager relations, reviews, promotions and layoffs. PROPOSED TUNING.
  */
 
-export const MAX_POSTINGS = 24;
+export const MAX_POSTINGS = 30;
 export const MAX_ACTIVE_APPLICATIONS = 5;
 const EMPLOYER_PREFIX = [
   'Apex',
@@ -126,6 +127,7 @@ export function makeTerms(
   level: number,
   contract: ContractType,
   locationId: string,
+  employer = employerName(world, occupation.industryId),
 ): JobTerms {
   const { country } = getLocation(locationId);
   const fullTime = getRules(country.code).work.fullTimeHours;
@@ -135,7 +137,7 @@ export function makeTerms(
   return {
     occupationId: occupation.id,
     level,
-    employer: employerName(world, occupation.industryId),
+    employer,
     industryId: occupation.industryId,
     contract,
     hours,
@@ -151,6 +153,29 @@ function difficultyPercent(world: World): number {
     : world.rules.difficulty === 'challenging'
       ? 140
       : 100;
+}
+
+const EXPERIENCED_HIRES = OCCUPATIONS.filter((o) => !o.hidden && o.minExperienceMonths > 0);
+
+/** Rotate full-time senior vacancies so high-end roles appear alongside ordinary jobs. */
+function postExperiencedRole(world: World, player: Character, unemployment: number): void {
+  const offset = seedFromString(`${world.seed}:senior-jobs:${player.locationId}`)[0];
+  const occupation = EXPERIENCED_HIRES[(offset + world.tick) % EXPERIENCED_HIRES.length];
+  if (!occupation) return;
+  const prefix =
+    EMPLOYER_PREFIX[
+      (offset + Math.floor(world.tick / EXPERIENCED_HIRES.length)) % EMPLOYER_PREFIX.length
+    ];
+  const employer = `${prefix ?? 'Meridian'} ${EMPLOYER_SUFFIX[occupation.industryId] ?? 'Group'}`;
+  const id = `job_senior_${world.tick.toString(36)}_${player.locationId}`;
+  world.jobs.postings[id] ??= {
+    id,
+    terms: makeTerms(world, occupation, 0, 'permanent', player.locationId, employer),
+    openings: 1,
+    applicants: clamp(Math.floor((18 * unemployment * difficultyPercent(world)) / 50_000), 1, 500),
+    postedTick: world.tick,
+    expiresTick: world.tick + 4,
+  };
 }
 
 /** Monthly refresh of the player's local job board. */
@@ -172,7 +197,9 @@ export function refreshJobMarket(world: World): void {
   const count = withRng(world, 'career', (rng) => rng.range(3, 6)) - (cycle < -40 ? 1 : 0);
   const minor = age < 18;
   const quals = player.education.qualifications;
-  const candidates = OCCUPATIONS.filter((o) => !o.hidden && (!minor || o.teen));
+  const candidates = OCCUPATIONS.filter(
+    (o) => !o.hidden && o.minExperienceMonths === 0 && (!minor || o.teen),
+  );
   for (let i = 0; i < count; i++) {
     const occupation = withRng(world, 'career', (rng) =>
       rng.weighted(candidates.map((o) => ({ value: o, weight: meetsEducation(o, quals) ? 6 : 1 }))),
@@ -218,6 +245,7 @@ export function refreshJobMarket(world: World): void {
     };
     world.jobs.postings[posting.id] = posting;
   }
+  if (!minor) postExperiencedRole(world, player, unemployment);
   const all = sortedValues(world.jobs.postings).sort(
     (a, b) => a.postedTick - b.postedTick || (a.id < b.id ? -1 : 1),
   );
@@ -300,6 +328,16 @@ export class JobError extends Error {
 /** Experience needed per level, months in the same industry. */
 const LEVEL_EXPERIENCE = [0, 12, 36, 60, 96] as const;
 
+export function requiredIndustryExperience(
+  occupation: OccupationDefinition,
+  level: number,
+  qualifications: readonly string[],
+): number {
+  const mastersWaiver = level === 1 && qualifications.some((q) => q.startsWith('master:'));
+  const seniorityMinimum = mastersWaiver ? 0 : (LEVEL_EXPERIENCE[level] ?? 96);
+  return Math.max(occupation.minExperienceMonths, seniorityMinimum);
+}
+
 export function jobEligibility(world: World, c: Character, terms: JobTerms): JobRejection | null {
   const rules = getRules(c.countryCode);
   const age = ageYears(world, c);
@@ -326,9 +364,8 @@ export function jobEligibility(world: World, c: Character, terms: JobTerms): Job
   );
   if (skillAverage < occupation.minSkill) return 'notSkilled';
   const experience = experienceMonths(world, c.id, terms.industryId);
-  const needed = LEVEL_EXPERIENCE[terms.level] ?? 96;
-  const masters = c.education.qualifications.some((q) => q.startsWith('master:'));
-  if (experience < needed && !(terms.level === 1 && masters)) return 'notExperienced';
+  if (experience < requiredIndustryExperience(occupation, terms.level, c.education.qualifications))
+    return 'notExperienced';
   return null;
 }
 
@@ -705,7 +742,7 @@ function review(world: World, c: Character, e: Employment, isPlayer: boolean): v
   const managerBonus = manager ? Math.floor((manager.closeness - 50) / 2) : 0;
   // Professional reputation counts at review time (gameplay expansion).
   const reputationBonus = Math.floor((c.career.reputation - 200) / 20);
-  const tenure = world.tick - e.startTick;
+  const tenure = world.tick - (e.levelStartTick ?? e.startTick);
   if (e.performance < 300) {
     e.warnings += 1;
     if (isPlayer) addNotification(world, 'work', 'ntf.workWarning', { title: e.title }, 'career');
@@ -744,7 +781,7 @@ export function promote(world: World, c: Character, e: Employment, isPlayer: boo
   };
   e.salaryMinor = maxBig(newMin, applyPercent(e.salaryMinor, 115));
   e.title = jobTitle(occupation, level);
-  e.startTick = world.tick;
+  e.levelStartTick = world.tick;
   if (isPlayer) {
     changeStat(world, c, 'happiness', 80, 'work:promotion');
     changeStat(world, c, 'confidence', 50, 'work:promotion');
@@ -870,7 +907,7 @@ export function headhuntChance(world: World, c: Character, e: Employment): numbe
   const occupation = getOccupation(e.terms.occupationId);
   if (occupation.hidden || e.terms.contract === 'internship' || e.terms.contract === 'casual')
     return 0;
-  if (world.tick - e.startTick < 6 || e.performance < 450) return 0;
+  if (world.tick - (e.levelStartTick ?? e.startTick) < 6 || e.performance < 450) return 0;
   if (ageYears(world, c) >= getRules(c.countryCode).pension.stateAge) return 0;
   const recent = sortedValues(world.jobs.applications).some(
     (a) =>
@@ -996,7 +1033,8 @@ export function assignNpcJob(
     level = payHint.level;
   } else {
     const options = OCCUPATIONS.filter(
-      (o) => !o.hidden && meetsEducation(o, c.education.qualifications),
+      (o) =>
+        !o.hidden && o.minExperienceMonths === 0 && meetsEducation(o, c.education.qualifications),
     );
     if (options.length === 0) return null;
     occupation = withRng(world, 'career', (rng) => rng.pick(options));

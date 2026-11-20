@@ -31,7 +31,7 @@ const PARENT_PAY: Record<WealthTier, number> = {
 function giveParentJob(world: World, parent: Character, targetPercent: number): void {
   const age = ageYears(world, parent);
   const level = clamp(Math.floor((age - 22) / 7), 0, 4);
-  const scored = OCCUPATIONS.filter((o) => !o.hidden && o.maxLevel >= 0)
+  const scored = OCCUPATIONS.filter((o) => !o.hidden && o.minExperienceMonths === 0)
     .map((o) => {
       const lvl = Math.min(level, o.maxLevel);
       return {

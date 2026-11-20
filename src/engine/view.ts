@@ -19,6 +19,7 @@ import {
   counterOfferChance,
   experienceMonths,
   jobEligibility,
+  requiredIndustryExperience,
   type JobRejection,
 } from './career/jobs';
 import { findOccupation, getOccupation, industryName, jobTitle } from './career/occupations';
@@ -295,6 +296,8 @@ export interface WorkView {
     expiresTick: number;
     education: string;
     field: string | null;
+    experienceNeeded: number;
+    experiencedHire: boolean;
     block: JobRejection | null;
     applied: boolean;
   }[];
@@ -764,6 +767,12 @@ function workView(world: World, c: Character): WorkView {
           expiresTick: p.expiresTick,
           education: occupation.education,
           field: occupation.field,
+          experienceNeeded: requiredIndustryExperience(
+            occupation,
+            p.terms.level,
+            c.education.qualifications,
+          ),
+          experiencedHire: occupation.minExperienceMonths > 0,
           block: jobEligibility(world, c, p.terms),
           applied: activeApps.some(
             (a) =>
