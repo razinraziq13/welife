@@ -8,6 +8,8 @@ import { Card } from '@app/components/ui/card';
 import { ChoiceGroup } from '@app/components/ui/choice-group';
 import { ConfirmDialog } from '@app/components/ui/confirm-dialog';
 import { Switch } from '@app/components/ui/switch';
+import { SegmentBar } from '@app/components/ui/segment-bar';
+import { Briefcase, GraduationCap, Search, Signpost, Sparkles } from 'lucide-react';
 import { t } from '@app/i18n/en';
 import { clubName, formatShortMonth, qualificationName } from '@app/i18n/format';
 import { useGameStore } from '@app/stores/gameStore';
@@ -915,21 +917,43 @@ function HistoryCard({ view }: { view: GameView }) {
   );
 }
 
+const SECTIONS = [
+  { value: 'job', label: 'Job', icon: Briefcase },
+  { value: 'jobapp', label: 'Job App', icon: Search },
+  { value: 'paths', label: 'Paths', icon: Signpost },
+  { value: 'study', label: 'Study', icon: GraduationCap },
+  { value: 'skills', label: 'Skills', icon: Sparkles },
+] as const;
+type Section = (typeof SECTIONS)[number]['value'];
+
 export function CareerTab() {
   const session = useGameStore((s) => s.session);
+  const [picked, setPicked] = useState<Section | null>(null);
   if (!session) return null;
   const view = session.view;
   const c = view.character;
+  const working = c.age.years >= 13;
+  // Open where the action is: a waiting offer, else your job, else school.
+  const offer = view.work.applications.some((a) => a.status === 'offered');
+  const section: Section = picked ?? (!working ? 'study' : offer ? 'jobapp' : 'job');
+  const items = working
+    ? SECTIONS
+    : SECTIONS.filter((x) => x.value === 'study' || x.value === 'skills');
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Career"
         description="School, further study and work. What you practise now shapes what you can do later."
       />
-      <EducationCard view={view} />
-      <ClubsCard view={view} />
-      <FurtherStudyCard view={view} />
-      {c.age.years >= 13 && (
+      <SegmentBar label="Career sections" items={items} value={section} onChange={setPicked} />
+      {section === 'study' && (
+        <>
+          <EducationCard view={view} />
+          <ClubsCard view={view} />
+          <FurtherStudyCard view={view} />
+        </>
+      )}
+      {working && section === 'job' && (
         <>
           <JobCard view={view} />
           <CareerPlayCard view={view} base={`/play/${session.saveId}`} />
@@ -948,39 +972,47 @@ export function CareerTab() {
               </p>
             </Card>
           )}
-          <ApplicationsCard view={view} />
-          <JobBoardCard view={view} />
-          <PathsCard view={view} base={`/play/${session.saveId}`} />
+          <HistoryCard view={view} />
         </>
       )}
-      <HistoryCard view={view} />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card title="Skills">
-          {SKILL_KEYS.map((key) => (
-            <StatBar key={key} label={t(`skill.${key}`)} value={c.skills[key]} />
-          ))}
-        </Card>
-        <Card
-          title="Habits"
-          description="Habits form from repeating an activity month after month, and fade if you stop."
-        >
-          <dl className="divide-y divide-border text-sm">
-            {HABIT_KEYS.map((key) => (
-              <div key={key} className="flex justify-between gap-2 py-2">
-                <dt className="text-fg">{t(`habit.${key}`)}</dt>
-                <dd className="text-muted">{habitLevel(c.habits[key])}</dd>
-              </div>
-            ))}
-          </dl>
-        </Card>
-      </div>
-      <Card title="Practise and learn">
-        <ActivityList
-          filter={(a) =>
-            a.category === 'learn' || a.category === 'creative' || a.category === 'health'
-          }
-        />
-      </Card>
+      {working && section === 'jobapp' && (
+        <>
+          <ApplicationsCard view={view} />
+          <JobBoardCard view={view} />
+        </>
+      )}
+      {working && section === 'paths' && <PathsCard view={view} base={`/play/${session.saveId}`} />}
+      {section === 'skills' && (
+        <>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card title="Skills">
+              {SKILL_KEYS.map((key) => (
+                <StatBar key={key} label={t(`skill.${key}`)} value={c.skills[key]} />
+              ))}
+            </Card>
+            <Card
+              title="Habits"
+              description="Habits form from repeating an activity month after month, and fade if you stop."
+            >
+              <dl className="divide-y divide-border text-sm">
+                {HABIT_KEYS.map((key) => (
+                  <div key={key} className="flex justify-between gap-2 py-2">
+                    <dt className="text-fg">{t(`habit.${key}`)}</dt>
+                    <dd className="text-muted">{habitLevel(c.habits[key])}</dd>
+                  </div>
+                ))}
+              </dl>
+            </Card>
+          </div>
+          <Card title="Practise and learn">
+            <ActivityList
+              filter={(a) =>
+                a.category === 'learn' || a.category === 'creative' || a.category === 'health'
+              }
+            />
+          </Card>
+        </>
+      )}
     </div>
   );
 }

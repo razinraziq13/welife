@@ -137,7 +137,9 @@ test.describe('an adult life', () => {
     const saveId = await importSave(page, json);
     await page.goto(`/play/${saveId}/career`);
     await expect(page.getByRole('heading', { level: 1, name: 'Career' })).toBeVisible();
+    await page.getByRole('button', { name: 'Job', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: /Your job|Work/ })).toBeVisible();
+    await page.getByRole('button', { name: 'Job App', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Job App' })).toBeVisible();
     const jobApp = page.getByRole('region', { name: 'Job App' });
     const experienced = jobApp.getByRole('switch', {
@@ -147,6 +149,7 @@ test.describe('an adult life', () => {
     await expect(experienced).toBeChecked();
     await expect(jobApp.getByText(/Requires \d+ years in/).first()).toBeVisible();
     await experienced.click();
+    await page.getByRole('button', { name: 'Paths', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Choose a path' })).toBeVisible();
     for (const path of ['Musician', 'Actor', 'Film director'])
       await expect(

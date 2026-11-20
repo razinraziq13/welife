@@ -10,7 +10,7 @@ import { AmountForm, Money } from '@app/components/Money';
 import { Button, buttonVariants } from '@app/components/ui/button';
 import { Card } from '@app/components/ui/card';
 import { ChoiceGroup } from '@app/components/ui/choice-group';
-import { cn } from '@app/lib/cn';
+import { SegmentBar } from '@app/components/ui/segment-bar';
 import { ConfirmDialog } from '@app/components/ui/confirm-dialog';
 import { t } from '@app/i18n/en';
 import {
@@ -838,9 +838,6 @@ const SECTIONS = [
   { value: 'bank', label: 'Bank', icon: Landmark },
   { value: 'investments', label: 'Investments', icon: ChartLine },
 ] as const;
-/** Same segmented bar as the Investments screen. */
-const SEGMENT =
-  'flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-0.5 text-xs font-medium sm:flex-row sm:gap-2 sm:px-2 sm:text-sm';
 
 /** Money, one section at a time: accounts, living costs, loans and debt, investments. */
 export function FinanceTab() {
@@ -854,37 +851,22 @@ export function FinanceTab() {
         title="Money"
         description="Every amount here comes from a balanced ledger of real transactions in your life."
       />
-      <nav
-        aria-label="Money sections"
-        className="grid grid-cols-5 rounded-xl border border-border bg-surface p-1"
-      >
-        {SECTIONS.map(({ value, label, icon: Icon }) => (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={section === value}
-            onClick={() => {
-              setSection(value);
-            }}
-            className={cn(
-              SEGMENT,
-              section === value
-                ? 'bg-primary-soft font-semibold text-fg'
-                : 'text-muted hover:bg-surface-2 hover:text-fg',
-            )}
-          >
-            <Icon aria-hidden="true" className="size-4 shrink-0" />
-            {label}
-          </button>
-        ))}
-        <Link
-          to={`/play/${session.saveId}/shopping`}
-          className={cn(SEGMENT, 'text-muted hover:bg-surface-2 hover:text-fg')}
-        >
-          <ShoppingBag aria-hidden="true" className="size-4 shrink-0" />
-          Shopping
-        </Link>
-      </nav>
+      <SegmentBar
+        label="Money sections"
+        items={[
+          ...SECTIONS,
+          {
+            value: 'shopping',
+            label: 'Shopping',
+            icon: ShoppingBag,
+            to: `/play/${session.saveId}/shopping`,
+          },
+        ]}
+        value={section}
+        onChange={(v) => {
+          if (v !== 'shopping') setSection(v);
+        }}
+      />
       {section === 'accounts' && (
         <>
           <OverviewCard view={view} />
