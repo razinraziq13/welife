@@ -400,6 +400,8 @@ export const enLife: Record<string, string> = {
   'ntf.raiseGranted': 'Pay rise of {percent}% approved.',
   'ntf.retired': 'You are now retired.',
   'ntf.firstAccount': 'You opened your first bank account.',
+  'ntf.currencyReform':
+    'Currency reform: every {factor} old notes became 1 new one. Wages, prices and savings are now in today’s money; their value is unchanged.',
   'ntf.taxRefund': 'Tax refund: {amountText}.',
   'ntf.taxBill': 'Tax to pay for last year: {amountText}.',
   'ntf.loanRepaid': 'Your {productName} is fully repaid.',
