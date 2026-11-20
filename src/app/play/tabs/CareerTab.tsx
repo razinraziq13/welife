@@ -7,6 +7,7 @@ import { Button } from '@app/components/ui/button';
 import { Card } from '@app/components/ui/card';
 import { ChoiceGroup } from '@app/components/ui/choice-group';
 import { ConfirmDialog } from '@app/components/ui/confirm-dialog';
+import { Switch } from '@app/components/ui/switch';
 import { t } from '@app/i18n/en';
 import { clubName, formatShortMonth, qualificationName } from '@app/i18n/format';
 import { useGameStore } from '@app/stores/gameStore';
@@ -552,17 +553,136 @@ function JobBoardCard({ view }: { view: GameView }) {
   const { send, disabled } = useAct();
   const work = view.work;
   const currency = view.country.currency;
+  const ids = { min: useId(), max: useId(), field: useId(), industry: useId(), contract: useId() };
+  const [onlyQualified, setOnlyQualified] = useState(false);
+  const [minPay, setMinPay] = useState('');
+  const [maxPay, setMaxPay] = useState('');
+  const [field, setField] = useState('');
+  const [industry, setIndustry] = useState('');
+  const [contract, setContract] = useState('');
   if (!work.canWork || work.retired) return null;
+  const scale = 10 ** currency.exponent;
+  const major = (minor: bigint) => Number(minor) / scale;
+  const unique = (xs: (string | null)[]) => [...new Set(xs.filter((x) => x !== null))].sort();
+  const shown = work.postings
+    .filter(
+      (p) =>
+        (!onlyQualified || p.block === null) &&
+        (minPay === '' || major(p.salaryMaxMinor) >= Number(minPay)) &&
+        (maxPay === '' || major(p.salaryMinMinor) <= Number(maxPay)) &&
+        (field === '' || p.field === field || p.field === null) &&
+        (industry === '' || p.industry === industry) &&
+        (contract === '' || p.contract === contract),
+    )
+    // Jobs you can apply for first, then the best paid.
+    .sort(
+      (a, b) =>
+        Number(a.block !== null) - Number(b.block !== null) ||
+        major(b.salaryMaxMinor) - major(a.salaryMaxMinor),
+    );
+  const selectClass = 'h-11 rounded-xl border border-border bg-surface px-3 text-sm text-fg';
+  const choose = (
+    id: string,
+    label: string,
+    value: string,
+    set: (v: string) => void,
+    options: { value: string; label: string }[],
+  ) => (
+    <div className="flex flex-col gap-1">
+      <label htmlFor={id} className="text-sm font-medium text-fg">
+        {label}
+      </label>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => {
+          set(e.target.value);
+        }}
+        className={selectClass}
+      >
+        <option value="">Any</option>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
   return (
     <Card
       title="Job board"
       description={`Openings near ${view.character.location.name}. New jobs appear every month; each closes after a few months.`}
     >
+      {work.postings.length > 0 && (
+        <div className="mb-3 flex flex-col gap-3 rounded-xl bg-surface-2 p-3">
+          <Switch
+            label="Only jobs I qualify for"
+            checked={onlyQualified}
+            onChange={setOnlyQualified}
+          />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {(
+              [
+                [ids.min, `Min pay a month (${currency.symbol})`, minPay, setMinPay],
+                [ids.max, `Max pay a month (${currency.symbol})`, maxPay, setMaxPay],
+              ] as const
+            ).map(([id, label, value, set]) => (
+              <div key={id} className="flex flex-col gap-1">
+                <label htmlFor={id} className="text-sm font-medium text-fg">
+                  {label}
+                </label>
+                <input
+                  id={id}
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={value}
+                  onChange={(e) => {
+                    set(e.target.value);
+                  }}
+                  className={selectClass}
+                />
+              </div>
+            ))}
+            {choose(
+              ids.field,
+              'Field of study',
+              field,
+              setField,
+              unique(work.postings.map((p) => p.field)).map((f) => ({ value: f, label: f })),
+            )}
+            {choose(
+              ids.industry,
+              'Industry',
+              industry,
+              setIndustry,
+              unique(work.postings.map((p) => p.industry)).map((i) => ({ value: i, label: i })),
+            )}
+            {choose(
+              ids.contract,
+              'Contract',
+              contract,
+              setContract,
+              unique(work.postings.map((p) => p.contract)).map((c) => ({
+                value: c,
+                label: t(`contract.${c}`),
+              })),
+            )}
+          </div>
+          <p role="status" className="text-xs text-muted">
+            Showing {shown.length} of {work.postings.length} jobs; ones you can apply for come
+            first.
+          </p>
+        </div>
+      )}
       {work.postings.length === 0 ? (
         <p className="text-sm text-muted">No openings right now. Check again next month.</p>
+      ) : shown.length === 0 ? (
+        <p className="text-sm text-muted">No jobs match these filters.</p>
       ) : (
         <ul className="divide-y divide-border">
-          {work.postings.map((p) => {
+          {shown.map((p) => {
             const reason = p.applied
               ? 'You have applied.'
               : p.block

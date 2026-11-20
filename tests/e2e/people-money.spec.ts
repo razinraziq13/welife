@@ -410,6 +410,14 @@ test.describe('rival job offers', () => {
     await page.goto(`/play/${saveId}/career`);
     await expect(page.getByText(/They approached you/)).toBeVisible();
     await expect(page.getByText(/Accepting means leaving that job/)).toBeVisible();
+    // Job board filters: an impossible minimum pay hides everything, clearing it brings them back.
+    const count = page.getByText(/^Showing \d+ of \d+ jobs/);
+    await expect(count).toBeVisible();
+    await page.getByLabel(/^Min pay a month/).fill('99999999');
+    await expect(page.getByText('No jobs match these filters.')).toBeVisible();
+    await page.getByLabel(/^Min pay a month/).fill('');
+    await page.getByRole('switch', { name: 'Only jobs I qualify for' }).click();
+    await expect(count).toBeVisible();
     await expectAccessible(page);
     const match = page.getByRole('button', { name: /to match \(\d+% chance\)$/ });
     await match.click();
