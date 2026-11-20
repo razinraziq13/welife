@@ -138,7 +138,13 @@ test.describe('an adult life', () => {
     await page.goto(`/play/${saveId}/career`);
     await expect(page.getByRole('heading', { level: 1, name: 'Career' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: /Your job|Work/ })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 2, name: 'Job board' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Job App' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Choose a path' })).toBeVisible();
+    for (const path of ['Musician', 'Actor', 'Film director'])
+      await expect(
+        page.getByRole('button', { name: `Start freelancing as ${path}` }),
+      ).toBeVisible();
+    await expect(page.getByRole('link', { name: /^(Enlist|Open Military)$/ })).toBeVisible();
     await expectAccessible(page);
 
     await page.goto(`/play/${saveId}/finance`);

@@ -947,6 +947,17 @@ const ROWS: Row[] = [
   ],
   ['illustrator', 'Illustrator', 'arts', 'diploma', 'arts', ['art'], 95, 4],
   ['actor', 'Actor', 'arts', 'none', null, ['socializing', 'art'], 75, 4, { minSkill: 400 }],
+  [
+    'film-director',
+    'Film director',
+    'arts',
+    'none',
+    null,
+    ['art', 'leadership'],
+    80,
+    4,
+    { minSkill: 400 },
+  ],
   ['museum-curator', 'Museum curator', 'arts', 'master', 'humanities', ['reading', 'art'], 150, 4],
   ['music-teacher', 'Music teacher', 'arts', 'diploma', 'arts', ['music', 'care'], 90, 3],
   // Sport and fitness

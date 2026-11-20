@@ -43,6 +43,7 @@ export const WORK_ACTION_IDS = [
   'audition',
   'rehearse',
   'promoteYourself',
+  'shootShortFilm',
   'takeOnProject',
   'upskillCourse',
 ] as const;
@@ -61,6 +62,7 @@ export const WORK_ACTIONS: Record<
   audition: { track: 'performing', hours: 4, energy: 50 },
   rehearse: { track: 'performing', hours: 5, energy: 50 },
   promoteYourself: { track: 'performing', hours: 3, energy: 20 },
+  shootShortFilm: { track: 'performing', hours: 10, energy: 80 },
   takeOnProject: { track: 'office', hours: 6, energy: 60 },
   upskillCourse: { track: 'office', hours: 4, energy: 30 },
 };
@@ -123,6 +125,11 @@ function courseFee(world: World, c: Character): bigint {
   return applyPercent(medianWage(world, c.countryCode), 5);
 }
 
+/** A short film's budget: 20% of the local median monthly wage. */
+function filmBudget(world: World, c: Character): bigint {
+  return applyPercent(medianWage(world, c.countryCode), 20);
+}
+
 function canPay(world: World, c: Character, amount: bigint): boolean {
   const payer = payerFor(world, c);
   if (!payer) return false;
@@ -141,6 +148,10 @@ export function workActionBlock(
   if (!e) return 'noJob';
   const def = WORK_ACTIONS[id];
   if (careerTrack(e) !== def.track) return 'otherTrack';
+  // Directors make films instead of auditioning; only directors shoot them.
+  const directing = e.terms.occupationId === 'film-director';
+  if ((id === 'audition' && directing) || (id === 'shootShortFilm' && !directing))
+    return 'otherTrack';
   if (id === 'audition' && c.career.contract) return 'underContract';
   if (world.activity.tick === world.tick && (world.activity.counts[countKey(id)] ?? 0) > 0)
     return 'doneThisMonth';
@@ -149,6 +160,7 @@ export function workActionBlock(
   if (c.stats.energy < def.energy) return 'tooTired';
   if (id === 'studySpecialty' && c.career.specialty !== null) return 'specialised';
   if (id === 'upskillCourse' && !canPay(world, c, courseFee(world, c))) return 'cannotAfford';
+  if (id === 'shootShortFilm' && !canPay(world, c, filmBudget(world, c))) return 'cannotAfford';
   return null;
 }
 
@@ -329,6 +341,35 @@ export function performWorkAction(world: World, c: Character, id: WorkActionId):
         return done('success', 'work.takeOnProject.shone');
       }
       return done('mixed', 'work.takeOnProject.done');
+    }
+    case 'shootShortFilm': {
+      const payer = payerFor(world, c);
+      if (payer) payExpense(world, payer, 'training', filmBudget(world, c), 'tx.shortFilm');
+      const hit =
+        roll() <
+        clamp(
+          20 +
+            Math.floor((c.skills.art + c.skills.leadership) / 30) +
+            Math.floor(c.career.reputation / 40),
+          10,
+          85,
+        );
+      train(15);
+      if (!hit) {
+        reputation(c, 5);
+        changeStat(world, c, 'stress', 10, 'work:shortFilm');
+        return done('mixed', 'work.shortFilm.flop');
+      }
+      // A well-received short is a credit; festivals sometimes pay a prize.
+      c.career.credits = (c.career.credits ?? 0) + 1;
+      reputation(c, 50);
+      bump(e, 40);
+      const prize = roll() < 40 ? applyPercent(medianWage(world, c.countryCode), 60) : 0n;
+      const into = c.finance?.checkingId ?? c.finance?.savingsId;
+      if (prize > 0n && into) receiveIncome(world, c.id, into, 'gigs', prize, 'tx.filmPrize');
+      return done('success', prize > 0n ? 'work.shortFilm.prize' : 'work.shortFilm.hit', {
+        amount: prize.toString(),
+      });
     }
     case 'upskillCourse': {
       const payer = payerFor(world, c);

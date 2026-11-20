@@ -1016,6 +1016,47 @@ export function assignNpcJob(
   return e;
 }
 
+/** Creative paths the player can start freelance from the Career tab (no posting needed). */
+export const CREATIVE_PATHS = ['actor', 'musician', 'film-director'] as const;
+export type CreativePath = (typeof CREATIVE_PATHS)[number];
+
+/** Entry-level freelance terms for a creative path where the player lives (no randomness). */
+export function freelanceTerms(world: World, c: Character, occupationId: CreativePath): JobTerms {
+  const occupation = getOccupation(occupationId);
+  const fullTime = getRules(c.countryCode).work.fullTimeHours;
+  const band = salaryBand(world, occupation, 0, c.locationId);
+  return {
+    occupationId,
+    level: 0,
+    employer: 'Freelance',
+    industryId: occupation.industryId,
+    contract: 'casual',
+    hours: 40,
+    salaryMinMinor: scaleForContract(band.min, 'casual', 40, fullTime),
+    salaryMaxMinor: scaleForContract(band.max, 'casual', 40, fullTime),
+    locationId: c.locationId,
+  };
+}
+
+/** Why the player cannot start this creative path now (null if they can). */
+export function creativePathBlock(
+  world: World,
+  c: Character,
+  occupationId: CreativePath,
+): JobRejection | null {
+  if (activeEmployment(world, c)?.terms.occupationId === occupationId) return 'noChange';
+  return jobEligibility(world, c, freelanceTerms(world, c, occupationId));
+}
+
+/** Starts freelance in a creative path, leaving any current job. */
+export function startCreativePath(world: World, c: Character, occupationId: CreativePath): void {
+  const block = creativePathBlock(world, c, occupationId);
+  if (block) throw new JobError(block);
+  if (c.employmentId) endEmployment(world, c, 'quit');
+  const terms = freelanceTerms(world, c, occupationId);
+  startEmployment(world, c, terms, terms.salaryMinMinor);
+}
+
 export function quitJob(world: World, c: Character): void {
   if (!c.employmentId) throw new JobError('noJob');
   endEmployment(world, c, 'quit');

@@ -17,6 +17,8 @@ import {
   applyForJob,
   prepareForInterview,
   quitJob,
+  CREATIVE_PATHS,
+  startCreativePath,
   requestRaise,
   respondToOffer,
   retire,
@@ -230,6 +232,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
   }),
   command('withdrawApplication', { applicationId: EntityId }),
   command('quitJob', {}),
+  command('startCreativePath', { occupationId: z.enum(CREATIVE_PATHS) }),
   command('setWorkEffort', { value: z.enum(WORK_EFFORTS) }),
   command('requestRaise', {}),
   command('retire', {}),
@@ -604,6 +607,9 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
     case 'quitJob':
       quitJob(world, player);
       return done('out.quit');
+    case 'startCreativePath':
+      startCreativePath(world, player, cmd.occupationId);
+      return done('out.creativePath', { occupationId: cmd.occupationId });
     case 'setWorkEffort': {
       const job = player.employmentId ? world.employment[player.employmentId] : undefined;
       if (job?.status !== 'active') throw new JobError('noJob');

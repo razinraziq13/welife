@@ -611,7 +611,7 @@ function JobBoardCard({ view }: { view: GameView }) {
   );
   return (
     <Card
-      title="Job board"
+      title="Job App"
       description={`Openings near ${view.character.location.name}. New jobs appear every month; each closes after a few months.`}
     >
       {work.postings.length > 0 && (
@@ -937,6 +937,7 @@ export function CareerTab() {
           )}
           <ApplicationsCard view={view} />
           <JobBoardCard view={view} />
+          <PathsCard view={view} base={`/play/${session.saveId}`} />
         </>
       )}
       <HistoryCard view={view} />
@@ -968,5 +969,87 @@ export function CareerTab() {
         />
       </Card>
     </div>
+  );
+}
+
+const PATH_HINT: Record<string, string> = {
+  actor: 'Auditions win film and TV roles; screen credits lead to bigger parts.',
+  musician: 'Perform and audition for paid work; practise music to improve.',
+  'film-director': 'Shoot short films; good ones earn credits, reputation and festival prizes.',
+};
+
+/** Choose a path: the forces, or start freelance as a musician, actor or film director. */
+function PathsCard({ view, base }: { view: GameView; base: string }) {
+  const { send, disabled } = useAct();
+  const [confirm, setConfirm] = useState<(typeof view.work.paths)[number] | null>(null);
+  const m = view.civic.military;
+  const armyReason = m.current?.status === 'serving' ? null : (m.enlist.enlisted[0] ?? null);
+  const job = view.work.job;
+  return (
+    <Card
+      title="Choose a path"
+      description="Careers you can start yourself, without a job posting."
+    >
+      <ul className="grid gap-3 sm:grid-cols-2">
+        <li className="flex flex-col gap-2 rounded-xl border border-border p-3 text-sm">
+          <p className="font-semibold text-fg">Army</p>
+          <p className="text-muted">
+            {m.current?.status === 'serving'
+              ? `Serving as ${m.current.rank}. Choose your specialty and posting on the Military page.`
+              : 'Enlist in the army, navy or air force: pay, ranks, a specialty and postings.'}
+          </p>
+          {armyReason && <p className="text-xs text-muted">{armyReason}</p>}
+          <Link
+            to={`${base}/military`}
+            className="inline-flex min-h-11 items-center self-start rounded-xl border border-border px-3 font-medium text-fg hover:bg-primary-soft"
+          >
+            {m.current?.status === 'serving' ? 'Open Military' : 'Enlist'}
+          </Link>
+        </li>
+        {view.work.paths.map((p) => (
+          <li
+            key={p.occupationId}
+            className="flex flex-col gap-2 rounded-xl border border-border p-3 text-sm"
+          >
+            <p className="font-semibold text-fg">{p.title}</p>
+            <p className="text-muted">{PATH_HINT[p.occupationId]}</p>
+            <p className="text-xs text-muted">
+              Needs {p.skills.map((s) => t(`skill.${s}`).toLowerCase()).join(' and ')} skills
+              averaging 40.
+            </p>
+            {p.block && <p className="text-xs text-muted">{p.block}</p>}
+            <ActionButton
+              size="sm"
+              variant="secondary"
+              className="self-start"
+              busy={disabled}
+              reason={p.block}
+              aria-label={`Start freelancing as ${p.title}`}
+              onAct={() => {
+                if (job) setConfirm(p);
+                else void send({ type: 'startCreativePath', occupationId: p.occupationId });
+              }}
+            >
+              Start freelancing
+            </ActionButton>
+          </li>
+        ))}
+      </ul>
+      <ConfirmDialog
+        open={confirm !== null}
+        onOpenChange={(o) => {
+          if (!o) setConfirm(null);
+        }}
+        title={`Become a ${confirm?.title.toLowerCase() ?? ''}?`}
+        confirmLabel="Leave my job and start"
+        onConfirm={() =>
+          confirm
+            ? send({ type: 'startCreativePath', occupationId: confirm.occupationId })
+            : undefined
+        }
+      >
+        You will leave your job as {job?.title ?? ''} and start freelancing on a casual contract.
+      </ConfirmDialog>
+    </Card>
   );
 }

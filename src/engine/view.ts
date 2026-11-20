@@ -12,6 +12,10 @@ import {
 } from './calendar/calendar';
 import { timeBudgetFor, type TimeLine } from './calendar/time';
 import {
+  CREATIVE_PATHS,
+  JOB_MESSAGES,
+  creativePathBlock,
+  type CreativePath,
   counterOfferChance,
   experienceMonths,
   jobEligibility,
@@ -309,6 +313,8 @@ export interface WorkView {
     counterChance: number | null;
     referrerName: string | null;
   }[];
+  /** Creative paths to start from the Career tab: why not (null = can start now). */
+  paths: { occupationId: CreativePath; title: string; block: string | null; skills: string[] }[];
   retired: boolean;
   canRetire: boolean;
   experienceMonths: number;
@@ -658,7 +664,10 @@ function careerView(world: World, c: Character, e: Employment | undefined): Care
     specialtyProgress: c.career.specialtyProgress,
     satisfaction: e ? jobSatisfaction(world, c, e) : null,
     actions: track
-      ? WORK_ACTION_IDS.filter((id) => WORK_ACTIONS[id].track === track).map((id) => {
+      ? WORK_ACTION_IDS.filter(
+          (id) =>
+            WORK_ACTIONS[id].track === track && workActionBlock(world, c, id) !== 'otherTrack',
+        ).map((id) => {
           const block = workActionBlock(world, c, id);
           return {
             id,
@@ -772,6 +781,15 @@ function workView(world: World, c: Character): WorkView {
           ? (world.characters[a.referrerId]?.identity.firstName ?? null)
           : null,
       })),
+    paths: CREATIVE_PATHS.map((id) => {
+      const block = creativePathBlock(world, c, id);
+      return {
+        occupationId: id,
+        title: getOccupation(id).title,
+        block: block ? JOB_MESSAGES[block] : null,
+        skills: [...getOccupation(id).skills],
+      };
+    }),
     retired: c.finance?.retired ?? false,
     canRetire: age >= 55 && !(c.finance?.retired ?? false),
     experienceMonths: experienceMonths(world, c.id, null),

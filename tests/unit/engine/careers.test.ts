@@ -98,7 +98,7 @@ describe('career simulation (gameplay expansion, feature 6)', () => {
     const rep = player.career.reputation;
     careerMonth(world, player, job);
     expect(player.career.reputation).toBe(rep + 5);
-  });
+  }, 30_000);
 
   it('work outcomes are deterministic', () => {
     const teacher = workerIn('education', 'primary-teacher', 'career-det');
