@@ -1049,6 +1049,33 @@ export const BusinessSchema = z
     /** Consecutive months the business could not pay its bills. */
     distressMonths: z.number().int().min(0),
     closedTick: Tick.nullable(),
+    /** Extra products (Career Expansion), sold at the first outlet; optional for older saves. */
+    products: z
+      .array(
+        z
+          .object({
+            id: Id,
+            name: z.string().trim().min(1).max(40),
+            pricePercent: z.number().int().min(50).max(250),
+            supplier: z.enum(['budget', 'standard', 'premium']),
+            marketingMinor: NonNegativeMinor,
+            stockTarget: z.number().int().min(0).max(1_000_000),
+            inventory: z.number().int().min(0),
+            last: z
+              .object({
+                demanded: z.number().int().min(0),
+                sold: z.number().int().min(0),
+                revenue: NonNegativeMinor,
+                cost: NonNegativeMinor,
+                ads: NonNegativeMinor,
+              })
+              .strict()
+              .nullable(),
+          })
+          .strict(),
+      )
+      .max(4)
+      .optional(),
   })
   .strict();
 export type Business = z.infer<typeof BusinessSchema>;

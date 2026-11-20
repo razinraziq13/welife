@@ -69,6 +69,9 @@ import {
   setStaff,
   setStockTarget,
   setSupplier,
+  launchProduct,
+  updateProduct,
+  discontinueProduct,
   startBusiness,
   takeBusinessLoan,
 } from '../business/business';
@@ -278,6 +281,21 @@ export const CommandSchema = z.discriminatedUnion('type', [
     supplier: z.enum(['budget', 'standard', 'premium']),
   }),
   command('setManager', { businessId: EntityId, manager: z.enum(['owner', 'hired']) }),
+  command('launchProduct', {
+    businessId: EntityId,
+    name: z.string().trim().min(1).max(40),
+    pricePercent: z.number().int().min(50).max(250),
+    supplier: z.enum(['budget', 'standard', 'premium']),
+  }),
+  command('updateProduct', {
+    businessId: EntityId,
+    productId: EntityId,
+    pricePercent: z.number().int().min(50).max(250),
+    supplier: z.enum(['budget', 'standard', 'premium']),
+    stockTarget: z.number().int().min(0).max(1_000_000),
+    marketingMinor: z.union([AmountMinor, z.literal('0')]),
+  }),
+  command('discontinueProduct', { businessId: EntityId, productId: EntityId }),
   command('investBusiness', { businessId: EntityId, amountMinor: AmountMinor }),
   command('payDividend', { businessId: EntityId, amountMinor: AmountMinor }),
   command('raiseInvestment', { businessId: EntityId, percent: z.number().int().min(5).max(49) }),
@@ -667,6 +685,20 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
     case 'setSupplier':
       setSupplier(world, player, cmd.businessId, cmd.supplier);
       return done('out.supplierSet', { supplier: cmd.supplier });
+    case 'launchProduct':
+      launchProduct(world, player, cmd.businessId, cmd.name, cmd.pricePercent, cmd.supplier);
+      return done('out.productLaunched', { name: cmd.name });
+    case 'updateProduct':
+      updateProduct(world, player, cmd.businessId, cmd.productId, {
+        pricePercent: cmd.pricePercent,
+        supplier: cmd.supplier,
+        stockTarget: cmd.stockTarget,
+        marketingMinor: BigInt(cmd.marketingMinor),
+      });
+      return done('out.productUpdated');
+    case 'discontinueProduct':
+      discontinueProduct(world, player, cmd.businessId, cmd.productId);
+      return done('out.productDropped');
     case 'setManager':
       setManager(world, player, cmd.businessId, cmd.manager);
       return done(cmd.manager === 'hired' ? 'out.managerHired' : 'out.managerSelf');

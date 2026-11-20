@@ -72,6 +72,8 @@ export interface CompanyView {
   typeName: string;
   unit: string;
   goods: boolean;
+  /** Extra products and last month's results (goods businesses). */
+  products: NonNullable<Business['products']>;
   countryCode: string;
   currency: CurrencyInfo;
   status: Business['status'];
@@ -205,6 +207,7 @@ function companyView(world: World, player: Character, b: Business): CompanyView 
     typeName: type.name,
     unit: type.unit,
     goods: type.goods,
+    products: b.products ?? [],
     countryCode: b.countryCode,
     currency: currencyOf(b.countryCode),
     status: b.status,

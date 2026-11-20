@@ -523,6 +523,7 @@ function ManageCard({
   const playerCur = { ...view.country.currency };
   return (
     <>
+      {company.goods && <ProductsCard company={company} />}
       <Card title="How it is run">
         <div className="flex flex-col gap-4">
           <StatBar label="Quality" value={company.quality} />
@@ -876,4 +877,203 @@ export function BusinessDetailScreen() {
       <ManageCard company={company} enterprise={view.enterprise} view={view} />
     </div>
   );
+}
+
+const SUPPLIER_KEYS = ['budget', 'standard', 'premium'] as const;
+const fieldClass = 'h-11 rounded-xl border border-border bg-surface px-3 text-sm text-fg';
+
+/** Extra products (Career Expansion): launch, tune, advertise and drop; last month's results. */
+function ProductsCard({ company }: { company: CompanyView }) {
+  const { send, disabled } = useAct();
+  const nameId = useId();
+  const [name, setName] = useState('');
+  const full = company.products.length >= 4;
+  return (
+    <Card
+      title="Products"
+      description="Sell extra products at your first outlet, each with its own price, supplier, stock and advertising. Results show after you advance."
+    >
+      <ul className="divide-y divide-border">
+        {company.products.map((p) => (
+          <ProductRow key={p.id} company={company} product={p} />
+        ))}
+      </ul>
+      <form
+        className="mt-3 flex flex-wrap items-end gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (name.trim() === '' || full) return;
+          void send({
+            type: 'launchProduct',
+            businessId: company.id,
+            name: name.trim(),
+            pricePercent: 100,
+            supplier: 'standard',
+          });
+          setName('');
+        }}
+      >
+        <div className="flex flex-col gap-1">
+          <label htmlFor={nameId} className="text-sm font-medium text-fg">
+            New product name
+          </label>
+          <input
+            id={nameId}
+            maxLength={40}
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+            }}
+            className={fieldClass}
+          />
+        </div>
+        <Button type="submit" size="sm" disabled={disabled || full || name.trim() === ''}>
+          Launch (trial batch of 50)
+        </Button>
+      </form>
+      {full && <p className="mt-1 text-xs text-muted">You can sell up to 4 extra products.</p>}
+    </Card>
+  );
+}
+
+function ProductRow({
+  company,
+  product: p,
+}: {
+  company: CompanyView;
+  product: CompanyView['products'][number];
+}) {
+  const { send, disabled } = useAct();
+  const cur = company.currency;
+  const ids = { price: useId(), supplier: useId(), stock: useId(), ads: useId() };
+  const [price, setPrice] = useState(String(p.pricePercent));
+  const [supplier, setSupplier] = useState<(typeof SUPPLIER_KEYS)[number]>(p.supplier);
+  const [stock, setStock] = useState(String(p.stockTarget));
+  const [ads, setAds] = useState(formatMinorPlain(p.marketingMinor, cur.exponent));
+  const profit = p.last ? p.last.revenue - p.last.cost - p.last.ads : null;
+  const save = () => {
+    const marketingMinor = toMinorString(ads === '' ? '0' : ads, cur) ?? '0';
+    void send({
+      type: 'updateProduct',
+      businessId: company.id,
+      productId: p.id,
+      pricePercent: Math.min(250, Math.max(50, Math.round(Number(price) || 100))),
+      supplier,
+      stockTarget: Math.max(0, Math.round(Number(stock) || 0)),
+      marketingMinor,
+    });
+  };
+  return (
+    <li className="flex flex-col gap-2 py-3 text-sm">
+      <p className="font-semibold text-fg">{p.name}</p>
+      <p className="text-xs text-muted">
+        {p.last ? (
+          <>
+            Last month: sold {p.last.sold} of {p.last.demanded} wanted · stock {p.inventory} · sales{' '}
+            <Money minor={p.last.revenue} currency={cur} /> · stock bought{' '}
+            <Money minor={p.last.cost} currency={cur} /> · ads{' '}
+            <Money minor={p.last.ads} currency={cur} /> ·{' '}
+            <span className={profit !== null && profit < 0n ? 'text-danger' : ''}>
+              {profit !== null && profit < 0n ? 'loss' : 'profit'}{' '}
+              <Money
+                minor={profit !== null && profit < 0n ? -profit : (profit ?? 0n)}
+                currency={cur}
+              />
+            </span>
+          </>
+        ) : (
+          'Launched; first results after you advance.'
+        )}
+      </p>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <label className="flex flex-col gap-1" htmlFor={ids.price}>
+          <span className="text-xs font-medium text-fg">Price (% of usual)</span>
+          <input
+            id={ids.price}
+            type="number"
+            min={50}
+            max={250}
+            value={price}
+            onChange={(e) => {
+              setPrice(e.target.value);
+            }}
+            className={fieldClass}
+          />
+        </label>
+        <label className="flex flex-col gap-1" htmlFor={ids.supplier}>
+          <span className="text-xs font-medium text-fg">Supplier</span>
+          <select
+            id={ids.supplier}
+            value={supplier}
+            onChange={(e) => {
+              setSupplier(e.target.value as (typeof SUPPLIER_KEYS)[number]);
+            }}
+            className={fieldClass}
+          >
+            {SUPPLIER_KEYS.map((s) => (
+              <option key={s} value={s}>
+                {t(`supplier.${s}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1" htmlFor={ids.stock}>
+          <span className="text-xs font-medium text-fg">Reorder up to (units)</span>
+          <input
+            id={ids.stock}
+            type="number"
+            min={0}
+            value={stock}
+            onChange={(e) => {
+              setStock(e.target.value);
+            }}
+            className={fieldClass}
+          />
+        </label>
+        <label className="flex flex-col gap-1" htmlFor={ids.ads}>
+          <span className="text-xs font-medium text-fg">Ads a month ({cur.symbol})</span>
+          <input
+            id={ids.ads}
+            type="number"
+            min={0}
+            value={ads}
+            onChange={(e) => {
+              setAds(e.target.value);
+            }}
+            className={fieldClass}
+          />
+        </label>
+      </div>
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={disabled}
+          onClick={save}
+          aria-label={`Save ${p.name}`}
+        >
+          Save
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={disabled}
+          aria-label={`Drop ${p.name}`}
+          onClick={() =>
+            void send({ type: 'discontinueProduct', businessId: company.id, productId: p.id })
+          }
+        >
+          Drop product
+        </Button>
+      </div>
+    </li>
+  );
+}
+
+/** Minor units as a plain decimal string for an input (no symbol or separators). */
+function formatMinorPlain(minor: bigint, exponent: number): string {
+  if (exponent === 0) return minor.toString();
+  const scale = 10n ** BigInt(exponent);
+  const frac = (minor % scale).toString().padStart(exponent, '0').replace(/0+$/, '');
+  return `${(minor / scale).toString()}${frac ? `.${frac}` : ''}`;
 }

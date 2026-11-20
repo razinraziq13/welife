@@ -1139,14 +1139,128 @@ function recordHistory(business: Business, entry: Business['history'][number], t
   }
 }
 
+// ----------------------------------------------------------------------------------------
+// Extra products (Career Expansion, decision E77)
+// ----------------------------------------------------------------------------------------
+
+export const MAX_PRODUCTS = 4;
+/** Each extra product competes for this share of the first outlet's local market, percent. */
+const PRODUCT_MARKET_PERCENT = 15;
+
+type Product = NonNullable<Business['products']>[number];
+
+function ownedProduct(world: World, player: Character, businessId: string, productId: string) {
+  const business = requireOwned(world, player, businessId);
+  const product = business.products?.find((p) => p.id === productId);
+  if (!product) throw new BusinessError('invalid');
+  return { business, product };
+}
+
+/** Launches a product (goods businesses): a trial batch of 50 is bought next month. */
+export function launchProduct(
+  world: World,
+  player: Character,
+  businessId: string,
+  name: string,
+  pricePercent: number,
+  supplier: Business['supplier'],
+): void {
+  const business = requireOwned(world, player, businessId);
+  if (!getBusinessType(business.typeId).goods) throw new BusinessError('invalid');
+  const products = (business.products ??= []);
+  if (products.length >= MAX_PRODUCTS) throw new BusinessError('invalid');
+  products.push({
+    id: nextId(world, 'prd'),
+    name: name.trim(),
+    pricePercent,
+    supplier,
+    marketingMinor: 0n,
+    stockTarget: 50,
+    inventory: 0,
+    last: null,
+  });
+}
+
+export function updateProduct(
+  world: World,
+  player: Character,
+  businessId: string,
+  productId: string,
+  change: Pick<Product, 'pricePercent' | 'supplier' | 'stockTarget' | 'marketingMinor'>,
+): void {
+  Object.assign(ownedProduct(world, player, businessId, productId).product, change);
+}
+
+/** Drops a product; unsold stock is written off (it was already paid for). */
+export function discontinueProduct(
+  world: World,
+  player: Character,
+  businessId: string,
+  productId: string,
+): void {
+  const { business } = ownedProduct(world, player, businessId, productId);
+  business.products = business.products?.filter((p) => p.id !== productId);
+}
+
+/** Sells each product for a month; the totals are booked with the company's own figures. */
+function runProducts(
+  world: World,
+  business: Business,
+  type: BusinessType,
+): { revenue: bigint; cost: bigint; ads: bigint } {
+  const total = { revenue: 0n, cost: 0n, ads: 0n };
+  const branch = business.branches[0];
+  if (!branch || !business.products?.length) return total;
+  const { country } = getLocation(branch.locationId);
+  const toBusiness = (amount: bigint) => convert(world, amount, country.code, business.countryCode);
+  const ref = refPrice(world, type, branch.locationId);
+  const median = medianWage(world, country.code);
+  const base = Math.floor(
+    (marketUnits(world, type, branch.locationId, 1) * PRODUCT_MARKET_PERCENT) / 100,
+  );
+  const plain = offerScore(business.quality, business.brand, 100, type.elasticity);
+  for (const p of business.products) {
+    // Advertising lifts the product's own brand: 1 point per 0.1% of the median wage spent.
+    const adBrand = median > 0n ? Number((p.marketingMinor * 1000n) / median) : 0;
+    const appeal = offerScore(
+      clamp(business.quality + SUPPLIERS[p.supplier].quality, 0, 1000),
+      clamp(business.brand + adBrand, 0, 1000),
+      p.pricePercent,
+      type.elasticity,
+    );
+    const demanded = Math.floor((base * appeal) / plain);
+    const purchased = Math.max(0, p.stockTarget - p.inventory);
+    p.inventory += purchased;
+    const sold = Math.min(demanded, p.inventory);
+    p.inventory -= sold;
+    p.inventory -= Math.floor((p.inventory * type.spoilagePercent) / 100);
+    const unitCost = applyPercent(
+      applyPercent(ref, type.unitCostPercent),
+      SUPPLIERS[p.supplier].costPercent,
+    );
+    p.last = {
+      demanded,
+      sold,
+      revenue: toBusiness(applyPercent(ref, p.pricePercent) * BigInt(sold)),
+      cost: toBusiness(unitCost * BigInt(purchased)),
+      ads: p.marketingMinor,
+    };
+    total.revenue += p.last.revenue;
+    total.cost += p.last.cost;
+    total.ads += p.last.ads;
+  }
+  return total;
+}
+
 /** One month for one company: sales, costs, tax, loans, statement, quality and brand. */
 export function runBusinessMonth(world: World, business: Business): void {
   const type = getBusinessType(business.typeId);
   const results = business.branches.map((b) => runBranch(world, business, type, b));
   const sum = (key: keyof Omit<BranchResult, 'demanded' | 'sold' | 'overloaded'>) =>
     results.reduce((s, r) => s + r[key], 0n);
-  const revenue = sum('revenue');
-  const cogs = sum('cogs');
+  const extra = runProducts(world, business, type);
+  const revenue = sum('revenue') + extra.revenue;
+  const cogs = sum('cogs') + extra.cost;
   const firstBranch = business.branches[0];
   const managerCost =
     business.manager === 'hired' && firstBranch
@@ -1160,7 +1274,7 @@ export function runBusinessMonth(world: World, business: Business): void {
   const wages = sum('wages') + managerCost;
   const rent = sum('rent');
   const other = sum('other');
-  const marketing = business.marketingMinor;
+  const marketing = business.marketingMinor + extra.ads;
   const payer = { ownerId: business.id, checkingId: business.cashAccountId, savingsId: null };
   if (revenue > 0n) {
     post(
