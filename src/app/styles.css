@@ -99,6 +99,52 @@
   --wl-danger-fg: #2a0905;
 }
 
+/* ---------- Game colour (Settings); jade is the default above. Before contrast so it wins. ---------- */
+:root[data-palette='grape'] {
+  --wl-primary: #5b399f;
+  --wl-primary-hover: #472c7d;
+  --wl-primary-soft: #eee6fc;
+  --wl-ring: #5b399f;
+}
+
+:root[data-theme='dark'][data-palette='grape'] {
+  --wl-primary: #c3a6f5;
+  --wl-primary-hover: #d6c2f8;
+  --wl-primary-fg: #1e1233;
+  --wl-primary-soft: #2f2347;
+  --wl-ring: #c3a6f5;
+}
+
+:root[data-palette='guava'] {
+  --wl-primary: #a8325b;
+  --wl-primary-hover: #8a2649;
+  --wl-primary-soft: #fae2eb;
+  --wl-ring: #a8325b;
+}
+
+:root[data-theme='dark'][data-palette='guava'] {
+  --wl-primary: #f29bba;
+  --wl-primary-hover: #f6b7cd;
+  --wl-primary-fg: #33101d;
+  --wl-primary-soft: #44212f;
+  --wl-ring: #f29bba;
+}
+
+:root[data-palette='ocean'] {
+  --wl-primary: #245e9e;
+  --wl-primary-hover: #1c4b7f;
+  --wl-primary-soft: #e2f0ff;
+  --wl-ring: #245e9e;
+}
+
+:root[data-theme='dark'][data-palette='ocean'] {
+  --wl-primary: #8cc4f7;
+  --wl-primary-hover: #aed5fa;
+  --wl-primary-fg: #0b2036;
+  --wl-primary-soft: #1b3049;
+  --wl-ring: #8cc4f7;
+}
+
 /* ---------- High contrast ---------- */
 :root[data-contrast='high'] {
   --wl-fg: #000000;

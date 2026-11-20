@@ -22,6 +22,7 @@ import type { GameView } from '@engine/view';
 import { Avatar } from '@app/components/avatar/Avatar';
 import { t } from '@app/i18n/en';
 import { displayValue, formatAge, formatShortMonth, storyText } from '@app/i18n/format';
+import { Money } from '@app/components/Money';
 import { fromMonthIndex, monthIndex } from '@engine/core/clock';
 import { cn } from '@app/lib/cn';
 
@@ -80,57 +81,64 @@ export function HeadlineStats({ view }: { view: GameView }) {
 export function LifeHero({ view, base }: { view: GameView; base: string }) {
   const c = view.character;
   const generation = view.legacy.generation;
+  const checking = view.finance.personal?.checking ?? null;
   return (
     <section
       aria-labelledby="life-hero-name"
       className="overflow-hidden rounded-3xl border border-border bg-surface shadow-sm"
     >
-      <div
-        aria-hidden="true"
-        className="h-16 bg-linear-to-br from-primary/30 via-primary-soft to-accent/35 sm:h-20"
-      />
-      <div className="px-4 pb-4 sm:px-5 sm:pb-5">
-        <div className="-mt-10 flex items-end gap-4">
+      <div className="flex items-center gap-3 bg-primary-soft px-4 py-3 sm:px-5">
+        <div className="min-w-0 flex-1">
+          {generation > 1 && (
+            <p className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-semibold text-fg">
+              <Crown aria-hidden="true" className="size-3.5 text-accent-strong" />
+              Generation {generation}
+            </p>
+          )}
+          <h2
+            id="life-hero-name"
+            className="text-xl leading-tight font-bold break-words text-fg sm:text-2xl"
+          >
+            {c.displayName}
+          </h2>
+          <p className="mt-0.5 flex items-start gap-1 text-sm text-muted">
+            <MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+            <span className="min-w-0">
+              {c.alive ? formatAge(c.age) : `Died at ${String(c.age.years)}`} · {c.location.name},{' '}
+              {view.country.name}
+            </span>
+          </p>
+          <p className="mt-0.5 flex items-start gap-1 text-sm font-medium text-fg">
+            <Sparkles aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
+            <span className="min-w-0">{occupationLine(view)}</span>
+          </p>
+        </div>
+        <div className="relative shrink-0">
+          <span
+            aria-hidden="true"
+            className="absolute inset-x-2 bottom-1 top-4 -rotate-12 rounded-[42%_52%_47%_41%] bg-primary/25"
+          />
           <Avatar
             appearance={c.appearance}
             stage={c.stage}
             ageYears={c.age.years}
-            className="size-24 shrink-0 rounded-full border-4 border-surface bg-surface shadow-md sm:size-28"
+            framed={false}
+            className="relative size-24 sm:size-28"
             label={`Portrait of ${c.displayName}`}
           />
-          <div className="min-w-0 flex-1 pb-1">
-            {generation > 1 && (
-              <p className="mb-1 inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-semibold text-fg">
-                <Crown aria-hidden="true" className="size-3.5 text-accent-strong" />
-                Generation {generation}
-              </p>
-            )}
-            <h2
-              id="life-hero-name"
-              className="text-xl leading-tight font-bold break-words text-fg sm:text-2xl"
-            >
-              {c.displayName}
-            </h2>
-            <p className="text-sm text-muted">
-              {c.alive ? formatAge(c.age) : `Died at ${String(c.age.years)}`}
-            </p>
-          </div>
         </div>
-        <div className="mt-3 flex flex-col gap-1 text-sm text-muted">
-          <p className="flex items-start gap-1.5">
-            <Sparkles aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-            <span className="min-w-0">{occupationLine(view)}</span>
-          </p>
-          <p className="flex items-start gap-1.5">
-            <MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-            <span className="min-w-0">
-              {c.location.name}, {view.country.name}
-            </span>
-          </p>
-        </div>
-        <div className="mt-4 border-t border-border pt-4">
-          <HeadlineStats view={view} />
-        </div>
+      </div>
+      {checking !== null && (
+        <p className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5 text-sm sm:px-5">
+          <span className="flex items-center gap-2 text-muted">
+            <Wallet aria-hidden="true" className="size-4" />
+            Current account
+          </span>
+          <Money minor={checking} currency={view.finance.currency} className="font-semibold" />
+        </p>
+      )}
+      <div className="px-4 pt-4 pb-4 sm:px-5 sm:pb-5">
+        <HeadlineStats view={view} />
         <Link
           to={`${base}/character`}
           className="mt-4 inline-flex min-h-11 items-center gap-1 rounded-xl bg-primary-soft px-4 font-semibold text-fg hover:bg-primary hover:text-primary-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"

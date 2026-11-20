@@ -12,6 +12,7 @@ export interface ResolvedAppearance {
   theme: 'light' | 'dark';
   motion: 'reduce' | 'full';
   contrast: 'standard' | 'high';
+  palette: AppSettings['palette'];
   fontSizePercent: number;
 }
 
@@ -27,7 +28,13 @@ export function resolveAppearance(
         ? 'reduce'
         : 'full'
       : settings.motion;
-  return { theme, motion, contrast: settings.contrast, fontSizePercent: settings.textScale };
+  return {
+    theme,
+    motion,
+    contrast: settings.contrast,
+    palette: settings.palette,
+    fontSizePercent: settings.textScale,
+  };
 }
 
 const THEME_COLORS: Record<ResolvedAppearance['theme'], string> = {
@@ -39,6 +46,7 @@ export function applyAppearance(root: HTMLElement, appearance: ResolvedAppearanc
   root.dataset.theme = appearance.theme;
   root.dataset.motion = appearance.motion;
   root.dataset.contrast = appearance.contrast;
+  root.dataset.palette = appearance.palette;
   root.style.fontSize = `${appearance.fontSizePercent}%`;
   const meta = root.ownerDocument.querySelector('meta[name="theme-color"]');
   meta?.setAttribute('content', THEME_COLORS[appearance.theme]);

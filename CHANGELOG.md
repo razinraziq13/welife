@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **New look, step 1:** the Life screen has a compact character header with your current account and a list of colourful action rows; choose a game colour (Jade, Grape, Guava or Ocean) in Settings.
+
 - **Take over a child:** Legacy, Hand over now lists your children and grandchildren of any age, so you can carry on as a young child while your character lives on.
 
 - **Long-term conditions:** asthma and other chronic conditions now flare up some months instead of draining health every month, and can be cured with an expensive therapy or operation from the Health care screen.

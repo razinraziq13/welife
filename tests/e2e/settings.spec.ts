@@ -90,3 +90,14 @@ test('keyboard shortcuts navigate and open help, and can be turned off', async (
   await page.getByRole('button', { name: 'View shortcuts' }).click();
   await expect(dialog).toBeVisible();
 });
+
+test('game colour applies immediately and survives a reload', async ({ page }) => {
+  await openSettings(page);
+  const html = page.locator('html');
+  await expect(html).toHaveAttribute('data-palette', 'jade');
+  await page.locator('label', { hasText: 'Ocean' }).click();
+  await expect(html).toHaveAttribute('data-palette', 'ocean');
+  await page.reload();
+  await expect(html).toHaveAttribute('data-palette', 'ocean');
+  await expect(page.getByRole('radio', { name: 'Ocean' })).toBeChecked();
+});

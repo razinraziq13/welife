@@ -11,7 +11,13 @@ describe('resolveAppearance', () => {
   it('follows the OS when theme and motion are "system"', () => {
     expect(
       resolveAppearance(settings({}), { prefersDark: true, prefersReducedMotion: true }),
-    ).toEqual({ theme: 'dark', motion: 'reduce', contrast: 'standard', fontSizePercent: 100 });
+    ).toEqual({
+      theme: 'dark',
+      motion: 'reduce',
+      contrast: 'standard',
+      palette: 'jade',
+      fontSizePercent: 100,
+    });
     expect(
       resolveAppearance(settings({}), { prefersDark: false, prefersReducedMotion: false }),
     ).toMatchObject({ theme: 'light', motion: 'full' });

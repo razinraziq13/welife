@@ -32,6 +32,8 @@
                 ? 'dark'
                 : 'light';
           d.dataset.contrast = s.contrast === 'high' ? 'high' : 'standard';
+          d.dataset.palette =
+            ['grape', 'guava', 'ocean'].indexOf(s.palette) >= 0 ? s.palette : 'jade';
           d.dataset.motion =
             s.motion === 'reduce' || (s.motion !== 'full' && mm('(prefers-reduced-motion: reduce)'))
               ? 'reduce'

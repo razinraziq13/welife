@@ -7,12 +7,13 @@ import type {
   TextScale,
   ThemePreference,
 } from '@contracts/appSettings';
-import { TEXT_SCALES } from '@contracts/appSettings';
+import { PALETTES, TEXT_SCALES } from '@contracts/appSettings';
 import { PageHeader } from '@app/components/PageHeader';
 import { Button } from '@app/components/ui/button';
 import { Card } from '@app/components/ui/card';
 import { ChoiceGroup, type Choice } from '@app/components/ui/choice-group';
 import { Switch } from '@app/components/ui/switch';
+import { SwatchGroup } from '@app/components/ui/swatch-group';
 import { cn } from '@app/lib/cn';
 import { useAppStore } from '@app/stores/appStore';
 import { useShortcutsDialogStore } from '@app/stores/uiStore';
@@ -130,6 +131,14 @@ export function SettingsScreen() {
             options={CONTRAST_OPTIONS}
             disabled={disabled}
             onChange={(contrast) => void updateSettings({ contrast })}
+          />
+          <SwatchGroup
+            legend="Game colour"
+            name="palette"
+            colors={['#0e6e5c', '#5b399f', '#a8325b', '#245e9e']}
+            labels={['Jade', 'Grape', 'Guava', 'Ocean']}
+            value={PALETTES.indexOf(settings.palette)}
+            onChange={(index) => void updateSettings({ palette: PALETTES[index] ?? 'jade' })}
           />
         </div>
       </Card>

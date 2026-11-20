@@ -42,6 +42,8 @@ describe('AppSettingsPatchSchema', () => {
       keyboardShortcuts: true,
     };
     expect(AppSettingsSchema.parse(old).hideSensitive).toBe(false);
+    expect(AppSettingsSchema.parse(old).palette).toBe('jade');
+    expect(AppSettingsPatchSchema.parse({ palette: 'grape' })).toEqual({ palette: 'grape' });
     expect(AppSettingsPatchSchema.parse({ hideSensitive: true })).toEqual({ hideSensitive: true });
   });
 
