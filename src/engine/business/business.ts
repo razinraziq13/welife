@@ -8,6 +8,7 @@ import {
   minBig,
   monthlyInterest,
 } from '../core/money';
+import { Rng } from '../core/rng';
 import { addBiography, addNotification, ageYears, nextId, withRng } from '../core/world';
 import { convertCurrency } from '../economy/fx';
 import { convert, medianWage } from '../economy/economy';
@@ -1052,7 +1053,9 @@ function runBranch(
   others = Math.floor((others * rivalry) / 100);
   const market = marketUnits(world, type, branch.locationId, outlets);
   const demanded = Math.floor((market * mine) / (mine + others));
-  const capacity = branch.staff * type.capacityPerStaff;
+  // Staff on client projects (first outlet) are not free for walk-in work.
+  const onContracts = branch === business.branches[0] ? staffOnContracts(business) : 0;
+  const capacity = Math.max(0, branch.staff - onContracts) * type.capacityPerStaff;
   let purchased = 0;
   if (type.goods) {
     purchased = Math.max(0, branch.stockTarget - branch.inventory);
@@ -1259,7 +1262,9 @@ export function runBusinessMonth(world: World, business: Business): void {
   const sum = (key: keyof Omit<BranchResult, 'demanded' | 'sold' | 'overloaded'>) =>
     results.reduce((s, r) => s + r[key], 0n);
   const extra = runProducts(world, business, type);
-  const revenue = sum('revenue') + extra.revenue;
+  const sales = sum('revenue') + extra.revenue;
+  // Client work is booked as it is paid; it counts in the month's revenue.
+  const revenue = sales + runContracts(world, business, type);
   const cogs = sum('cogs') + extra.cost;
   const firstBranch = business.branches[0];
   const managerCost =
@@ -1276,15 +1281,15 @@ export function runBusinessMonth(world: World, business: Business): void {
   const other = sum('other');
   const marketing = business.marketingMinor + extra.ads;
   const payer = { ownerId: business.id, checkingId: business.cashAccountId, savingsId: null };
-  if (revenue > 0n) {
+  if (sales > 0n) {
     post(
       world,
       'tx.sales',
       [
-        { accountId: business.cashAccountId, debit: revenue },
+        { accountId: business.cashAccountId, debit: sales },
         {
           accountId: categoryAccount(world, business.id, 'income', 'sales', business.currency),
-          credit: revenue,
+          credit: sales,
         },
       ],
       { params: { business: business.name } },
@@ -1437,4 +1442,212 @@ export function processBusinesses(world: World): void {
     if (business?.status === 'active') runBusinessMonth(world, business);
   }
   evolveCompetitors(world);
+}
+
+// ----------------------------------------------------------------------------------------
+// Client contracts (decision E91): project firms win, staff and deliver client work
+// ----------------------------------------------------------------------------------------
+
+/** Firms that take on client projects, and the kinds of brief they get. */
+const PROJECT_BRIEFS: Record<string, readonly string[]> = {
+  consultancy: [
+    'Market entry review',
+    'Cost reduction study',
+    'Pricing strategy',
+    'Team restructuring',
+  ],
+  software: ['Booking app', 'Inventory system', 'Customer portal', 'Payments integration'],
+  contractor: ['Office refit', 'Shopfront renovation', 'Kitchen extension', 'Warehouse repairs'],
+};
+const CLIENTS = [
+  'Harbourside Clinic',
+  'Northgate Logistics',
+  'Bluefin Foods',
+  'Greenway Schools Trust',
+  'Copperleaf Hotels',
+  'Lantern Insurance',
+  'Riverbend Council',
+  'Summit Retail Group',
+];
+/** Advance on signing (percent); the rest is paid on delivery, less 10% a month late. */
+const CONTRACT_ADVANCE = 30;
+/** Clients pay a premium over walk-in work, percent. */
+const CONTRACT_PREMIUM = 130;
+/** Lean scope finishes faster but lower quality; thorough takes longer and is better. */
+const SCOPE = {
+  lean: { workPercent: 70, quality: -150 },
+  thorough: { workPercent: 120, quality: 100 },
+} as const;
+const CANCEL_AFTER_LATE_MONTHS = 3;
+
+export function takesContracts(business: Business): boolean {
+  return business.typeId in PROJECT_BRIEFS;
+}
+
+/** Staff of the first outlet currently working on client projects. */
+export function staffOnContracts(business: Business): number {
+  return (business.contracts?.active ?? []).reduce((s, c) => s + c.team, 0);
+}
+
+type ContractOffer = NonNullable<Business['contracts']>['offers'][number];
+
+export function contractBlock(business: Business, offer: ContractOffer | undefined): string | null {
+  if (!offer) return 'This offer is no longer available.';
+  if ((business.contracts?.active.length ?? 0) >= 4)
+    return 'You already have four projects running.';
+  const free = (business.branches[0]?.staff ?? 0) - staffOnContracts(business);
+  if (offer.team > free)
+    return `This needs ${String(offer.team)} free staff; you have ${String(Math.max(0, free))}. Hire more first.`;
+  return null;
+}
+
+function contractIncome(
+  world: World,
+  business: Business,
+  amount: bigint,
+  kind: string,
+  client: string,
+) {
+  post(
+    world,
+    kind,
+    [
+      { accountId: business.cashAccountId, debit: amount },
+      {
+        accountId: categoryAccount(world, business.id, 'income', 'contracts', business.currency),
+        credit: amount,
+      },
+    ],
+    { params: { business: business.name, client } },
+  );
+}
+
+/** Signs a client contract: the team leaves regular work and the advance is paid now. */
+function signContract(
+  world: World,
+  business: Business,
+  offer: ContractOffer,
+  scope: 'lean' | 'thorough',
+): void {
+  const c = business.contracts;
+  if (!c) return;
+  const work = Math.max(
+    1,
+    Math.round((offer.team * offer.months * SCOPE[scope].workPercent) / 100),
+  );
+  const advance = applyPercent(offer.feeMinor, CONTRACT_ADVANCE);
+  c.offers = c.offers.filter((o) => o !== offer);
+  c.active.push({
+    id: offer.id,
+    client: offer.client,
+    brief: offer.brief,
+    team: offer.team,
+    scope,
+    workLeft: work,
+    deadlineTick: world.tick + offer.months,
+    feeMinor: offer.feeMinor,
+    paidMinor: advance,
+    quality: clamp(business.quality + SCOPE[scope].quality, 0, 1000),
+  });
+  contractIncome(world, business, advance, 'tx.clientAdvance', offer.client);
+}
+
+export function answerClientOffer(
+  world: World,
+  player: Character,
+  businessId: string,
+  offerId: string,
+  accept: boolean,
+  scope: 'lean' | 'thorough',
+): void {
+  const business = requireOwned(world, player, businessId);
+  const offer = business.contracts?.offers.find((o) => o.id === offerId);
+  if (!offer || !business.contracts) throw new BusinessError('invalid');
+  if (!accept) {
+    business.contracts.offers = business.contracts.offers.filter((o) => o !== offer);
+    return;
+  }
+  if (contractBlock(business, offer)) throw new BusinessError('invalid');
+  signContract(world, business, offer, scope);
+}
+
+function newOffer(
+  world: World,
+  business: Business,
+  type: BusinessType,
+  client: string | null,
+  returning: boolean,
+): ContractOffer {
+  const branch = business.branches[0];
+  const rng = new Rng(world.rng.business);
+  const team = rng.range(1, Math.max(1, Math.min(3, branch?.staff ?? 1)));
+  const months = rng.range(1, 4);
+  const price = branch ? refPrice(world, type, branch.locationId) : 0n;
+  const fee = (price * BigInt(type.capacityPerStaff * team * months * CONTRACT_PREMIUM)) / 100n;
+  const offer: ContractOffer = {
+    id: nextId(world, 'job'),
+    client: client ?? rng.pick(CLIENTS),
+    brief: rng.pick(PROJECT_BRIEFS[business.typeId] ?? ['Client project']),
+    team,
+    months,
+    feeMinor: returning ? applyPercent(fee, 115) : fee,
+    expiresTick: world.tick + 2,
+    returning,
+  };
+  world.rng.business = rng.state();
+  return offer;
+}
+
+/**
+ * The month's client work: each assigned staff member does one staff-month; finished work
+ * is paid (less lateness), very late work is cancelled; new briefs arrive. Returns income.
+ */
+function runContracts(world: World, business: Business, type: BusinessType): bigint {
+  if (!takesContracts(business)) return 0n;
+  const c = (business.contracts ??= {
+    offers: [],
+    active: [],
+    delivered: 0,
+    late: 0,
+    cancelled: 0,
+  });
+  let income = 0n;
+  for (const job of [...c.active]) {
+    job.workLeft = Math.max(0, job.workLeft - job.team);
+    const lateMonths = Math.max(0, world.tick - job.deadlineTick);
+    if (job.workLeft === 0) {
+      const penalty = applyPercent(job.feeMinor, Math.min(50, lateMonths * 10));
+      const final = maxBig(0n, job.feeMinor - job.paidMinor - penalty);
+      if (final > 0n) contractIncome(world, business, final, 'tx.clientPayment', job.client);
+      income += final;
+      c.active = c.active.filter((x) => x !== job);
+      c.delivered += 1;
+      if (lateMonths > 0) c.late += 1;
+      // A happy client (on time, good work) often comes back with more.
+      const happy = lateMonths === 0 && job.quality >= 500;
+      business.brand = clamp(business.brand + (happy ? 20 : -20), 0, 1000);
+      if (happy && c.offers.length < 3 && withRng(world, 'business', (rng) => rng.int(100) < 60))
+        c.offers.push(newOffer(world, business, type, job.client, true));
+    } else if (lateMonths >= CANCEL_AFTER_LATE_MONTHS) {
+      c.active = c.active.filter((x) => x !== job);
+      c.cancelled += 1;
+      business.brand = clamp(business.brand - 60, 0, 1000);
+      addNotification(
+        world,
+        'business',
+        'ntf.contractCancelled',
+        { business: business.name, client: job.client },
+        'business',
+        business.id,
+      );
+    }
+  }
+  c.offers = c.offers.filter((o) => o.expiresTick >= world.tick);
+  if (c.offers.length < 2) c.offers.push(newOffer(world, business, type, null, false));
+  // A hired manager signs work that fits, and does it properly.
+  if (business.manager === 'hired') {
+    const fit = c.offers.find((o) => contractBlock(business, o) === null);
+    if (fit) signContract(world, business, fit, 'thorough');
+  }
+  return income;
 }

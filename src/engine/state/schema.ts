@@ -1334,6 +1334,51 @@ export const BusinessSchema = z
       )
       .max(4)
       .optional(),
+    /** Client contracts (project firms: consultancy, software, contractor; decision E91). */
+    contracts: z
+      .object({
+        offers: z
+          .array(
+            z
+              .object({
+                id: Id,
+                client: z.string().min(1).max(60),
+                brief: z.string().min(1).max(60),
+                /** Staff the work needs and the months the client allows. */
+                team: z.number().int().min(1).max(10),
+                months: z.number().int().min(1).max(6),
+                feeMinor: NonNegativeMinor,
+                expiresTick: Tick,
+                returning: z.boolean(),
+              })
+              .strict(),
+          )
+          .max(3),
+        active: z
+          .array(
+            z
+              .object({
+                id: Id,
+                client: z.string().min(1).max(60),
+                brief: z.string().min(1).max(60),
+                team: z.number().int().min(1).max(10),
+                scope: z.enum(['lean', 'thorough']),
+                /** Staff-months of work still to do. */
+                workLeft: z.number().int().min(0).max(100),
+                deadlineTick: Tick,
+                feeMinor: NonNegativeMinor,
+                paidMinor: NonNegativeMinor,
+                quality: Fixed,
+              })
+              .strict(),
+          )
+          .max(4),
+        delivered: z.number().int().min(0),
+        late: z.number().int().min(0),
+        cancelled: z.number().int().min(0),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 export type Business = z.infer<typeof BusinessSchema>;

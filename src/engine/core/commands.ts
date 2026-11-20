@@ -102,6 +102,7 @@ import {
   setStockTarget,
   setSupplier,
   launchProduct,
+  answerClientOffer,
   updateProduct,
   discontinueProduct,
   startBusiness,
@@ -317,6 +318,12 @@ export const CommandSchema = z.discriminatedUnion('type', [
     supplier: z.enum(['budget', 'standard', 'premium']),
   }),
   command('setManager', { businessId: EntityId, manager: z.enum(['owner', 'hired']) }),
+  command('answerClient', {
+    businessId: EntityId,
+    offerId: EntityId,
+    accept: z.boolean(),
+    scope: z.enum(['lean', 'thorough']),
+  }),
   command('launchProduct', {
     businessId: EntityId,
     name: z.string().trim().min(1).max(40),
@@ -775,6 +782,9 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
     case 'setSupplier':
       setSupplier(world, player, cmd.businessId, cmd.supplier);
       return done('out.supplierSet', { supplier: cmd.supplier });
+    case 'answerClient':
+      answerClientOffer(world, player, cmd.businessId, cmd.offerId, cmd.accept, cmd.scope);
+      return done(cmd.accept ? 'out.clientSigned' : 'out.clientDeclined');
     case 'launchProduct':
       launchProduct(world, player, cmd.businessId, cmd.name, cmd.pricePercent, cmd.supplier);
       return done('out.productLaunched', { name: cmd.name });

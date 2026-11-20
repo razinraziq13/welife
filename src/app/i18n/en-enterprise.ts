@@ -71,6 +71,14 @@ export const enEnterprise: Record<string, string> = {
   'out.propertyListed': 'Property put up for sale.',
   'out.propertyUnlisted': 'Property taken off the market.',
   'out.fundBought': 'Investment bought.',
+  'out.clientSigned':
+    'Contract signed. The advance is in the business account and the team has started.',
+  'out.clientDeclined': 'You turned the brief down.',
+  'tx.clientAdvance': 'Advance from {client}',
+  'tx.clientPayment': 'Final payment from {client}',
+  'category.contracts': 'Client contracts',
+  'ntf.contractCancelled':
+    '{client} cancelled its contract with {business}: the work was too late.',
   'out.productLaunched': '{name} launched. A trial batch of 50 is bought next month.',
   'out.productUpdated': 'Product settings saved.',
   'out.productDropped': 'Product dropped. Unsold stock was written off.',

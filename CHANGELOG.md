@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Business: client contracts.** Consultancies, software studios and contractors now win client briefs: sign with a lean or thorough scope, put staff on the project (they leave walk-in work), get 30% up front and the rest on delivery less 10% for each month late. Happy clients come back with bigger briefs; work three months late is cancelled. A hired manager signs fitting work for you.
+
 - **Music career:** musicians write original songs over several sessions (alone or co-writing with another musician for half the credit), record them at a home, independent or professional studio, and release singles, EPs or albums independently or through a label (advance, recoupment, royalty share, releases owed, exclusive). Releases earn capped monthly royalties while they last, compete on a monthly chart with fictional artists and can win a Golden Note; live shows come from a venue board that grows with your fans. An optional simulated mode runs routine music work each month (Career, Music).
 
 - **Acting: industry outlook.** One genre is in fashion each year: more castings come in it and its releases draw bigger audiences, but fashion changes yearly.

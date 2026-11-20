@@ -11,6 +11,9 @@ import {
   ownerShare,
   refPrice,
   setupCost,
+  contractBlock,
+  staffOnContracts,
+  takesContracts,
 } from './business/business';
 import { BUSINESS_TYPES, getBusinessType } from './business/catalog';
 import { displayName } from './characters/names';
@@ -83,6 +86,13 @@ export interface CompanyView {
   goods: boolean;
   /** Extra products and last month's results (goods businesses). */
   products: NonNullable<Business['products']>;
+  /** Client contracts for project firms (E91); null for other businesses. */
+  contracts:
+    | (NonNullable<Business['contracts']> & {
+        freeStaff: number;
+        offerReasons: Record<string, string | null>;
+      })
+    | null;
   countryCode: string;
   currency: CurrencyInfo;
   status: Business['status'];
@@ -225,6 +235,15 @@ function companyView(world: World, player: Character, b: Business): CompanyView 
     unit: type.unit,
     goods: type.goods,
     products: b.products ?? [],
+    contracts: takesContracts(b)
+      ? {
+          ...(b.contracts ?? { offers: [], active: [], delivered: 0, late: 0, cancelled: 0 }),
+          freeStaff: Math.max(0, (b.branches[0]?.staff ?? 0) - staffOnContracts(b)),
+          offerReasons: Object.fromEntries(
+            (b.contracts?.offers ?? []).map((o) => [o.id, contractBlock(b, o)]),
+          ),
+        }
+      : null,
     countryCode: b.countryCode,
     currency: currencyOf(b.countryCode),
     status: b.status,

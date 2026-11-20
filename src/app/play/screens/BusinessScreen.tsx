@@ -523,6 +523,7 @@ function ManageCard({
   const playerCur = { ...view.country.currency };
   return (
     <>
+      {company.contracts && <ContractsCard company={company} view={view} />}
       {company.goods && <ProductsCard company={company} />}
       <Card title="How it is run">
         <div className="flex flex-col gap-4">
@@ -1076,4 +1077,106 @@ function formatMinorPlain(minor: bigint, exponent: number): string {
   const scale = 10n ** BigInt(exponent);
   const frac = (minor % scale).toString().padStart(exponent, '0').replace(/0+$/, '');
   return `${(minor / scale).toString()}${frac ? `.${frac}` : ''}`;
+}
+
+/** Client contracts (project firms, E91): sign briefs, staff them, deliver on time. */
+function ContractsCard({ company, view }: { company: CompanyView; view: GameView }) {
+  const { send, disabled } = useAct();
+  const [scope, setScope] = useState<Record<string, 'lean' | 'thorough'>>({});
+  const c = company.contracts;
+  if (!c) return null;
+  const cur = company.currency;
+  return (
+    <Card
+      title="Client contracts"
+      description={`Staff on a project leave walk-in work. Free staff: ${String(c.freeStaff)}. Delivered ${String(c.delivered)} (late ${String(c.late)}), cancelled ${String(c.cancelled)}.`}
+    >
+      {c.active.length > 0 && (
+        <ul aria-label="Projects in progress" className="mb-3 divide-y divide-border text-sm">
+          {c.active.map((j) => (
+            <li key={j.id} className="py-2">
+              <p className="font-semibold text-fg">
+                {j.brief} for {j.client}
+              </p>
+              <p className="text-muted">
+                {j.team} staff · {j.scope} scope · {j.workLeft} staff-month
+                {j.workLeft === 1 ? '' : 's'} of work left · due {month(view, j.deadlineTick)} ·
+                paid <Money minor={j.paidMinor} currency={cur} /> of{' '}
+                <Money minor={j.feeMinor} currency={cur} />
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+      {c.offers.length === 0 ? (
+        <p className="text-sm text-muted">No briefs right now. New ones arrive each month.</p>
+      ) : (
+        <ul aria-label="Client briefs" className="divide-y divide-border text-sm">
+          {c.offers.map((o) => {
+            const reason = c.offerReasons[o.id] ?? null;
+            const chosen = scope[o.id] ?? 'thorough';
+            return (
+              <li key={o.id} className="flex flex-col gap-2 py-2">
+                <p className="font-semibold text-fg">
+                  {o.brief} for {o.client}
+                  {o.returning ? ' (returning client)' : ''}
+                </p>
+                <p className="text-muted">
+                  Needs {o.team} staff for {o.months} month{o.months === 1 ? '' : 's'} · fee{' '}
+                  <Money minor={o.feeMinor} currency={cur} /> (30% on signing, the rest on delivery,
+                  less 10% for each month late) · answer by {month(view, o.expiresTick)}
+                </p>
+                <ChoiceGroup
+                  legend="Scope"
+                  name={`scope-${o.id}`}
+                  value={chosen}
+                  onChange={(v) => {
+                    setScope({ ...scope, [o.id]: v });
+                  }}
+                  options={[
+                    { value: 'thorough', label: 'Thorough: better work, takes longer' },
+                    { value: 'lean', label: 'Lean: faster, lower quality' },
+                  ]}
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    size="sm"
+                    disabled={disabled || reason !== null}
+                    onClick={() => {
+                      void send({
+                        type: 'answerClient',
+                        businessId: company.id,
+                        offerId: o.id,
+                        accept: true,
+                        scope: chosen,
+                      });
+                    }}
+                  >
+                    Sign: {o.brief}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={disabled}
+                    onClick={() => {
+                      void send({
+                        type: 'answerClient',
+                        businessId: company.id,
+                        offerId: o.id,
+                        accept: false,
+                        scope: chosen,
+                      });
+                    }}
+                  >
+                    Decline
+                  </Button>
+                  {reason && <span className="text-xs text-muted">{reason}</span>}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Card>
+  );
 }
