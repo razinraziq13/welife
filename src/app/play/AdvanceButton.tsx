@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { CalendarArrowUp, History, Loader2 } from 'lucide-react';
+import { ChevronDown, FastForward, Loader2 } from 'lucide-react';
 import { Button } from '@app/components/ui/button';
 import { formatMonth } from '@app/i18n/format';
 import { addMonths } from '@engine/core/clock';
@@ -52,9 +52,9 @@ export function AdvanceButton({
         : null;
   return (
     <div className={cn('flex flex-col items-stretch gap-1', className)}>
-      <div className="flex items-stretch gap-2">
+      <div className="flex items-stretch">
         <Button
-          className="min-w-0 flex-1"
+          className="min-w-0 flex-1 rounded-r-none"
           size={size}
           disabled={busy || reason !== null}
           aria-describedby={reason ? reasonId : undefined}
@@ -64,15 +64,19 @@ export function AdvanceButton({
           {busy ? (
             <Loader2 aria-hidden="true" className="size-5 animate-spin" />
           ) : (
-            <CalendarArrowUp aria-hidden="true" className="size-5" />
+            <FastForward aria-hidden="true" className="size-5" />
           )}
-          Advance to {formatMonth(addMonths(view.clock, ADVANCE_MONTHS))}
+          Advance
+          <span className="text-sm font-semibold">+{ADVANCE_MONTHS} months</span>
+          <span className="sr-only">
+            to {formatMonth(addMonths(view.clock, ADVANCE_MONTHS))}; stops early for a decision or
+            job offer
+          </span>
         </Button>
         <div ref={box} className="relative shrink-0">
           <Button
-            variant="secondary"
             size={size}
-            className="h-full px-3"
+            className="h-full rounded-l-none border-l border-primary-fg/30 px-3"
             aria-label="Time options"
             aria-expanded={open}
             aria-controls={menuId}
@@ -80,7 +84,7 @@ export function AdvanceButton({
               setOpen((o) => !o);
             }}
           >
-            <History aria-hidden="true" className="size-5" />
+            <ChevronDown aria-hidden="true" className="size-5" />
           </Button>
           {open && (
             <div
@@ -121,11 +125,6 @@ export function AdvanceButton({
           )}
         </div>
       </div>
-      {!reason && (
-        <p className="text-center text-xs text-muted">
-          {ADVANCE_MONTHS} months; stops early if a decision or job offer comes up.
-        </p>
-      )}
       {reason && (
         <p id={reasonId} className="text-center text-xs text-muted">
           {reason}

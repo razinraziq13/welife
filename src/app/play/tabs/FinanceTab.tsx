@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import { Link } from 'react-router';
+import { ShoppingBag } from 'lucide-react';
 import { amortisedPayment } from '@engine/core/money';
 import { HOME_SIZES, LIFESTYLES } from '@engine/state/schema';
 import type { GameView } from '@engine/view';
@@ -837,9 +838,16 @@ export function FinanceTab() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        title="Finance"
+        title="Money"
         description="Every amount here comes from a balanced ledger of real transactions in your life."
       />
+      <Link
+        to={`/play/${session.saveId}/shopping`}
+        className={buttonVariants({ variant: 'secondary', className: 'self-start' })}
+      >
+        <ShoppingBag aria-hidden="true" className="size-4" />
+        Shopping: homes, cars and aircraft
+      </Link>
       <OverviewCard view={view} />
       <InvestmentsCard view={view} />
       <div className="grid gap-4 lg:grid-cols-2">

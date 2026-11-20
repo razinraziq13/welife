@@ -16,6 +16,7 @@ import {
   Scale,
   Settings,
   Shield,
+  ShoppingBag,
   SlidersHorizontal,
   Sparkles,
   Trophy,
@@ -42,6 +43,12 @@ export function MoreTab() {
       label: 'Calendar',
       desc: 'Your month, recurring plans, bookings and the year ahead',
       icon: CalendarDays,
+    },
+    {
+      to: `${base}/shopping`,
+      label: 'Shopping',
+      desc: 'Homes, cars, aeroplanes and helicopters',
+      icon: ShoppingBag,
     },
     {
       to: `${base}/business`,

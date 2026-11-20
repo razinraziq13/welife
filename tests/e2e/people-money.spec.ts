@@ -45,7 +45,7 @@ test('family, people, the family tree and the calendar work from birth (M3)', as
 
   // The plan runs when the month ends, and the family's money moves through the ledger.
   await advanceOnce(page);
-  await page.getByRole('link', { name: 'Finance' }).last().click();
+  await page.getByRole('link', { name: 'Money', exact: true }).last().click();
   await expect(page.getByText(/This month they took in/)).toBeVisible();
 });
 
@@ -600,7 +600,11 @@ test.describe('Shopping', () => {
       page,
       await adultSaveJson('e2e-shopping', { cashGiftMinor: 1_000_000_000n }),
     );
-    await page.getByRole('link', { name: 'Shopping', exact: true }).last().click();
+    await page.getByRole('link', { name: 'Money', exact: true }).last().click();
+    await page
+      .getByRole('link', { name: /^Shopping/ })
+      .first()
+      .click();
     await expect(page.getByRole('heading', { level: 1, name: 'Shopping' })).toBeVisible();
     await expect(page.getByRole('heading', { name: /Property for sale/ })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Manage your properties' })).toBeVisible();

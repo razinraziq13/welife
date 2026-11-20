@@ -205,14 +205,14 @@ export function ActionGrid({ view, base }: { view: GameView; base: string }) {
       to: base + '/activities',
     },
     {
-      label: studying ? 'School' : 'Work',
+      label: studying ? 'School' : 'Career',
       hint: studying ? 'Grades, clubs, study' : 'Jobs and career',
       icon: studying ? GraduationCap : Briefcase,
       tone: 'bg-primary-soft text-primary',
       to: `${base}/career`,
     },
     {
-      label: 'People',
+      label: 'Social',
       hint: 'Family and friends',
       icon: Users,
       tone: 'bg-surface-2 text-danger',
@@ -220,7 +220,7 @@ export function ActionGrid({ view, base }: { view: GameView; base: string }) {
     },
     {
       label: 'Money',
-      hint: 'Accounts and spending',
+      hint: 'Accounts, investments and shopping',
       icon: Wallet,
       tone: 'bg-accent-soft text-accent-strong',
       to: `${base}/finance`,

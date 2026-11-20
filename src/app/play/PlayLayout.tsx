@@ -1,16 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useMatch, useParams } from 'react-router';
-import {
-  Bell,
-  Briefcase,
-  CalendarDays,
-  HeartHandshake,
-  Home,
-  Loader2,
-  Menu,
-  ShoppingBag,
-  Wallet,
-} from 'lucide-react';
+import { Bell, Briefcase, CalendarDays, Home, Loader2, Menu, Users, Wallet } from 'lucide-react';
 import { Avatar } from '@app/components/avatar/Avatar';
 import { buttonVariants } from '@app/components/ui/button';
 import { Button } from '@app/components/ui/button';
@@ -29,9 +19,8 @@ import { EventDialog } from './EventDialog';
 export const TABS = [
   { to: 'life', label: 'Life', icon: Home },
   { to: 'career', label: 'Career', icon: Briefcase },
-  { to: 'finance', label: 'Finance', icon: Wallet },
-  { to: 'social', label: 'Social', icon: HeartHandshake },
-  { to: 'shopping', label: 'Shopping', icon: ShoppingBag },
+  { to: 'social', label: 'Social', icon: Users },
+  { to: 'finance', label: 'Money', icon: Wallet },
   { to: 'more', label: 'More', icon: Menu },
 ] as const;
 
@@ -246,15 +235,15 @@ export function PlayLayout() {
           <AdvanceButton size="md" />
         </div>
         <nav aria-label="Game sections">
-          <ul className="grid grid-cols-6">
+          <ul className="grid grid-cols-5 gap-1 px-2 pb-1">
             {TABS.map(({ to, label, icon: Icon }) => (
               <li key={to}>
                 <NavLink
                   to={`${base}/${to}`}
                   className={({ isActive }) =>
                     cn(
-                      'flex h-14 min-w-0 flex-col items-center justify-center gap-0.5 text-[0.6875rem] font-medium sm:text-xs',
-                      isActive ? 'text-primary' : 'text-muted',
+                      'flex h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl text-xs font-semibold',
+                      isActive ? 'bg-primary-soft text-fg' : 'text-muted',
                     )
                   }
                 >
