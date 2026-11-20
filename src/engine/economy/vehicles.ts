@@ -1,12 +1,13 @@
 import { sortedValues } from '../core/data';
-import { applyPercent } from '../core/money';
+import { applyPercent, divRound } from '../core/money';
 import { Rng } from '../core/rng';
 import { ageYears } from '../core/world';
 import type { Character, Vehicle, VehicleKind, World } from '../state/schema';
 import { getCountry } from '../world/countries';
 import { medianWage } from './economy';
 import { currencyCountry } from './fx';
-import { openAccount, post } from './ledger';
+import { payExpense, payerIn } from './finance';
+import { categoryAccount, openAccount, post } from './ledger';
 
 interface Model {
   id: string;
@@ -62,11 +63,21 @@ const MODELS: readonly Model[] = [
   },
 ];
 
+/** Monthly running costs (fuel, insurance, servicing, hangar), in bp of the price paid. */
+const RUNNING_BP: Record<VehicleKind, bigint> = { car: 20n, aeroplane: 50n, helicopter: 70n };
+/** Monthly loss of value, in bp of the current value (cars about 13% a year). */
+const DEPRECIATION_BP: Record<VehicleKind, bigint> = { car: 120n, aeroplane: 50n, helicopter: 60n };
+
+function runningCost(account: { balance: bigint }, vehicle: Vehicle): bigint {
+  return divRound((vehicle.priceMinor ?? account.balance) * RUNNING_BP[vehicle.kind], 10_000n);
+}
+
 const VEHICLE_MESSAGES = {
   tooYoung: 'You can buy vehicles from age 18.',
   noAccount: 'You need a current account to buy a vehicle.',
   unavailable: 'This offer is no longer available.',
   insufficientFunds: 'You do not have enough cash in your current account.',
+  notOwned: 'You do not own this vehicle.',
 } as const;
 type VehicleRejection = keyof typeof VEHICLE_MESSAGES;
 
@@ -134,7 +145,9 @@ export function projectVehicleShop(world: World, buyer: Character) {
             {
               ...account.vehicle,
               id: account.id,
-              purchaseValueMinor: account.balance,
+              purchaseValueMinor: account.vehicle.priceMinor ?? account.balance,
+              valueMinor: account.balance,
+              runningMinor: runningCost(account, account.vehicle),
               currency: getCountry(currencyCountry(account.currency)).currency,
             },
           ]
@@ -151,7 +164,15 @@ export function buyVehicle(world: World, buyer: Character, offerId: string): Veh
   const checking = checkingAccount(world, buyer);
   if (!checking) throw new VehicleError('noAccount');
   const { name, kind, condition, yearsUsed } = offer;
-  const vehicle: Vehicle = { offerId, name, kind, condition, yearsUsed, purchasedTick: world.tick };
+  const vehicle: Vehicle = {
+    offerId,
+    name,
+    kind,
+    condition,
+    yearsUsed,
+    purchasedTick: world.tick,
+    priceMinor: offer.priceMinor,
+  };
   const asset = openAccount(world, buyer.id, 'vehicle', checking.currency, {
     category: kind,
     vehicle,
@@ -166,4 +187,59 @@ export function buyVehicle(world: World, buyer: Character, offerId: string): Veh
     { params: { name }, source: asset },
   );
   return vehicle;
+}
+
+/** Sells at the current value into the current account (or an account kept in that currency). */
+export function sellVehicle(world: World, seller: Character, accountId: string): string {
+  const account = world.ledger.accounts[accountId];
+  if (!account?.vehicle || account.ownerId !== seller.id || account.closedTick !== null)
+    throw new VehicleError('notOwned');
+  const payer = payerIn(world, seller, account.currency);
+  if (!payer) throw new VehicleError('noAccount');
+  const { name } = account.vehicle;
+  if (account.balance > 0n)
+    post(
+      world,
+      'tx.vehicleSold',
+      [
+        { accountId: payer.checkingId, debit: account.balance },
+        { accountId: account.id, credit: account.balance },
+      ],
+      { params: { name }, source: account.id },
+    );
+  account.closedTick = world.tick;
+  return name;
+}
+
+/** Each month vehicles lose value and their owners pay to run them. */
+export function processVehicles(world: World): void {
+  for (const account of sortedValues(world.ledger.accounts)) {
+    const vehicle = account.vehicle;
+    const owner = world.characters[account.ownerId];
+    if (!vehicle || account.closedTick !== null || owner?.death !== null) continue;
+    const params = { name: vehicle.name };
+    const loss = divRound(account.balance * DEPRECIATION_BP[vehicle.kind], 10_000n);
+    if (loss > 0n)
+      post(
+        world,
+        'tx.vehicleDepreciation',
+        [
+          {
+            accountId: categoryAccount(
+              world,
+              owner.id,
+              'expense',
+              'depreciation',
+              account.currency,
+            ),
+            debit: loss,
+          },
+          { accountId: account.id, credit: loss },
+        ],
+        { params, source: account.id },
+      );
+    const cost = runningCost(account, vehicle);
+    const payer = payerIn(world, owner, account.currency, cost);
+    if (payer) payExpense(world, payer, 'vehicle', cost, 'tx.vehicleRunning', params, account.id);
+  }
 }

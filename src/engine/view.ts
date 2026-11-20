@@ -855,7 +855,7 @@ function financeView(world: World, c: Character): FinanceView {
   const repaid = [...repaidBy]
     .map(([product, amount]) => ({ product, amount }))
     .filter((x) => x.amount > 0n);
-  const NOT_CASH = new Set(['employerPension', 'investment', 'investmentLoss']);
+  const NOT_CASH = new Set(['employerPension', 'investment', 'investmentLoss', 'depreciation']);
   const lines = (map: Map<string, bigint>, notCash: boolean) =>
     [...map]
       .filter(([category, amount]) => amount !== 0n && NOT_CASH.has(category) === notCash)

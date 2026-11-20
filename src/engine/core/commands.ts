@@ -135,7 +135,7 @@ import { PackError, disablePack, enablePack } from '../content/packs';
 import { checkAchievements } from '../achievements/achievements';
 import { OFFICE_LEVELS, RELIGIONS } from '../world/institutions';
 import { enforcePopulation } from '../social/population';
-import { buyVehicle, VehicleError } from '../economy/vehicles';
+import { buyVehicle, sellVehicle, VehicleError } from '../economy/vehicles';
 import { DatingPreferencesSchema } from '../social/datingPreferences';
 import {
   INTERACTION_IDS,
@@ -324,6 +324,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
   }),
   command('moveIntoProperty', { propertyId: EntityId }),
   command('buyVehicle', { offerId: EntityId }),
+  command('sellVehicle', { accountId: EntityId }),
   command('letProperty', { propertyId: EntityId, rentMinor: AmountMinor }),
   command('stopLetting', { propertyId: EntityId }),
   command('renovate', { propertyId: EntityId, level: z.enum(['light', 'major']) }),
@@ -481,6 +482,7 @@ const BLOCKED_IN_CUSTODY = new Set<string>([
   'acquireCompetitor',
   'buyProperty',
   'buyVehicle',
+  'sellVehicle',
   'moveIntoProperty',
   'joinParty',
   'campaign',
@@ -747,6 +749,8 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
       const vehicle = buyVehicle(world, player, cmd.offerId);
       return done('out.vehicleBought', { name: vehicle.name });
     }
+    case 'sellVehicle':
+      return done('out.vehicleSold', { name: sellVehicle(world, player, cmd.accountId) });
     case 'moveIntoProperty':
       moveIntoProperty(world, player, cmd.propertyId);
       return done('out.movedIntoProperty');

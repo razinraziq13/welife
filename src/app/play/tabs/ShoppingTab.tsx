@@ -30,10 +30,24 @@ const kindLabel: Record<VehicleKind, string> = {
   helicopter: 'Helicopter',
 };
 
+type Owned = GameView['enterprise']['vehicles']['owned'][number];
+
 function VehicleCollection({ view }: { view: GameView }) {
   const { owned } = view.enterprise.vehicles;
+  const send = useGameStore((s) => s.send);
+  const busy = useGameStore((s) => s.busy || s.advancing);
+  const [selling, setSelling] = useState<Owned | null>(null);
+  const blocked =
+    view.lifeStatus !== 'alive'
+      ? 'This life has ended.'
+      : view.pendingEvent
+        ? 'Make the waiting decision first.'
+        : null;
   return (
-    <Card title="Your vehicles">
+    <Card
+      title="Your vehicles"
+      description="Vehicles lose value every month and cost money to run. Sell one to get its current value back."
+    >
       {owned.length === 0 ? (
         <p className="text-sm text-muted">Vehicles you buy appear here.</p>
       ) : (
@@ -47,18 +61,48 @@ function VehicleCollection({ view }: { view: GameView }) {
                   <p className="font-semibold text-fg">{vehicle.name}</p>
                   <p className="text-xs text-muted">
                     {kindLabel[vehicle.kind]} ·{' '}
-                    {vehicle.yearsUsed > 0 ? 'Bought used' : 'Bought new'}
+                    {vehicle.yearsUsed > 0 ? 'Bought used' : 'Bought new'} for{' '}
+                    <Money minor={vehicle.purchaseValueMinor} currency={vehicle.currency} /> · Costs{' '}
+                    <Money minor={vehicle.runningMinor} currency={vehicle.currency} /> a month
                   </p>
                 </div>
                 <span className="text-right">
-                  <Money minor={vehicle.purchaseValueMinor} currency={vehicle.currency} />
-                  <span className="block text-xs text-muted">Purchase value</span>
+                  <Money minor={vehicle.valueMinor} currency={vehicle.currency} />
+                  <span className="block text-xs text-muted">Worth now</span>
                 </span>
+                <ActionButton
+                  size="sm"
+                  variant="secondary"
+                  aria-label={`Sell ${vehicle.name}`}
+                  reason={blocked}
+                  busy={busy}
+                  onAct={() => {
+                    setSelling(vehicle);
+                  }}
+                >
+                  Sell
+                </ActionButton>
               </li>
             );
           })}
         </ul>
       )}
+      <ConfirmDialog
+        open={selling !== null}
+        title={selling ? `Sell ${selling.name}?` : 'Sell vehicle?'}
+        confirmLabel="Sell"
+        onOpenChange={(open) => {
+          if (!open) setSelling(null);
+        }}
+        onConfirm={() => selling && send({ type: 'sellVehicle', accountId: selling.id })}
+      >
+        {selling && (
+          <p>
+            Get <Money minor={selling.valueMinor} currency={selling.currency} /> into your current
+            account.
+          </p>
+        )}
+      </ConfirmDialog>
     </Card>
   );
 }

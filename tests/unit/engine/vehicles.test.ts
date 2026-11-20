@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { ensurePlayerAccounts } from '@engine/economy/finance';
-import { checkLedger, netWorthOf } from '@engine/economy/ledger';
+import { balanceOf, checkLedger, netWorthOf } from '@engine/economy/ledger';
 import { projectVehicleShop } from '@engine/economy/vehicles';
 import { settleEstate, setWill } from '@engine/legacy/inheritance';
 import { WorldSchema } from '@engine/state/schema';
 import { giveMoney } from '../../helpers/reconcile';
-import { newState, playerOf, run } from '../../helpers/sim';
+import { advanceMonths, newState, playerOf, run } from '../../helpers/sim';
 
 function adult() {
   const state = newState({ countryCode: 'GB' });
@@ -92,4 +92,32 @@ describe('vehicle shopping', () => {
     });
     expect(checkLedger(bought.world)).toEqual([]);
   });
+
+  it('loses value and costs money each month, and sells for what it is worth now', () => {
+    const state = giveMoney(adult(), 1_000_000_000n);
+    const offer = projectVehicleShop(state.world, playerOf(state)).offers[0];
+    if (!offer) throw new Error('Expected a vehicle offer');
+    const bought = run(state, { type: 'buyVehicle', offerId: offer.offerId }).state;
+    const later = advanceMonths(bought, 3);
+    const [car] = projectVehicleShop(later.world, playerOf(later)).owned;
+    if (!car) throw new Error('Expected the vehicle');
+    expect(car.valueMinor).toBeLessThan(offer.priceMinor);
+    expect(car.runningMinor).toBeGreaterThan(0n);
+    const kinds = Object.values(later.world.ledger.journal)
+      .flat()
+      .map((t) => t.kind);
+    expect(kinds.filter((k) => k === 'tx.vehicleRunning')).toHaveLength(3);
+    expect(kinds.filter((k) => k === 'tx.vehicleDepreciation')).toHaveLength(3);
+
+    const checkingId = playerOf(later).finance?.checkingId ?? null;
+    const cash = balanceOf(later.world, checkingId);
+    const sold = run(later, { type: 'sellVehicle', accountId: car.id });
+    expect(sold.outcome.status).toBe('applied');
+    expect(balanceOf(sold.state.world, checkingId)).toBe(cash + car.valueMinor);
+    expect(projectVehicleShop(sold.state.world, playerOf(sold.state)).owned).toHaveLength(0);
+    expect(checkLedger(sold.state.world)).toEqual([]);
+    expect(run(sold.state, { type: 'sellVehicle', accountId: car.id }).outcome.status).toBe(
+      'rejected',
+    );
+  }, 30_000);
 });

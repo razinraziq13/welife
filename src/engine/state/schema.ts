@@ -835,6 +835,8 @@ const VehicleSchema = z.strictObject({
   yearsUsed: z.number().int().min(0).max(100),
   condition: z.number().int().min(1).max(100),
   purchasedTick: Tick,
+  /** Price paid (optional: older saves); running costs scale with it. */
+  priceMinor: NonNegativeMinor.optional(),
 });
 export type Vehicle = z.infer<typeof VehicleSchema>;
 

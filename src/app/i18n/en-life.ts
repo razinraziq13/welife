@@ -168,6 +168,8 @@ export const enLife: Record<string, string> = {
   'category.interest': 'Interest',
   'category.investment': 'Retirement fund growth',
   'category.investmentLoss': 'Retirement fund fall',
+  'category.depreciation': 'Vehicle value lost',
+  'category.vehicle': 'Vehicle running costs',
   'category.gifts': 'Gifts',
   'category.board': 'Board',
   'category.bonus': 'Bonus',

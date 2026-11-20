@@ -563,5 +563,9 @@ test.describe('Shopping', () => {
     await expect(page).toHaveURL(new RegExp(`/play/${saveId}/shopping$`));
     await expect(page.getByRole('region', { name: 'Your vehicles' })).toContainText('Meranti City');
     await expectAccessible(page);
+    await page.getByRole('button', { name: 'Sell Meranti City' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Sell', exact: true }).click();
+    await expect(page.getByTestId('feedback')).toContainText('You sold the Meranti City');
+    await expect(page.getByText('Vehicles you buy appear here.')).toBeVisible();
   });
 });

@@ -14,6 +14,7 @@ import {
 import { advanceEconomies } from '../economy/economy';
 import { processFinances, rescheduleStudentLoan } from '../economy/finance';
 import { processBonds } from '../economy/investments';
+import { processVehicles } from '../economy/vehicles';
 import { processEducation } from '../education/school';
 import { processBusinesses } from '../business/business';
 import { processProperties } from '../property/property';
@@ -104,6 +105,7 @@ export function advanceMonth(committed: World): AdvanceResult {
   const markets = advanceEconomies(world);
   processFinances(world, markets);
   processBonds(world);
+  processVehicles(world);
   processCivicDuties(world);
   processMedia(world);
 
