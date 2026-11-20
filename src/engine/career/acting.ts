@@ -162,6 +162,20 @@ export function isActor(world: World, c: Character): boolean {
 }
 
 const credits = (a: ActingState) => a.filmography.length;
+
+/**
+ * Typecasting: with three or more credits, a genre that makes up most of them is what casting
+ * knows you for. That genre gets easier to win, every other one harder.
+ */
+export function knownFor(a: ActingState): (typeof ACTING_GENRES)[number] | null {
+  if (a.filmography.length < 3) return null;
+  const counts = new Map<string, number>();
+  for (const f of a.filmography) counts.set(f.genre, (counts.get(f.genre) ?? 0) + 1);
+  const best = ACTING_GENRES.find((g) => (counts.get(g) ?? 0) * 2 > a.filmography.length);
+  return best ?? null;
+}
+const TYPECAST_BONUS = 10;
+const TYPECAST_PENALTY = 8;
 const count = (world: World, key: string) =>
   world.activity.tick === world.tick ? (world.activity.counts[`acting:${key}`] ?? 0) : 0;
 function mark(world: World, key: string) {
@@ -301,6 +315,8 @@ export function audition(
   changeStat(world, c, 'energy', -50, 'acting:audition');
   changeSkill(world, c, 'art', 5, 'acting:audition');
   const fits = APPROACH_FIT[l.genre].includes(approach);
+  const typecast = knownFor(a);
+  const typecastAgainst = typecast !== null && typecast !== l.genre;
   const chance = clamp(
     20 +
       skillOf(c) / 2 +
@@ -308,7 +324,8 @@ export function audition(
       credits(a) * 3 +
       (fits ? 15 : -5) +
       (l.directorId ? 20 : 0) +
-      (a.agent ? Math.floor(a.agent.skill / 10) : 0) -
+      (a.agent ? Math.floor(a.agent.skill / 10) : 0) +
+      (typecast === l.genre ? TYPECAST_BONUS : typecastAgainst ? -TYPECAST_PENALTY : 0) -
       (l.prominence === 'lead' ? 25 : l.prominence === 'supporting' ? 10 : 0) -
       (l.budget === 'studio' ? 10 : 0),
     5,
@@ -325,11 +342,13 @@ export function audition(
   // Honest feedback: the main thing that held you back, never the dice.
   l.feedback = !fits
     ? 'wrongApproach'
-    : roll < chance + 10
-      ? 'closeCall'
-      : credits(a) < 2
-        ? 'moreExperience'
-        : 'otherActor';
+    : typecastAgainst && roll < chance + TYPECAST_PENALTY
+      ? 'typecast'
+      : roll < chance + 10
+        ? 'closeCall'
+        : credits(a) < 2
+          ? 'moreExperience'
+          : 'otherActor';
   changeStat(world, c, 'confidence', -15, 'acting:rejected');
   return { offered: false, feedback: l.feedback };
 }
@@ -755,6 +774,7 @@ export function projectActing(world: World, c: Character) {
   const p = a.production;
   return {
     isActor: isActor(world, c),
+    knownFor: knownFor(a),
     recognition: a.recognition,
     critics: a.critics,
     auditionsLeft: Math.max(0, AUDITIONS_PER_MONTH - count(world, 'audition')),

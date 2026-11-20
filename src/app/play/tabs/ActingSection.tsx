@@ -51,7 +51,7 @@ export function ActingSection({ view, screen }: { view: GameView; screen: Screen
       <Overview view={view} screen={screen} />
       {screen.production && <ProductionCard screen={screen} />}
       {screen.isActor && <CastingBoard view={view} screen={screen} />}
-      <Filmography view={view} screen={screen} />
+      <FilmographyCard view={view} credits={screen.filmography} currency={screen.currency} />
     </>
   );
 }
@@ -67,6 +67,12 @@ function Overview({ view, screen }: { view: GameView; screen: Screen }) {
       <StatBar label="Industry reputation" value={view.work.career.reputation} />
       <StatBar label="Recognition" value={screen.recognition} />
       <StatBar label="Critical standing" value={screen.critics} />
+      {screen.knownFor && (
+        <p className="mt-2 text-sm text-fg">
+          Casting knows you for {screen.knownFor}: those parts are easier to win, other genres
+          harder (typecast).
+        </p>
+      )}
       {!screen.isActor && (
         <p className="mt-2 text-sm text-muted">
           To get casting calls, start the actor path in Career, Paths.
@@ -363,15 +369,25 @@ function CastingBoard({ view, screen }: { view: GameView; screen: Screen }) {
   );
 }
 
-function Filmography({ view, screen }: { view: GameView; screen: Screen }) {
-  const cur = screen.currency;
+/** Every finished credit: shown in Acting and on a person's profile, even after death. */
+export function FilmographyCard({
+  view,
+  credits,
+  currency: cur,
+  title = 'Filmography and awards',
+}: {
+  view: GameView;
+  credits: Screen['filmography'];
+  currency: Screen['currency'];
+  title?: string;
+}) {
   return (
-    <Card title="Filmography and awards">
-      {screen.filmography.length === 0 ? (
+    <Card title={title}>
+      {credits.length === 0 ? (
         <p className="text-sm text-muted">No screen credits yet.</p>
       ) : (
         <ul aria-label="Filmography" className="divide-y divide-border text-sm">
-          {screen.filmography.map((f) => (
+          {credits.map((f) => (
             <li key={`${f.title}-${String(f.startTick)}`} className="py-2">
               <p className="font-semibold text-fg">
                 {f.title} ({tickToMonth(view, f.endTick).year})

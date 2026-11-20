@@ -70,7 +70,7 @@ import {
   type Satisfaction,
   type WorkActionId,
 } from './career/workActions';
-import { projectActing } from './career/acting';
+import { knownFor, projectActing } from './career/acting';
 import { ADULT_AGE, DATE_CLOSENESS, familyHomeFor } from './social/family';
 import { datingProfileTraits } from './social/datingPreferences';
 import {
@@ -1228,6 +1228,12 @@ export function projectGame(state: SimState): GameView {
 
 /** Detail for one person (Social: profile, memories, interactions). */
 export interface PersonDetailView extends PersonSummary {
+  /** Screen credits, kept after death for later generations (E89). */
+  acting: {
+    filmography: NonNullable<Character['career']['acting']>['filmography'];
+    knownFor: string | null;
+    currency: ReturnType<typeof getCountry>['currency'];
+  } | null;
   location: string;
   countryCode: string;
   interests: Character['interests'];
@@ -1265,6 +1271,13 @@ export function projectPerson(state: SimState, personId: string): PersonDetailVi
     }));
   return {
     ...summary,
+    acting: c.career.acting?.filmography.length
+      ? {
+          filmography: [...c.career.acting.filmography].reverse(),
+          knownFor: knownFor(c.career.acting),
+          currency: getCountry(c.countryCode).currency,
+        }
+      : null,
     location: getLocation(c.locationId).location.name,
     countryCode: c.countryCode,
     interests: c.interests,

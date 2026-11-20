@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Acting: typecasting and legacy.** With three or more credits mostly in one genre, casting knows you for it: those parts are easier to win, others harder. A person's filmography and awards show on their profile, also after they die.
+
 - **Acting career:** actors get a Casting board (film and TV castings with studio, director, character, script quality, pay and deadline), audition with an approach and get honest feedback, accept, negotiate or decline offers, then work through rehearsals, filming and post-production. Pay arrives at milestones less an agent's commission; films are reviewed by critics and audiences, TV seasons are renewed or cancelled, strong work can win a Silver Reel, and everything lands in your Filmography (Career, Acting).
 
 - **Lottery and casino:** adults can buy lottery tickets (jackpot one in ten million) and bet on red at roulette, from Money, Investments. Both lose money on average.

@@ -4,7 +4,8 @@ import { balanceOf, checkLedger } from '@engine/economy/ledger';
 import type { SimState } from '@engine/core/commands';
 import { checked, findWork } from '../../helpers/reconcile';
 import { advanceMonths, newState, playerOf, run } from '../../helpers/sim';
-import { projectGame } from '@engine/view';
+import { projectGame, projectPerson } from '@engine/view';
+import { knownFor } from '@engine/career/acting';
 
 /** An adult re-cast as an actor, rested, with a strong reputation. */
 function actor(seed: string, occupationId = 'actor'): SimState {
@@ -200,5 +201,54 @@ describe('acting career: casting board to filmography (E89)', () => {
     const r = run(state, { type: 'actingAgent', sign: true });
     expect(r.outcome.status).toBe('applied');
     expect(run(r.state, { type: 'actingAgent', sign: true }).outcome.status).toBe('rejected');
+  });
+});
+
+describe('typecasting and acting legacy (E89)', () => {
+  const credit = (genre: 'drama' | 'comedy') => ({
+    title: 'Paper Tides',
+    format: 'film' as const,
+    genre,
+    studio: 'Lumen Pictures',
+    director: 'A B',
+    character: 'X, a chef',
+    prominence: 'supporting' as const,
+    script: 50,
+    budget: 'indie' as const,
+    startTick: 0,
+    endTick: 1,
+    seasons: 1,
+    earnedMinor: 0n,
+    critics: 80,
+    audience: 50,
+    award: 'won' as const,
+    coStar: '',
+  });
+  const acting = (genres: ('drama' | 'comedy')[]) => ({
+    recognition: 0,
+    critics: 0,
+    board: [],
+    production: null,
+    agent: null,
+    filmography: genres.map(credit),
+  });
+
+  it('three or more credits mostly in one genre make you known for it', () => {
+    expect(knownFor(acting(['drama', 'drama']))).toBeNull();
+    expect(knownFor(acting(['drama', 'drama', 'comedy']))).toBe('drama');
+    expect(knownFor(acting(['drama', 'comedy', 'drama', 'comedy']))).toBeNull();
+  });
+
+  it("a person's filmography shows on their profile, also after they die", () => {
+    const state = actor('acting-legacy');
+    const other = Object.values(state.world.characters).find(
+      (p) => p.id !== state.world.activeCharacterId,
+    );
+    if (!other) throw new Error('no other person');
+    other.career.acting = acting(['comedy', 'comedy', 'comedy']);
+    other.death = { ...state.world.clock };
+    const profile = projectPerson(state, other.id);
+    expect(profile?.acting?.filmography).toHaveLength(3);
+    expect(profile?.acting?.knownFor).toBe('comedy');
   });
 });

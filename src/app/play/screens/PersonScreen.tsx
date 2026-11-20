@@ -11,6 +11,7 @@ import { t } from '@app/i18n/en';
 import { countryName, formatShortMonth } from '@app/i18n/format';
 import { useGameStore } from '@app/stores/gameStore';
 import { tickToMonth } from '../widgets';
+import { FilmographyCard } from '../tabs/ActingSection';
 import { INTERACTION_GROUPS, type InteractionGroup } from '@engine/social/contextual';
 
 const GROUP_ORDER: readonly InteractionGroup[] = [
@@ -308,6 +309,14 @@ export function PersonScreen() {
         <p className="text-sm text-muted">
           Make the waiting decision first to do things with people.
         </p>
+      )}
+      {person.acting && (
+        <FilmographyCard
+          view={view}
+          credits={person.acting.filmography}
+          currency={person.acting.currency}
+          title={`${person.identity.firstName}'s filmography${person.acting.knownFor ? ` (known for ${person.acting.knownFor})` : ''}`}
+        />
       )}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title={`What ${person.identity.firstName} remembers about you`}>

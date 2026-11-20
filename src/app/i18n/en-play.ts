@@ -154,6 +154,7 @@ export const enPlay: Record<string, string> = {
   'out.acting.closeCall': 'Not this time, but it was close: you were on the final shortlist.',
   'out.acting.moreExperience':
     'Strong interpretation, but the director chose an actor with more screen experience.',
+  'out.acting.typecast': 'Not this time: casting sees you as a different kind of actor (typecast).',
   'out.acting.otherActor': 'Not this time: the part went to another actor.',
   'out.acting.accepted': 'You signed on. Rehearsals start next month.',
   'out.acting.declined': 'You turned the offer down.',
