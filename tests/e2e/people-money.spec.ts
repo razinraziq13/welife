@@ -111,6 +111,11 @@ test.describe('an adult life', () => {
     // Single adults can find profiles from the Dating App.
     await page.goto(`/play/${saveId}/social`);
     await expect(page.getByRole('heading', { level: 2, name: 'Dating App' })).toBeVisible();
+    await page.getByText('Search filters', { exact: true }).click();
+    await page.getByLabel('Minimum age').fill('130');
+    await page.getByRole('button', { name: /Look for love/ }).click();
+    await expect(page.getByText(/No new profiles fit your filters/)).toBeVisible();
+    await page.getByRole('button', { name: 'Clear filters' }).click();
     await page.getByRole('button', { name: /Look for love/ }).click();
     await expect(page.getByText(/seems interested in you|No spark this time/)).toBeVisible();
     await expectAccessible(page);

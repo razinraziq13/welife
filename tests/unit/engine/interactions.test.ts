@@ -2,7 +2,10 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { checkInvariants } from '@engine/core/invariants';
 import { checkLedger } from '@engine/economy/ledger';
-import { interactionBlock, INTERACTION_IDS } from '@engine/social/interactions';
+import { interactionBlock, INTERACTION_IDS, lookForLove } from '@engine/social/interactions';
+import { datingProfileTraits, DatingPreferencesSchema } from '@engine/social/datingPreferences';
+import { createPotentialPartner } from '@engine/social/npcs';
+import { ageYears } from '@engine/core/world';
 import { CONTEXTUAL_IDS, INTERACTION_GROUPS, askMoneyAmount } from '@engine/social/contextual';
 import { adjustPair, findRelationship } from '@engine/social/relationships';
 import type { SimState } from '@engine/core/commands';
@@ -171,6 +174,48 @@ describe('contextual interactions (gameplay expansion, feature 2)', () => {
     expect(matched.dating?.matches.map((p) => p.id)).toContain(id);
     expect(matched.partner).toBeNull();
     expect(projectGame(liked.state).time).toEqual(projectGame(state).time);
+  });
+
+  it('searches the existing population using age, wealth, looks and royal status', () => {
+    const state = newState({ countryCode: 'MY' });
+    const { world } = state;
+    const player = playerOf(state);
+    player.birth.year -= 25;
+    const prospect = createPotentialPartner(world, player);
+    const home = world.households[prospect.householdId];
+    if (!home) throw new Error('Missing prospect household');
+    home.wealth = 'royal';
+    home.flags.royal = true;
+    const age = ageYears(world, prospect);
+    const looks = datingProfileTraits(world, prospect).looks;
+    expect(DatingPreferencesSchema.safeParse({ minAge: 30, maxAge: 20 }).success).toBe(false);
+
+    expect(lookForLove(world, { status: 'celebrity' })).toEqual({
+      personId: null,
+      noProfiles: true,
+    });
+    expect(projectGame(state).time.usedHours).toBe(0);
+    world.rng.social = [0, 0, 0, 0];
+    expect(
+      lookForLove(world, {
+        minAge: age,
+        maxAge: age,
+        minWealth: 'wealthy',
+        minLooks: looks,
+        status: 'royalty',
+      }),
+    ).toEqual({ personId: prospect.id });
+    expect(projectGame(state).social.dating?.profiles).toContainEqual(
+      expect.objectContaining({
+        id: prospect.id,
+        age,
+        looks,
+        royalty: true,
+        celebrity: false,
+        wealth: 'royal',
+      }),
+    );
+    expect(projectGame(state).time.usedHours).toBe(6);
   });
 
   it('says exactly how much closer you need to be to ask someone out', () => {

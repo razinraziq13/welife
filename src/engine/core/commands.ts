@@ -122,6 +122,7 @@ import { PackError, disablePack, enablePack } from '../content/packs';
 import { checkAchievements } from '../achievements/achievements';
 import { OFFICE_LEVELS, RELIGIONS } from '../world/institutions';
 import { enforcePopulation } from '../social/population';
+import { DatingPreferencesSchema } from '../social/datingPreferences';
 import {
   INTERACTION_IDS,
   InteractionError,
@@ -170,7 +171,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
   // Social (Milestone 3)
   command('interact', { personId: EntityId, interactionId: z.enum(INTERACTION_IDS) }),
   command('meetPeople', {}),
-  command('lookForLove', {}),
+  command('lookForLove', { preferences: DatingPreferencesSchema.optional() }),
   command('respondToDatingProfile', { personId: EntityId, response: z.enum(['like', 'pass']) }),
   // Career play (gameplay expansion)
   command('workAction', { actionId: z.enum(WORK_ACTION_IDS) }),
@@ -484,11 +485,18 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
       return done(r.key, r.params);
     }
     case 'lookForLove': {
-      const found = lookForLove(world);
-      return done(found.personId ? 'out.foundSomeone' : 'out.noOneSpecial', {
-        personId: found.personId ?? '',
-        name: found.personId ? (world.characters[found.personId]?.identity.firstName ?? '') : '',
-      });
+      const found = lookForLove(world, cmd.preferences);
+      return done(
+        found.personId
+          ? 'out.foundSomeone'
+          : found.noProfiles
+            ? 'out.datingNoProfiles'
+            : 'out.noOneSpecial',
+        {
+          personId: found.personId ?? '',
+          name: found.personId ? (world.characters[found.personId]?.identity.firstName ?? '') : '',
+        },
+      );
     }
     case 'respondToDatingProfile':
       respondToDatingProfile(world, cmd.personId, cmd.response);

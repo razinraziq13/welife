@@ -146,6 +146,7 @@ export const enPlay: Record<string, string> = {
   'memory.coveredForMe': 'You covered their shift',
   // Dating
   'out.datingAppMatch': 'You and {name} matched.',
+  'out.datingNoProfiles': 'No new profiles fit your filters right now. No time was spent.',
   'out.datingAppPass': 'You passed on {name} for this month.',
   'memory.datingAppMatch': 'You matched on a dating app',
   'out.foundSomeone':
