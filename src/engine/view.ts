@@ -314,7 +314,13 @@ export interface WorkView {
     referrerName: string | null;
   }[];
   /** Creative paths to start from the Career tab: why not (null = can start now). */
-  paths: { occupationId: CreativePath; title: string; block: string | null; skills: string[] }[];
+  paths: {
+    occupationId: CreativePath;
+    title: string;
+    block: string | null;
+    skills: string[];
+    minSkill: number;
+  }[];
   retired: boolean;
   canRetire: boolean;
   experienceMonths: number;
@@ -788,6 +794,7 @@ function workView(world: World, c: Character): WorkView {
         title: getOccupation(id).title,
         block: block ? JOB_MESSAGES[block] : null,
         skills: [...getOccupation(id).skills],
+        minSkill: Math.round(getOccupation(id).minSkill / 10),
       };
     }),
     retired: c.finance?.retired ?? false,

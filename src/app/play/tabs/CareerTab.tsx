@@ -1014,8 +1014,8 @@ function PathsCard({ view, base }: { view: GameView; base: string }) {
             <p className="font-semibold text-fg">{p.title}</p>
             <p className="text-muted">{PATH_HINT[p.occupationId]}</p>
             <p className="text-xs text-muted">
-              Needs {p.skills.map((s) => t(`skill.${s}`).toLowerCase()).join(' and ')} skills
-              averaging 40.
+              Needs {p.skills.map((s) => t(`skill.${s}`).toLowerCase()).join(' and ')}{' '}
+              {p.skills.length > 1 ? 'skills averaging' : 'skill of'} {p.minSkill}.
             </p>
             {p.block && <p className="text-xs text-muted">{p.block}</p>}
             <ActionButton
