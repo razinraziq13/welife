@@ -157,17 +157,21 @@ function Tile({ tile }: { tile: ActionTile }) {
   const body: ReactNode = (
     <>
       <span
-        className={cn('flex size-11 items-center justify-center rounded-2xl', tile.tone)}
+        className={cn('flex size-11 shrink-0 items-center justify-center rounded-xl', tile.tone)}
         aria-hidden="true"
       >
         <Icon className="size-6" />
       </span>
-      <span className="text-sm font-semibold text-fg">{tile.label}</span>
-      <span className="text-xs text-muted">{tile.hint}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold text-fg">{tile.label}</span>
+        <span className="block text-sm text-muted">{tile.hint}</span>
+      </span>
+      <ChevronRight aria-hidden="true" className="size-5 shrink-0 text-primary" />
     </>
   );
+  // Sticker row: coloured icon tile, title and hint, arrow (cartoon redesign).
   const className =
-    'flex h-full min-h-28 flex-col items-center justify-start gap-1 rounded-2xl border border-border bg-surface p-3 text-center shadow-sm hover:border-primary hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+    'flex min-h-16 w-full items-center gap-3 px-3 py-2 text-left hover:bg-primary-soft focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring';
   return tile.to ? (
     <Link to={tile.to} className={className}>
       {body}
@@ -233,7 +237,7 @@ export function ActionGrid({ view, base }: { view: GameView; base: string }) {
       <h2 id="action-grid-title" className="mb-3 text-lg font-semibold text-fg">
         What do you want to do?
       </h2>
-      <ul className="grid grid-cols-3 gap-3 lg:grid-cols-6">
+      <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
         {tiles.map((tile) => (
           <li key={tile.label}>
             <Tile tile={tile} />
