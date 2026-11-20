@@ -266,6 +266,11 @@ test.describe('companies and property (M5)', () => {
     await page.goto(`/play/${saveId}/finance`);
     await page.getByText('Investments', { exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Investments' })).toBeVisible();
+    await page.getByRole('button', { name: /^Buy a ticket/ }).click();
+    await expect(page.getByTestId('feedback')).toContainText(/ticket/);
+    await page.getByLabel(/^Roulette/).fill('1');
+    await page.getByRole('button', { name: 'Spin' }).click();
+    await expect(page.getByTestId('feedback')).toContainText('came up');
     await page.getByRole('link', { name: 'Open investments' }).click();
     await page.getByRole('link', { name: 'Crypto', exact: true }).click();
     await page.getByRole('link', { name: /^Bitcoin/ }).click();

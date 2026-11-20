@@ -137,6 +137,7 @@ import { checkAchievements } from '../achievements/achievements';
 import { OFFICE_LEVELS, RELIGIONS } from '../world/institutions';
 import { enforcePopulation } from '../social/population';
 import { buyVehicle, sellVehicle, VehicleError } from '../economy/vehicles';
+import { buyLotteryTicket, GamblingError, placeBet } from '../economy/gambling';
 import { DatingPreferencesSchema } from '../social/datingPreferences';
 import {
   INTERACTION_IDS,
@@ -326,6 +327,8 @@ export const CommandSchema = z.discriminatedUnion('type', [
   command('moveIntoProperty', { propertyId: EntityId }),
   command('buyVehicle', { offerId: EntityId }),
   command('sellVehicle', { accountId: EntityId }),
+  command('buyLotteryTicket', {}),
+  command('placeBet', { amountMinor: AmountMinor }),
   command('letProperty', { propertyId: EntityId, rentMinor: AmountMinor }),
   command('stopLetting', { propertyId: EntityId }),
   command('renovate', { propertyId: EntityId, level: z.enum(['light', 'major']) }),
@@ -471,6 +474,8 @@ const done = (key: string, params: Record<string, string | number> = {}): Comman
 
 /** Actions that need freedom of movement (unavailable in custody, spec §4 Law). */
 const BLOCKED_IN_CUSTODY = new Set<string>([
+  'buyLotteryTicket',
+  'placeBet',
   'meetPeople',
   'lookForLove',
   'respondToDatingProfile',
@@ -757,6 +762,16 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
     }
     case 'sellVehicle':
       return done('out.vehicleSold', { name: sellVehicle(world, player, cmd.accountId) });
+    case 'buyLotteryTicket': {
+      const prize = buyLotteryTicket(world, player);
+      return done(prize > 0n ? 'out.lotteryWon' : 'out.lotteryLost', { amount: prize.toString() });
+    }
+    case 'placeBet': {
+      const prize = placeBet(world, player, BigInt(cmd.amountMinor));
+      return done(prize > 0n ? 'out.betWon' : 'out.betLost', {
+        amount: (prize > 0n ? prize : BigInt(cmd.amountMinor)).toString(),
+      });
+    }
     case 'moveIntoProperty':
       moveIntoProperty(world, player, cmd.propertyId);
       return done('out.movedIntoProperty');
@@ -918,6 +933,7 @@ const DOMAIN_ERRORS = [
   BusinessError,
   PropertyError,
   VehicleError,
+  GamblingError,
   InvestmentError,
   MigrationError,
   HealthError,

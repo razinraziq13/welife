@@ -503,6 +503,47 @@ function InsuranceCard({ view }: { view: GameView }) {
   );
 }
 
+function GamblingCard({ view }: { view: GameView }) {
+  const { send, disabled } = useAct();
+  const g = view.enterprise.gambling;
+  if (view.character.age.years < 18) return null;
+  return (
+    <Card
+      title="Lottery and casino"
+      description="Games of chance lose money on average: the lottery pays back about half of what it takes."
+    >
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <p className="text-sm text-fg">
+            Jackpot <Money minor={g.jackpotMinor} currency={g.currency} /> (one in ten million).
+          </p>
+          <ActionButton
+            size="sm"
+            variant="secondary"
+            className="self-start"
+            busy={disabled}
+            reason={g.reason}
+            onAct={() => {
+              void send({ type: 'buyLotteryTicket' });
+            }}
+          >
+            {`Buy a ticket (${formatMoney(g.ticketMinor, g.currency)})`}
+          </ActionButton>
+          {g.reason && <p className="text-xs text-muted">{g.reason}</p>}
+        </div>
+        <AmountForm
+          label="Roulette: bet on red (18 in 37 to double)"
+          currency={g.currency}
+          submitLabel="Spin"
+          disabled={disabled || g.reason !== null}
+          disabledReason={g.reason}
+          onSubmit={(m) => send({ type: 'placeBet', amountMinor: m })}
+        />
+      </div>
+    </Card>
+  );
+}
+
 function RetirementCard({ view }: { view: GameView }) {
   const { send, disabled } = useAct();
   const f = view.finance;
@@ -889,6 +930,7 @@ export function FinanceTab() {
         <>
           <InvestmentsCard view={view} />
           <RetirementCard view={view} />
+          <GamblingCard view={view} />
         </>
       )}
     </div>

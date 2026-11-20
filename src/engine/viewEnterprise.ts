@@ -26,6 +26,7 @@ import { monthlyInterest } from './core/money';
 import { balanceOf } from './economy/ledger';
 import { rateFor } from './economy/finance';
 import { projectVehicleShop } from './economy/vehicles';
+import { projectGambling } from './economy/gambling';
 import { RENOVATION, depositPercent, marketRent } from './property/property';
 import { COUNTRIES, getCountry, getLocation } from './world/countries';
 import { MARKETS_SOURCE, countryMarket } from './world/markets';
@@ -111,6 +112,7 @@ export interface CompanyView {
 
 export interface EnterpriseView {
   vehicles: ReturnType<typeof projectVehicleShop>;
+  gambling: ReturnType<typeof projectGambling>;
   business: {
     canStart: boolean;
     reason: string | null;
@@ -386,6 +388,7 @@ export function projectEnterprise(world: World, player: Character): EnterpriseVi
         }),
     },
     vehicles: projectVehicleShop(world, player),
+    gambling: projectGambling(world, player),
     investments: {
       stocksMinor: fundAccount(world, player.id, 'stocks')?.balance ?? 0n,
       bondsMinor: fundAccount(world, player.id, 'bonds')?.balance ?? 0n,

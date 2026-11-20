@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Lottery and casino:** adults can buy lottery tickets (jackpot one in ten million) and bet on red at roulette, from Money, Investments. Both lose money on average.
+
 - **Prices stay in today's money:** wages, house and car prices no longer multiply over the generations; only booms, slumps and policies move them, and interest rates are real rates. Saves already far in the future get a one-time currency reform on the next Advance, so they read in today's money too. A family can now give money from savings when its current account is empty.
 
 - **Month recap:** after Advance you see what changed: your stats, money in and out, and what happened. Five tabs now (Life, Career, Social, Money, More) and one wide Advance button.
