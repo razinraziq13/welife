@@ -227,11 +227,14 @@ test('step one month forward and back beside Advance', async ({ page }) => {
   await advanceOnce(page);
   const advance = page.getByTestId('advance-month').locator('visible=true').first();
   const start = await advance.textContent();
-  const steps = page.getByRole('group', { name: 'Step through time' }).locator('visible=true');
-  await steps.getByRole('button', { name: '+1 mo' }).click();
+  const timeOptions = page.getByRole('button', { name: 'Time options' }).locator('visible=true');
+  await timeOptions.click();
+  await page.getByRole('button', { name: 'Advance 1 month' }).click();
+  await expect(page.getByRole('group', { name: 'Step through time' })).toHaveCount(0);
   await expect(advance).not.toHaveText(start ?? '');
   await expect(advance).toBeEnabled();
-  await steps.getByRole('button', { name: '−1 mo' }).click();
+  await timeOptions.click();
+  await page.getByRole('button', { name: 'Rewind 1 month' }).click();
   await expect(page.getByTestId('feedback')).toContainText('Rewound to a new timeline');
   await expect(advance).toHaveText(start ?? '');
 });

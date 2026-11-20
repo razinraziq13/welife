@@ -1,5 +1,5 @@
-import { useId } from 'react';
-import { CalendarArrowUp, Loader2 } from 'lucide-react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { CalendarArrowUp, History, Loader2 } from 'lucide-react';
 import { Button } from '@app/components/ui/button';
 import { formatMonth } from '@app/i18n/format';
 import { addMonths } from '@engine/core/clock';
@@ -23,6 +23,25 @@ export function AdvanceButton({
   const advance = useGameStore((s) => s.advance);
   const rewindMonths = useGameStore((s) => s.rewindMonths);
   const reasonId = useId();
+  const menuId = useId();
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  // Close the time menu on Escape or a tap outside it.
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: Event) => {
+      if (
+        e instanceof KeyboardEvent ? e.key === 'Escape' : !box.current?.contains(e.target as Node)
+      )
+        setOpen(false);
+    };
+    document.addEventListener('keydown', close);
+    document.addEventListener('pointerdown', close);
+    return () => {
+      document.removeEventListener('keydown', close);
+      document.removeEventListener('pointerdown', close);
+    };
+  }, [open]);
   if (!session) return null;
   const view = session.view;
   const reason =
@@ -49,35 +68,57 @@ export function AdvanceButton({
           )}
           Advance to {formatMonth(addMonths(view.clock, ADVANCE_MONTHS))}
         </Button>
-        <div
-          role="group"
-          aria-label="Step through time"
-          className="grid shrink-0 grid-cols-2 gap-1"
-        >
-          {[1, 4].map((months) => (
-            <ActionButton
-              key={`+${String(months)}`}
-              size="sm"
-              variant="secondary"
-              reason={reason}
-              busy={busy}
-              onAct={() => void advance(months)}
+        <div ref={box} className="relative shrink-0">
+          <Button
+            variant="secondary"
+            size={size}
+            className="h-full px-3"
+            aria-label="Time options"
+            aria-expanded={open}
+            aria-controls={menuId}
+            onClick={() => {
+              setOpen((o) => !o);
+            }}
+          >
+            <History aria-hidden="true" className="size-5" />
+          </Button>
+          {open && (
+            <div
+              id={menuId}
+              role="group"
+              aria-label="Step through time"
+              className="absolute right-0 bottom-full z-50 mb-2 grid w-52 gap-1 rounded-2xl border border-border bg-surface p-2 shadow-lg md:top-full md:bottom-auto md:mt-2 md:mb-0"
             >
-              +{months} mo
-            </ActionButton>
-          ))}
-          {[1, 4].map((months) => (
-            <ActionButton
-              key={`-${String(months)}`}
-              size="sm"
-              variant="secondary"
-              reason={view.tick < months ? 'Not enough months played to go back that far.' : null}
-              busy={busy}
-              onAct={() => void rewindMonths(months)}
-            >
-              −{months} mo
-            </ActionButton>
-          ))}
+              {(
+                [
+                  ['Advance 1 month', 1],
+                  ['Advance 4 months', 4],
+                  ['Rewind 1 month', -1],
+                  ['Rewind 4 months', -4],
+                ] as const
+              ).map(([label, months]) => (
+                <ActionButton
+                  key={label}
+                  size="sm"
+                  variant="secondary"
+                  reason={
+                    months > 0
+                      ? reason
+                      : view.tick < -months
+                        ? 'Not enough months played to go back that far.'
+                        : null
+                  }
+                  busy={busy}
+                  onAct={() => {
+                    setOpen(false);
+                    void (months > 0 ? advance(months) : rewindMonths(-months));
+                  }}
+                >
+                  {label}
+                </ActionButton>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       {!reason && (
