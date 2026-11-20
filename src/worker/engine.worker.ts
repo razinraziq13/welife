@@ -2,6 +2,7 @@
  * Engine worker entry point. Owns the IndexedDB connection and (from Milestone 1)
  * the authoritative world state; the UI thread only sends validated requests.
  */
+import '@contracts/zodConfig';
 import { WeLifeDatabase } from '@persistence/db';
 import { createEngineHost } from './host';
 

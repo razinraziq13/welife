@@ -13,6 +13,9 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
     <title>WeLife</title>
     <script>
+      // Before any module loads: zod must not probe `new Function` (CSP forbids eval, and
+      // Firefox reports the blocked probe as an error). Schemas are built while modules load.
+      globalThis.__zod_globalConfig = { jitless: true };
       // Pre-paint appearance from the local mirror to avoid a flash of the wrong theme.
       // Source of truth is IndexedDB (via the engine worker); see src/app/theme/appearance.ts.
       (function () {
