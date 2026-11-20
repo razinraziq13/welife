@@ -58,30 +58,49 @@ export function CareerPlayCard({ view, base }: { view: GameView; base: string })
           </div>
         </div>
 
-        {c.acting && (
-          <div className="rounded-xl bg-surface-2 p-3 text-sm">
-            <h3 className="font-semibold text-fg">Screen work</h3>
-            <p className="mt-1 text-muted">
-              {c.acting.credits} screen credit{c.acting.credits === 1 ? '' : 's'}. Auditions now
-              offer {c.acting.nextRole} roles (supporting from 2 credits; lead from 5 credits and
-              reputation 50).
-            </p>
-            {c.acting.contract && (
-              <p className="mt-1 text-fg">
-                Working on a {c.acting.contract.kind === 'film' ? 'film' : 'TV series'} as{' '}
-                {c.acting.contract.role}
-                {c.acting.contract.monthlyMinor > 0n && (
-                  <>
-                    {' '}
-                    for <Money minor={c.acting.contract.monthlyMinor} currency={currency} /> a month
-                  </>
-                )}
-                , {c.acting.contract.monthsLeft} month
-                {c.acting.contract.monthsLeft === 1 ? '' : 's'} to go.
+        {c.acting &&
+          (c.acting.music ? (
+            <div className="rounded-xl bg-surface-2 p-3 text-sm">
+              <h3 className="font-semibold text-fg">Your music</h3>
+              <p className="mt-1 text-muted">
+                {c.acting.credits} release{c.acting.credits === 1 ? '' : 's'} that ran their course.
+                Play gigs for pay and reputation; release a single for royalties (a bigger name
+                earns more).
               </p>
-            )}
-          </div>
-        )}
+              {c.acting.contract?.kind === 'single' && (
+                <p className="mt-1 text-fg">
+                  Your single earns{' '}
+                  <Money minor={c.acting.contract.monthlyMinor} currency={currency} /> a month in
+                  royalties, {c.acting.contract.monthsLeft} month
+                  {c.acting.contract.monthsLeft === 1 ? '' : 's'} to go.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-xl bg-surface-2 p-3 text-sm">
+              <h3 className="font-semibold text-fg">Screen work</h3>
+              <p className="mt-1 text-muted">
+                {c.acting.credits} screen credit{c.acting.credits === 1 ? '' : 's'}. Auditions now
+                offer {c.acting.nextRole} roles (supporting from 2 credits; lead from 5 credits and
+                reputation 50).
+              </p>
+              {c.acting.contract && c.acting.contract.kind !== 'single' && (
+                <p className="mt-1 text-fg">
+                  Working on a {c.acting.contract.kind === 'film' ? 'film' : 'TV series'} as{' '}
+                  {c.acting.contract.role}
+                  {c.acting.contract.monthlyMinor > 0n && (
+                    <>
+                      {' '}
+                      for <Money minor={c.acting.contract.monthlyMinor} currency={currency} /> a
+                      month
+                    </>
+                  )}
+                  , {c.acting.contract.monthsLeft} month
+                  {c.acting.contract.monthsLeft === 1 ? '' : 's'} to go.
+                </p>
+              )}
+            </div>
+          ))}
 
         {c.satisfaction && (
           <div>

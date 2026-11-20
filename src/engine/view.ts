@@ -241,10 +241,12 @@ export interface CareerView {
   track: CareerTrack | null;
   /** Performing track: screen credits, the role auditions now offer, the current production. */
   acting: {
+    /** Musician (gigs and releases) rather than screen work. */
+    music: boolean;
     credits: number;
     nextRole: 'extra' | 'supporting' | 'lead';
     contract: {
-      kind: 'film' | 'tv';
+      kind: 'film' | 'tv' | 'single';
       role: 'extra' | 'supporting' | 'lead';
       monthlyMinor: bigint;
       monthsLeft: number;
@@ -660,6 +662,7 @@ function careerView(world: World, c: Character, e: Employment | undefined): Care
     acting:
       track === 'performing'
         ? {
+            music: e?.terms.occupationId === 'musician' || e?.terms.occupationId === 'singer',
             credits: c.career.credits ?? 0,
             nextRole: actingRole(c),
             contract: c.career.contract ?? null,

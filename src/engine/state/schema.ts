@@ -528,9 +528,9 @@ export const CharacterSchema = z
         credits: z.number().int().min(0).optional(),
         contract: z
           .object({
-            kind: z.enum(['film', 'tv']),
+            kind: z.enum(['film', 'tv', 'single']),
             role: z.enum(['extra', 'supporting', 'lead']),
-            /** TV pay per month (4 episodes); film is paid up front, so 0. */
+            /** TV pay or single royalties per month; film is paid up front, so 0. */
             monthlyMinor: NonNegativeMinor,
             monthsLeft: z.number().int().min(0).max(12),
           })

@@ -44,6 +44,8 @@ export const WORK_ACTION_IDS = [
   'rehearse',
   'promoteYourself',
   'shootShortFilm',
+  'playGig',
+  'releaseSingle',
   'takeOnProject',
   'upskillCourse',
 ] as const;
@@ -63,6 +65,8 @@ export const WORK_ACTIONS: Record<
   rehearse: { track: 'performing', hours: 5, energy: 50 },
   promoteYourself: { track: 'performing', hours: 3, energy: 20 },
   shootShortFilm: { track: 'performing', hours: 10, energy: 80 },
+  playGig: { track: 'performing', hours: 4, energy: 50 },
+  releaseSingle: { track: 'performing', hours: 8, energy: 60 },
   takeOnProject: { track: 'office', hours: 6, energy: 60 },
   upskillCourse: { track: 'office', hours: 4, energy: 30 },
 };
@@ -75,7 +79,8 @@ export type WorkActionBlock =
   | 'tooTired'
   | 'cannotAfford'
   | 'specialised'
-  | 'underContract';
+  | 'underContract'
+  | 'releasing';
 
 export const WORK_ACTION_MESSAGES: Record<WorkActionBlock, string> = {
   noJob: 'You need a job for this.',
@@ -85,6 +90,7 @@ export const WORK_ACTION_MESSAGES: Record<WorkActionBlock, string> = {
   tooTired: 'You are too tired; rest first.',
   cannotAfford: 'You cannot afford the course fee right now.',
   underContract: 'You are already working on a production; finish it first.',
+  releasing: 'Your last single is still earning royalties; release the next one when it has run.',
   specialised: 'You have already earned your specialism.',
 };
 
@@ -125,6 +131,15 @@ function courseFee(world: World, c: Character): bigint {
   return applyPercent(medianWage(world, c.countryCode), 5);
 }
 
+/** Musicians (who gig and release music rather than audition). */
+const MUSIC = new Set(['musician', 'singer']);
+/** Studio time for a single: 15% of the local median monthly wage. */
+function studioBudget(world: World, c: Character): bigint {
+  return applyPercent(medianWage(world, c.countryCode), 15);
+}
+/** Monthly royalties for a hit single, % of the median wage, by standing (as acting roles). */
+const ROYALTY_PERCENT = { extra: 5, supporting: 15, lead: 40 } as const;
+
 /** A short film's budget: 20% of the local median monthly wage. */
 function filmBudget(world: World, c: Character): bigint {
   return applyPercent(medianWage(world, c.countryCode), 20);
@@ -148,10 +163,16 @@ export function workActionBlock(
   if (!e) return 'noJob';
   const def = WORK_ACTIONS[id];
   if (careerTrack(e) !== def.track) return 'otherTrack';
-  // Directors make films instead of auditioning; only directors shoot them.
+  // Directors make films and musicians play and release music instead of auditioning.
   const directing = e.terms.occupationId === 'film-director';
-  if ((id === 'audition' && directing) || (id === 'shootShortFilm' && !directing))
+  const music = MUSIC.has(e.terms.occupationId);
+  if (
+    (id === 'audition' && (directing || music)) ||
+    (id === 'shootShortFilm' && !directing) ||
+    ((id === 'playGig' || id === 'releaseSingle') && !music)
+  )
     return 'otherTrack';
+  if (id === 'releaseSingle' && c.career.contract) return 'releasing';
   if (id === 'audition' && c.career.contract) return 'underContract';
   if (world.activity.tick === world.tick && (world.activity.counts[countKey(id)] ?? 0) > 0)
     return 'doneThisMonth';
@@ -161,6 +182,7 @@ export function workActionBlock(
   if (id === 'studySpecialty' && c.career.specialty !== null) return 'specialised';
   if (id === 'upskillCourse' && !canPay(world, c, courseFee(world, c))) return 'cannotAfford';
   if (id === 'shootShortFilm' && !canPay(world, c, filmBudget(world, c))) return 'cannotAfford';
+  if (id === 'releaseSingle' && !canPay(world, c, studioBudget(world, c))) return 'cannotAfford';
   return null;
 }
 
@@ -371,6 +393,43 @@ export function performWorkAction(world: World, c: Character, id: WorkActionId):
         amount: prize.toString(),
       });
     }
+    case 'playGig': {
+      // Pay grows with reputation: 10% of the median wage, up to 60% for a big name.
+      const fee = applyPercent(
+        medianWage(world, c.countryCode),
+        10 + Math.floor(c.career.reputation / 20),
+      );
+      const into = c.finance?.checkingId ?? c.finance?.savingsId;
+      if (into) receiveIncome(world, c.id, into, 'gigs', fee, 'tx.gig');
+      train(15);
+      reputation(c, 10);
+      bump(e, 20);
+      return done('success', 'work.gig', { amount: fee.toString() });
+    }
+    case 'releaseSingle': {
+      const payer = payerFor(world, c);
+      if (payer) payExpense(world, payer, 'training', studioBudget(world, c), 'tx.studio');
+      train(15);
+      const hit =
+        roll() <
+        clamp(15 + Math.floor(c.skills.music / 15) + Math.floor(c.career.reputation / 40), 10, 85);
+      if (!hit) {
+        reputation(c, 5);
+        return done('mixed', 'work.single.flop');
+      }
+      const role = actingRole(c);
+      c.career.contract = {
+        kind: 'single',
+        role,
+        monthlyMinor: applyPercent(medianWage(world, c.countryCode), ROYALTY_PERCENT[role]),
+        monthsLeft: 6,
+      };
+      reputation(c, 30);
+      bump(e, 30);
+      return done('success', 'work.single.hit', {
+        amount: c.career.contract.monthlyMinor.toString(),
+      });
+    }
     case 'upskillCourse': {
       const payer = payerFor(world, c);
       if (payer) payExpense(world, payer, 'training', courseFee(world, c), 'tx.course');
@@ -431,12 +490,25 @@ function actingMonth(world: World, c: Character): void {
   if (!k) return;
   const into = c.finance?.checkingId ?? c.finance?.savingsId;
   if (k.monthlyMinor > 0n && into)
-    receiveIncome(world, c.id, into, 'gigs', k.monthlyMinor, 'tx.tvEpisodes');
+    receiveIncome(
+      world,
+      c.id,
+      into,
+      'gigs',
+      k.monthlyMinor,
+      k.kind === 'single' ? 'tx.royalties' : 'tx.tvEpisodes',
+    );
   k.monthsLeft -= 1;
   if (k.monthsLeft > 0) return;
   c.career.credits = (c.career.credits ?? 0) + 1;
   reputation(c, CREDIT_REPUTATION[k.role]);
-  addNotification(world, 'work', 'ntf.productionWrapped', { kind: k.kind, role: k.role }, 'career');
+  addNotification(
+    world,
+    'work',
+    k.kind === 'single' ? 'ntf.singleRun' : 'ntf.productionWrapped',
+    { kind: k.kind, role: k.role },
+    'career',
+  );
   c.career.contract = undefined;
 }
 
