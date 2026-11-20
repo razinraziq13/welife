@@ -478,6 +478,34 @@ test.describe('government bonds', () => {
     json = await adultSaveJson('e2e-bonds');
   });
 
+  test('choose an investment, view monthly moves and trade Bitcoin', async ({ page }) => {
+    const saveId = await importSave(page, json);
+    await page.goto(`/play/${saveId}/finance`);
+    await page.getByText('Bitcoin', { exact: true }).click();
+    const chart = page.getByRole('region', { name: 'Bitcoin price history' });
+    await expect(chart.getByText(/this month/)).toBeVisible();
+    await chart.getByRole('button', { name: '6 months', exact: true }).click();
+    await chart.getByText('Monthly prices').click();
+    await expect(chart.getByRole('row')).toHaveCount(8);
+    await chart.getByRole('button', { name: '24 months', exact: true }).click();
+    await expect(chart.getByRole('row')).toHaveCount(26);
+
+    await page.getByLabel(/^Buy Bitcoin/).fill('100');
+    const investments = page.getByRole('region', { name: 'Investments', exact: true });
+    await investments.getByRole('button', { name: 'Buy', exact: true }).click();
+    await expect(page.getByTestId('feedback')).toContainText('Investment bought');
+    await expect(investments.getByText('Cost basis')).toBeVisible();
+    await page.getByLabel(/^Sell Bitcoin/).fill('50');
+    await page.getByLabel(/^Sell Bitcoin/).press('Enter');
+    await expect(page.getByTestId('feedback')).toContainText('Investment sold');
+    await page.getByText('Technology stock fund', { exact: true }).click();
+    await expect(
+      page.getByRole('region', { name: 'Technology stock fund price history' }),
+    ).toBeVisible();
+    await page.getByText('Selara Systems', { exact: true }).click();
+    await expect(page.getByRole('region', { name: 'Selara Systems price history' })).toBeVisible();
+  });
+
   test('buy a bond, see its interest and sale price, sell it early', async ({ page }) => {
     const saveId = await importSave(page, json);
     await page.goto(`/play/${saveId}/finance`);

@@ -162,6 +162,7 @@ function enrich(params: Record<string, string | number>): Record<string, string 
     out.competitionName = findClub(params.clubId)?.competition?.name ?? '';
   }
   if (typeof params.programId === 'string') out.programName = programName(params.programId);
+  if (typeof params.fund === 'string') out.fundName = t(`fund.${params.fund}`);
   if (typeof params.level === 'string') out.levelName = t(`level.${params.level}`);
   if (typeof params.place === 'number') out.placeName = t(`place.${String(params.place)}`);
   if (typeof params.option === 'string') out.optionName = t(`vacation.${params.option}`);

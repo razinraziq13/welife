@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { checkInvariants } from '@engine/core/invariants';
-import { monthlyInterest } from '@engine/core/money';
+import { divRound, monthlyInterest } from '@engine/core/money';
 import { balanceOf, checkLedger } from '@engine/economy/ledger';
 import { bondSaleValue, bondYieldBp, playerBonds } from '@engine/economy/investments';
 import type { SimState } from '@engine/core/commands';
 import { projectGame } from '@engine/view';
+import { MARKET_HISTORY_LIMIT, WorldSchema } from '@engine/state/schema';
 import { checked, findWork, giveMoney } from '../../helpers/reconcile';
 import { advanceMonths, newState, playerOf, run } from '../../helpers/sim';
 
@@ -107,6 +108,45 @@ describe('government bonds', () => {
 });
 
 describe('fund gains', () => {
+  it('starts chart history for older saves and marks each new investment at its own market price', () => {
+    const older = investor('investment-market');
+    const country = playerOf(older).countryCode;
+    const economy = older.world.economy[country];
+    if (!economy) throw new Error('no economy');
+    delete economy.marketHistory;
+    const state: SimState = { world: WorldSchema.parse(older.world), pending: null };
+    const original = projectGame(state).enterprise.investments.markets;
+    expect(original).toHaveLength(7);
+    expect(original.every((market) => market.history.length === 1)).toBe(true);
+    const principal = 100_000n;
+    let invested = state;
+    for (const fund of ['bitcoin', 'technology', 'consumer', 'selara', 'meranti'] as const) {
+      invested = checked(invested, {
+        type: 'buyFund',
+        fund,
+        amountMinor: principal.toString(),
+      }).state;
+    }
+    const next = advanceMonths(invested, 1);
+    const markets = projectGame(next).enterprise.investments.markets;
+    expect(markets).toEqual(projectGame(advanceMonths(invested, 1)).enterprise.investments.markets);
+    for (const fund of ['bitcoin', 'technology', 'consumer', 'selara', 'meranti'] as const) {
+      const market = markets.find(({ id }) => id === fund);
+      const [first, latest] = market?.history ?? [];
+      if (!market || !first || !latest) throw new Error('missing market history');
+      expect([first.tick, latest.tick]).toEqual([state.world.tick, next.world.tick]);
+      expect(market.balanceMinor).toBe(
+        divRound(principal * BigInt(latest.indexBp), BigInt(first.indexBp)),
+      );
+      expect(market.costMinor).toBe(principal);
+    }
+    const sold = checked(next, { type: 'sellFund', fund: 'bitcoin', amountMinor: '10000' }).state;
+    expect(checkLedger(sold.world)).toEqual([]);
+    const later = advanceMonths(sold, MARKET_HISTORY_LIMIT);
+    expect(later.world.economy[country]?.marketHistory).toHaveLength(MARKET_HISTORY_LIMIT);
+    expect(WorldSchema.safeParse(later.world).success).toBe(true);
+  });
+
   it('tracks what was put in, reduced in proportion when selling', () => {
     const state = investor('fund-cost');
     const a = checked(state, { type: 'buyFund', fund: 'stocks', amountMinor: '100000' }).state;
