@@ -52,7 +52,7 @@ export function MoreTab() {
     {
       to: `${base}/property`,
       label: 'Property',
-      desc: 'Buy, let, renovate and sell homes and premises',
+      desc: 'Let, renovate and sell homes and premises you own',
       icon: Home,
     },
     {

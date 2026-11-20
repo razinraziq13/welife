@@ -547,7 +547,7 @@ test.describe('Shopping', () => {
     );
     await page.getByRole('link', { name: 'Shopping', exact: true }).last().click();
     await expect(page.getByRole('heading', { level: 1, name: 'Shopping' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: /Homes for sale/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Property for sale/ })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Manage your properties' })).toBeVisible();
     await page.getByLabel('Deposit', { exact: true }).selectOption('100');
     await page

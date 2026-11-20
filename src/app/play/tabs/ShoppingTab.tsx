@@ -14,7 +14,7 @@ import { ActionButton } from '../ActionButton';
 import { PropertyListingsCard } from '../screens/PropertyScreen';
 
 const categories = [
-  { value: 'houses', label: 'Houses' },
+  { value: 'houses', label: 'Property' },
   { value: 'used', label: 'Used cars' },
   { value: 'new', label: 'New cars' },
   { value: 'aeroplane', label: 'Aeroplanes' },
@@ -218,7 +218,7 @@ export function ShoppingTab() {
       />
       {category === 'houses' ? (
         <>
-          <PropertyListingsCard view={view} residentialOnly />
+          <PropertyListingsCard view={view} />
           <Link
             to={`/play/${saveId}/property`}
             className={buttonVariants({ variant: 'secondary', className: 'self-start' })}

@@ -1,11 +1,12 @@
 import { useId, useState } from 'react';
+import { Link } from 'react-router';
 import { amortisedPayment } from '@engine/core/money';
 import type { EnterpriseView } from '@engine/viewEnterprise';
 import type { GameView } from '@engine/view';
 import { PageHeader } from '@app/components/PageHeader';
 import { StatBar } from '@app/components/StatBar';
 import { AmountForm, Money } from '@app/components/Money';
-import { Button } from '@app/components/ui/button';
+import { Button, buttonVariants } from '@app/components/ui/button';
 import { Card } from '@app/components/ui/card';
 import { ConfirmDialog } from '@app/components/ui/confirm-dialog';
 import { t } from '@app/i18n/en';
@@ -222,13 +223,7 @@ function OwnedCard({ p, view }: { p: Owned; view: GameView }) {
   );
 }
 
-export function PropertyListingsCard({
-  view,
-  residentialOnly = false,
-}: {
-  view: GameView;
-  residentialOnly?: boolean;
-}) {
+export function PropertyListingsCard({ view }: { view: GameView }) {
   const { send, disabled } = useAct();
   const property = view.enterprise.property;
   const depositId = useId();
@@ -236,19 +231,15 @@ export function PropertyListingsCard({
   const [deposit, setDeposit] = useState(Math.max(property.depositPercent, 20));
   const [term, setTerm] = useState(300);
   const cur = view.country.currency;
-  const market = residentialOnly ? 'Homes for sale' : 'Property for sale';
-  const listings = residentialOnly
-    ? property.listings.filter((listing) => listing.kind !== 'commercial')
-    : property.listings;
   if (view.character.age.years < 18)
     return (
-      <Card title={market}>
+      <Card title="Property for sale">
         <p className="text-sm text-muted">You can buy property from 18.</p>
       </Card>
     );
   return (
     <Card
-      title={`${market} in ${view.character.location.name}`}
+      title={`Property for sale in ${view.character.location.name}`}
       description={`Lenders need a deposit of at least ${String(property.depositPercent)}%. Mortgage rate about ${formatBp(property.mortgageRateBp)} a year; transfer costs about ${formatBp(property.transferBp)}.`}
     >
       <div className="mb-3 flex flex-wrap items-end gap-3">
@@ -293,13 +284,13 @@ export function PropertyListingsCard({
           </select>
         </div>
       </div>
-      {listings.length === 0 ? (
+      {property.listings.length === 0 ? (
         <p className="text-sm text-muted">
           Nothing for sale right now. New listings appear each month.
         </p>
       ) : (
         <ul className="divide-y divide-border">
-          {listings.map((l) => {
+          {property.listings.map((l) => {
             const depositMinor = (l.askingMinor * BigInt(deposit)) / 100n;
             const borrow = l.askingMinor - depositMinor;
             const payment =
@@ -354,14 +345,20 @@ export function PropertyListingsCard({
 export function PropertyScreen() {
   const session = useGameStore((s) => s.session);
   if (!session) return null;
-  const view = session.view;
+  const { view, saveId } = session;
   const owned = view.enterprise.property.owned;
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Property"
-        description="Buy, live in, let, renovate and sell. Values follow simulated house prices."
+        description="Live in, let, renovate and sell what you own. Values follow simulated house prices."
       />
+      <Link
+        to={`/play/${saveId}/shopping`}
+        className={buttonVariants({ variant: 'secondary', className: 'self-start' })}
+      >
+        Buy property in Shopping
+      </Link>
       {owned.length === 0 ? (
         <Card title="Your property">
           <p className="text-sm text-muted">You do not own any property yet.</p>
@@ -369,7 +366,6 @@ export function PropertyScreen() {
       ) : (
         owned.map((p) => <OwnedCard key={p.id} p={p} view={view} />)
       )}
-      <PropertyListingsCard view={view} />
     </div>
   );
 }
