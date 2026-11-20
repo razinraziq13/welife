@@ -7,6 +7,7 @@ import { intestateHeirs } from './legacy/inheritance';
 import { lineOfSuccession, successionRule } from './legacy/succession';
 import { lifeSummary, type LifeSummary, type LifeTitle } from './legacy/summary';
 import { currencyFor } from './economy/finance';
+import { netWorthIn } from './economy/fx';
 import { MEDIA_STYLES } from './state/schema';
 import { NICHES, PLATFORMS, profilesOf } from './media/media';
 import { getInstitutions } from './world/institutions';
@@ -26,6 +27,8 @@ export interface PersonRef {
 
 export interface LegacyView {
   generation: number;
+  /** Net worth of you and every living relative, plus households they run (your currency). */
+  familyWealth: { minor: bigint; people: number };
   lineage: {
     characterId: string;
     name: string;
@@ -187,8 +190,23 @@ export function projectLegacy(world: World, player: Character): LegacyView {
     .filter((r) => r.aId === player.id)
     .map((r) => world.characters[r.bId])
     .filter((c): c is Character => c?.death === null);
+  const family = sortedValues(world.characters).filter(
+    (c) => c.death === null && (c.id === player.id || kinship(world, player.id, c.id) !== null),
+  );
+  const currency = currencyFor(player.countryCode);
+  const headed = sortedValues(world.households).filter((h) =>
+    family.some((c) => h.finance?.headId === c.id),
+  );
+  const familyWealth = {
+    minor: [...family.map((c) => c.id), ...headed.map((h) => h.id)].reduce(
+      (sum, id) => sum + netWorthIn(world, id, currency),
+      0n,
+    ),
+    people: family.length,
+  };
   return {
     generation: world.legacy.generation,
+    familyWealth,
     lineage: world.legacy.lineage.map((l) => {
       const c = world.characters[l.characterId];
       return {

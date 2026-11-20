@@ -721,6 +721,7 @@ function workView(world: World, c: Character): WorkView {
         endReason: x.endReason,
       })),
     postings: sortedValues(world.jobs.postings)
+      .filter((p) => p.terms.locationId === c.locationId)
       .sort((a, b) => b.postedTick - a.postedTick || (a.id < b.id ? -1 : 1))
       .map((p) => {
         const occupation = getOccupation(p.terms.occupationId);

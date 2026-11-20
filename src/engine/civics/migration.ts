@@ -2,7 +2,7 @@ import { sortedValues } from '../core/data';
 import { applyPercent } from '../core/money';
 import { addBiography, addNotification, ageYears, nextId, withRng } from '../core/world';
 import { moveToHousehold } from '../characters/factory';
-import { endEmployment } from '../career/jobs';
+import { endEmployment, refreshJobMarket } from '../career/jobs';
 import { leaveEducation } from '../education/school';
 import { ensureEconomy, medianWage, convert, savingsRateBp } from '../economy/economy';
 import {
@@ -616,6 +616,7 @@ export function relocate(world: World, c: Character, locationId: string): void {
     household.finance.housing = 'rented';
   }
   household.finance.rentMinor = rentFor(world, location.id, household.finance.homeSize);
+  refreshJobMarket(world);
 
   if (abroad) {
     convertMoney(world, c, household, currencyFor(fromCode), country.code);

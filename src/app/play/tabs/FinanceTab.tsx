@@ -53,11 +53,6 @@ function OverviewCard({ view }: { view: GameView }) {
         {f.personal && (
           <Row label="Your net worth">{<Money minor={f.personal.netWorth} currency={cur} />}</Row>
         )}
-        {household?.isHead && (
-          <Row label="Household net worth">
-            {<Money minor={household.netWorth} currency={cur} />}
-          </Row>
-        )}
         {f.netIncomeMinor > 0n && (
           <Row label="Your take-home pay">{<Money minor={f.netIncomeMinor} currency={cur} />}</Row>
         )}

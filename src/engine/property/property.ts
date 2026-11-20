@@ -53,6 +53,7 @@ export const RENOVATION = {
 export const REPOSSESSION_MISSES = 6;
 
 export type PropertyRejection =
+  | 'abroad'
   | 'tooYoung'
   | 'unknownListing'
   | 'unknownProperty'
@@ -88,6 +89,7 @@ export const PROPERTY_MESSAGES: Record<PropertyRejection, string> = {
   invalid: 'That value is not allowed.',
   commercialHome: 'You cannot live in commercial premises.',
   alreadyHome: 'You already live there.',
+  abroad: 'This home is in another country. Move there first (World, Moving), then move in.',
   tenanted: 'A tenant lives there until their lease ends.',
   livingThere: 'You live there. Move somewhere else first.',
   renovating: 'Renovation work is under way.',
@@ -358,6 +360,8 @@ export function moveIntoProperty(world: World, c: Character, propertyId: string)
   const home = world.households[c.householdId];
   if (home?.finance?.propertyId === property.id) throw new PropertyError('alreadyHome');
   if (ageYears(world, c) < 18) throw new PropertyError('tooYoung');
+  if (getLocation(property.locationId).country.code !== c.countryCode)
+    throw new PropertyError('abroad');
   const size = property.kind === 'house' ? 'house' : 'apartment';
   let household: Household;
   if (home?.finance?.headId === c.id) {

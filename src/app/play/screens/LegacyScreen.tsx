@@ -361,6 +361,14 @@ export function LegacyScreen() {
     <div className="flex flex-col gap-4">
       <PageHeader title="Legacy" description="Your family across the generations." />
       {view.lifeStatus === 'succession' && <SuccessionPanel />}
+      <Card
+        title="Family wealth"
+        description={`Everything owned by you and your ${String(view.legacy.familyWealth.people - 1)} living relatives, including the homes and budgets they run.`}
+      >
+        <p className="text-2xl font-semibold text-fg">
+          <Money minor={view.legacy.familyWealth.minor} currency={view.country.currency} />
+        </p>
+      </Card>
       <LineageCard view={view} />
       <HouseCard view={view} />
       {view.lifeStatus === 'alive' && <HandOverCard view={view} />}
