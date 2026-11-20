@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Take over a child:** Legacy, Hand over now lists your children and grandchildren of any age, so you can carry on as a young child while your character lives on.
+
 - **Long-term conditions:** asthma and other chronic conditions now flare up some months instead of draining health every month, and can be cured with an expensive therapy or operation from the Health care screen.
 
 - **Vehicles:** cars, planes and helicopters now lose value each month and cost money to run; sell them from Shopping for what they are worth now.

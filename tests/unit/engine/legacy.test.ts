@@ -187,6 +187,23 @@ describe('ten generations (M7 exit)', () => {
 });
 
 describe('succession on death (decision D7)', () => {
+  it('a young child can be taken over while alive and grows up in the family home', () => {
+    let state = advanceMonths(newState({ seed: 'young-heir', countryCode: 'GB' }), 25 * 12);
+    state = advanceMonths(startFamily(state, 1), 3);
+    const parent = playerOf(state);
+    const child = Object.values(state.world.familyLinks)
+      .filter((l) => l.parentId === parent.id)
+      .map((l) => state.world.characters[l.childId])
+      .find((c) => c?.death === null);
+    if (!child) throw new Error('no child');
+    state = checked(state, { type: 'continueAs', characterId: child.id }).state;
+    expect(state.world.activeCharacterId).toBe(child.id);
+    expect(state.world.characters[parent.id]?.death).toBeNull();
+    for (let i = 0; i < 12; i++) state = monthChecked(state);
+    expect(state.world.lifeStatus).toBe('alive');
+    expect(checkInvariants(state.world)).toEqual([]);
+  }, 60_000);
+
   it('an adult child takes over when the player dies; the estate passes to the heirs', () => {
     let state = newState({ seed: 'succession', countryCode: 'GB' });
     state = advanceMonths(state, 18 * 12);

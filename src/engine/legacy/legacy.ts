@@ -26,12 +26,10 @@ import type { Character, RelationType, World } from '../state/schema';
  * - The lineage records every character the player has been, with their generation.
  */
 
-export type LegacyRejection =
-  'notCandidate' | 'notAdult' | 'notDescendant' | 'noSuccession' | 'dead' | 'self';
+export type LegacyRejection = 'notCandidate' | 'notDescendant' | 'noSuccession' | 'dead' | 'self';
 
 export const LEGACY_MESSAGES: Record<LegacyRejection, string> = {
   notCandidate: 'That person cannot take over.',
-  notAdult: 'Only adults can take over.',
   notDescendant: 'You can hand over only to an adult child or grandchild.',
   noSuccession: 'There is no succession to decide.',
   dead: 'That person has died.',
@@ -85,16 +83,17 @@ function byAgeDesc(a: Character, b: Character): number {
 }
 
 /** Adult descendants a player may hand over to (voluntary switching). */
-export function switchCandidates(world: World, player: Character): Character[] {
+/** Living children and grandchildren, any age, nearest first (heirs on death need `minAge` 18). */
+export function switchCandidates(world: World, player: Character, minAge = 0): Character[] {
   return descendantsOf(world, player.id)
-    .filter(({ c }) => ageYears(world, c) >= 18)
+    .filter(({ c }) => ageYears(world, c) >= minAge)
     .sort((a, b) => a.depth - b.depth || byAgeDesc(a.c, b.c))
     .map(({ c }) => c);
 }
 
 /** Heirs on death: adult descendants, else the nearest adult relatives (decision D7). */
 export function heirCandidates(world: World, deceased: Character): Character[] {
-  const descendants = switchCandidates(world, deceased);
+  const descendants = switchCandidates(world, deceased, 18);
   if (descendants.length > 0) return descendants.slice(0, 30);
   const adult = (ids: string[]) =>
     ids
@@ -289,7 +288,6 @@ export function continueAs(world: World, heirId: string): void {
   }
   const player = world.characters[world.activeCharacterId];
   if (!player || world.lifeStatus !== 'alive') throw new LegacyError('noSuccession');
-  if (ageYears(world, heir) < 18) throw new LegacyError('notAdult');
   if (!switchCandidates(world, player).some((c) => c.id === heirId))
     throw new LegacyError('notDescendant');
   takeControl(world, heir, 'switch');

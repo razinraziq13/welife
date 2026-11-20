@@ -183,10 +183,10 @@ function HandOverCard({ view }: { view: GameView }) {
   return (
     <Card
       title="Hand over"
-      description="Continue the story as an adult child or grandchild. You keep playing in the same world; your current character lives on as their own person and keeps everything they own."
+      description="Continue the story as one of your children or grandchildren, at any age. You keep playing in the same world; your current character lives on as their own person and keeps everything they own."
     >
       {candidates.length === 0 ? (
-        <p className="text-sm text-muted">You have no adult children or grandchildren yet.</p>
+        <p className="text-sm text-muted">You have no children or grandchildren yet.</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {candidates.map((c) => (
