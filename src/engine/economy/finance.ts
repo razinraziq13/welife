@@ -268,7 +268,7 @@ export function receiveIncome(
 /** Pays down arrears from available cash first each month. */
 function settleArrears(
   world: World,
-  payer: { ownerId: string; checkingId: string },
+  payer: { ownerId: string; checkingId: string; savingsId?: string | null },
   player?: Character,
 ): void {
   const cur = world.ledger.accounts[payer.checkingId]?.currency;
@@ -295,12 +295,18 @@ function settleArrears(
     const account =
       foreign && player ? payerIn(world, player, arrears.currency, arrears.balance) : payer;
     if (!account) continue;
-    const pay = minBig(arrears.balance, maxBig(0n, balanceOf(world, account.checkingId)));
-    if (pay > 0n)
-      post(world, 'tx.arrearsPaid', [
-        { accountId: arrears.id, debit: pay },
-        { accountId: account.checkingId, credit: pay },
-      ]);
+    // Current account first, then savings (as bills are paid), so money in savings is not left
+    // idle while late fees grow.
+    for (const from of [account.checkingId, foreign ? null : (payer.savingsId ?? null)]) {
+      const owed = balanceOf(world, arrears.id);
+      if (!from || owed <= 0n) continue;
+      const pay = minBig(owed, maxBig(0n, balanceOf(world, from)));
+      if (pay > 0n)
+        post(world, 'tx.arrearsPaid', [
+          { accountId: arrears.id, debit: pay },
+          { accountId: from, credit: pay },
+        ]);
+    }
   }
 }
 
@@ -900,7 +906,11 @@ export function processFinances(world: World, markets: Map<string, MarketMove>):
     householdIncome(world, h);
     householdSupport(world, h);
     householdExpenses(world, h);
-    settleArrears(world, { ownerId: h.id, checkingId: h.finance.checkingId });
+    settleArrears(world, {
+      ownerId: h.id,
+      checkingId: h.finance.checkingId,
+      savingsId: h.finance.savingsId,
+    });
     growAccounts(world, h.id, country.code, markets.get(country.code));
     if (world.clock.month === 1 && h.finance.housing === 'rented') {
       const inflation = world.economy[country.code]?.inflationBp ?? 0;

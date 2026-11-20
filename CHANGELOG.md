@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Overdue bills are paid from savings too.** Overdue bills used to be paid only from the current account, so money arriving in savings (birthday money, interest) sat idle while the 1% monthly late fee grew. They are now paid from the current account, then savings, and Money explains what overdue bills are.
+
 - **Job board:** actor, musician and film director roles are only started from Career, Paths (no longer advertised in Job App), and the board is fuller: 6 to 10 new jobs a month, up to 50 listed. Transactions now read "Royalties" for both book and music royalties (one label used to overwrite the other).
 
 - **Doctors: registration and a patient queue.** Practising as a doctor now needs a medical degree and registration: work as a resident doctor for your country's supervised months (routine patients only), then pass the registration exam. Nursing and other health roles see why they cannot take a doctor's cases. Registered doctors get a patient queue in Career, Patients: review information cards, talk with the patient and consult a colleague, then arrange follow-up care or refer. Cases are fictional and non-graphic, with no diagnoses, medicines or procedures.

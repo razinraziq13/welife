@@ -63,7 +63,13 @@ function OverviewCard({ view }: { view: GameView }) {
         )}
         {f.arrears > 0n && (
           <Row label="Overdue bills">
-            {<Money minor={f.arrears} currency={cur} className="text-danger" />}
+            <Money minor={f.arrears} currency={cur} className="text-danger" />
+            <span className="mt-1 block text-xs font-normal text-muted">
+              Bills you could not pay. A 1% late fee is added each month, and they are paid
+              automatically from your current account, then savings, as money comes in. If they keep
+              rising, your monthly costs are more than your income: earn more, move to a cheaper
+              home or lifestyle, or take a loan to clear them.
+            </span>
           </Row>
         )}
         {f.benefits.months > 0 && (
