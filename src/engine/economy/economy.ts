@@ -11,6 +11,9 @@ import { MARKET_HISTORY_LIMIT, type Economy, type MarketPoint, type World } from
  * Aggregate background economy per country (spec §4: background population is aggregate;
  * "all later economic evolution is explicitly simulated"). A seeded business cycle drives
  * inflation, wages, unemployment, the policy rate and a retirement-fund market index.
+ * Money is in today's prices (decision E87): there is no built-in inflation trend, so a
+ * wage or a house costs about the same in 2150 as now; only booms, slumps and policies move
+ * prices, and interest rates are real rates (the nominal rate less the country's inflation).
  * All numbers PROPOSED TUNING.
  */
 
@@ -20,10 +23,10 @@ export function initialEconomy(code: string): Economy {
     priceIndexBp: 10_000,
     wageIndexBp: 10_000,
     unemploymentBp: rates.unemploymentBp,
-    policyRateBp: rates.policyBp,
+    policyRateBp: neutralRateBp(code),
     marketIndexBp: 10_000,
     cycle: 0,
-    inflationBp: rates.inflationBp,
+    inflationBp: 0,
     priceIndexYearAgoBp: 10_000,
     fxIndexBp: 10_000,
     housePriceBp: 10_000,
@@ -49,8 +52,11 @@ export interface MarketMove {
   houseReturnBp: number;
 }
 
-/** World inflation the exchange rates drift against (PROPOSED TUNING). */
-const WORLD_INFLATION_BP = 250;
+/** The central bank's resting real rate: today's policy rate less today's inflation. */
+function neutralRateBp(code: string): number {
+  const rates = getRules(code).rates;
+  return Math.max(0, rates.policyBp - rates.inflationBp);
+}
 
 function grow(value: number, bp: number, min: number, max: number): number {
   return clamp(value + Number(divRound(BigInt(value) * BigInt(bp), 10_000n)), min, max);
@@ -94,8 +100,8 @@ export function advanceEconomies(world: World): Map<string, MarketMove> {
       fx: rng.range(-60, 60),
     }));
     e.cycle = clamp(e.cycle + noise.cycle - Math.trunc(e.cycle / 10), -100, 100);
-    const monthlyInflation =
-      Math.trunc(base.inflationBp / 12) + Math.trunc(e.cycle / 25) + noise.inflation;
+    const neutral = neutralRateBp(code);
+    const monthlyInflation = Math.trunc(e.cycle / 25) + noise.inflation;
     e.priceIndexBp = clamp(
       e.priceIndexBp + Number(divRound(BigInt(e.priceIndexBp) * BigInt(monthlyInflation), 10_000n)),
       1000,
@@ -116,12 +122,8 @@ export function advanceEconomies(world: World): Map<string, MarketMove> {
       100,
       4000,
     );
-    // The policy rate leans against inflation above the country's baseline.
-    const target = clamp(
-      base.policyBp + Math.trunc(((e.inflationBp - base.inflationBp) * 3) / 2),
-      0,
-      3000,
-    );
+    // The policy rate leans against inflation.
+    const target = clamp(neutral + Math.trunc((e.inflationBp * 3) / 2), 0, 3000);
     e.policyRateBp = clamp(e.policyRateBp + Math.trunc((target - e.policyRateBp) / 12), 0, 3000);
     const returnBp = 45 + e.cycle * 2 + noise.market;
     e.marketIndexBp = clamp(
@@ -173,13 +175,9 @@ export function advanceEconomies(world: World): Map<string, MarketMove> {
       { tick: world.tick, indices: after },
     ].slice(-MARKET_HISTORY_LIMIT);
     const houseReturnBp =
-      Math.trunc(base.inflationBp / 12) +
-      10 +
-      Math.trunc(e.cycle / 10) -
-      Math.trunc((e.policyRateBp - base.policyBp) / 60) +
-      noise.house;
+      10 + Math.trunc(e.cycle / 10) - Math.trunc((e.policyRateBp - neutral) / 60) + noise.house;
     e.housePriceBp = grow(e.housePriceBp, houseReturnBp, 500, 10_000_000);
-    const fxChange = -Math.trunc((e.inflationBp - WORLD_INFLATION_BP) / 12) + noise.fx;
+    const fxChange = -Math.trunc(e.inflationBp / 12) + noise.fx;
     e.fxIndexBp = grow(e.fxIndexBp, fxChange, 100, 1_000_000);
     moves.set(code, { returnBp, fundPrices: { before: previous.indices, after }, houseReturnBp });
   }

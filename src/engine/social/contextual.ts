@@ -1,5 +1,5 @@
 import { clamp } from '../core/data';
-import { applyPercent } from '../core/money';
+import { applyPercent, maxBig, minBig } from '../core/money';
 import { ageYears, withRng } from '../core/world';
 import { changeNeed, changeSkill, changeStat } from '../characters/stats';
 import { medianWage } from '../economy/economy';
@@ -137,9 +137,11 @@ function playerAccount(player: Character): string | null {
 function theirMoney(
   world: World,
   other: Character,
-): { ownerId: string; checkingId: string } | null {
+): { ownerId: string; checkingId: string; savingsId: string } | null {
   const h = world.households[other.householdId]?.finance;
-  return h ? { ownerId: other.householdId, checkingId: h.checkingId } : null;
+  return h
+    ? { ownerId: other.householdId, checkingId: h.checkingId, savingsId: h.savingsId }
+    : null;
 }
 
 function balance(world: World, id: string): bigint {
@@ -204,8 +206,9 @@ export function contextualBlock(
           world.households[player.householdId]?.finance?.headId === player.id)
       )
         return 'theyCannotAfford';
-      if (balance(world, money.checkingId) < askMoneyAmount(world, player) * 3n)
-        return 'theyCannotAfford';
+      // Savings count: a family with money put by can still spare a little.
+      const spare = balance(world, money.checkingId) + balance(world, money.savingsId);
+      if (spare < askMoneyAmount(world, player) * 3n) return 'theyCannotAfford';
       return monthsSince(world, other.id, player.id, 'gaveMoney') < 6 ? 'tooSoon' : null;
     }
     case 'askPermission':
@@ -383,6 +386,7 @@ export function contextualOutcome(
         return { outcome: 'mixed', key: 'int.askMoney.no' };
       }
       const cur = world.ledger.accounts[money.checkingId]?.currency ?? 'USD';
+      const fromChecking = minBig(amount, maxBig(0n, balance(world, money.checkingId)));
       post(
         world,
         'tx.familyHelp',
@@ -391,7 +395,8 @@ export function contextualOutcome(
             accountId: categoryAccount(world, money.ownerId, 'expense', 'familyHelp', cur),
             debit: amount,
           },
-          { accountId: money.checkingId, credit: amount },
+          { accountId: money.checkingId, credit: fromChecking },
+          { accountId: money.savingsId, credit: amount - fromChecking },
           { accountId: to, debit: amount },
           {
             accountId: categoryAccount(world, player.id, 'income', 'familyHelp', cur),

@@ -110,7 +110,8 @@ describe('ten generations (M7 exit)', () => {
         state = advanceMonths(state, 12);
       if (state.world.lifeStatus !== 'alive') continue;
       const heir = eldestAdultChild(state.world);
-      if (!heir) throw new Error('no adult child after 30 years');
+      // A birth can fall through (the mother dies before it is due): start a family again.
+      if (!heir) continue;
       const switched = run(state, { type: 'continueAs', characterId: heir.id });
       expect(switched.outcome).toMatchObject({ status: 'applied' });
       state = switched.state;

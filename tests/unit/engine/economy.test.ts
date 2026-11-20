@@ -326,7 +326,10 @@ describe('careers and the household economy reconcile (M4 exit)', () => {
     const economy = w.economy.BR;
     expect(economy).toBeDefined();
     if (economy) {
-      expect(economy.priceIndexBp).toBeGreaterThan(10_000);
+      // Today's prices: 60 years on, prices have drifted, not multiplied (E87).
+      expect(economy.priceIndexBp).toBeGreaterThan(5_000);
+      expect(economy.priceIndexBp).toBeLessThan(20_000);
+      expect(economy.wageIndexBp).toBeLessThan(30_000);
       expect(economy.unemploymentBp).toBeGreaterThanOrEqual(100);
     }
     // Journal stays bounded (snapshots keep the full record).
