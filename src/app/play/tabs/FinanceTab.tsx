@@ -149,6 +149,7 @@ function CashFlowCard({ view }: { view: GameView }) {
     1n,
   );
   const scale = (v: bigint) => Number((v * 100n) / max);
+  const repaid = f.month.repaid.reduce((s, r) => s + r.amount, 0n);
   return (
     <Card title="Money this month" description={`Booked in ${month(view, f.month.tick)}.`}>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -179,12 +180,54 @@ function CashFlowCard({ view }: { view: GameView }) {
               ))}
             </dl>
           )}
+          {repaid > 0n && (
+            <>
+              <h3 className="mt-3 text-sm font-semibold text-fg">Debt repaid</h3>
+              <dl className="text-sm">
+                {f.month.repaid.map((r) => (
+                  <Row key={r.product} label={t(`loan.${r.product}`)}>
+                    <Money minor={r.amount} currency={cur} />
+                  </Row>
+                ))}
+              </dl>
+              <p className="text-xs text-muted">
+                The part of each payment that reduces what you owe; the interest is under spending.
+              </p>
+            </>
+          )}
         </div>
       </div>
-      <p className="mt-2 text-sm text-fg">
-        Net this month:{' '}
-        <Money minor={f.month.totalIncome - f.month.totalExpenses} currency={cur} signed />
-      </p>
+      {f.month.notCash.length > 0 && (
+        <div className="mt-3">
+          <h3 className="text-sm font-semibold text-fg">Pension and investments (not cash)</h3>
+          <dl className="text-sm">
+            {f.month.notCash.map((i) => (
+              <Row key={i.category} label={t(`category.${i.category}`)}>
+                <Money minor={i.amount} currency={cur} signed />
+              </Row>
+            ))}
+          </dl>
+          <p className="text-xs text-muted">
+            These change what your savings are worth but do not reach your current account, so they
+            are not in the totals below.
+          </p>
+        </div>
+      )}
+      <dl className="mt-3 grid gap-x-8 border-t border-border pt-2 text-sm sm:grid-cols-3">
+        <Row label="Money in">
+          <Money minor={f.month.totalIncome} currency={cur} />
+        </Row>
+        <Row label="Money out">
+          <Money minor={f.month.totalExpenses + repaid} currency={cur} />
+        </Row>
+        <Row label="Net this month">
+          <Money
+            minor={f.month.totalIncome - f.month.totalExpenses - repaid}
+            currency={cur}
+            signed
+          />
+        </Row>
+      </dl>
       {history.length > 1 && (
         <figure className="mt-4">
           <figcaption className="text-sm font-semibold text-fg">

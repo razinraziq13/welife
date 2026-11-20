@@ -200,7 +200,12 @@ export function MoneyWidget({ view, base }: { view: GameView; base: string }) {
         )}
         <dt className="text-muted">This month</dt>
         <dd className="text-right text-fg">
-          {formatSignedMoney(f.month.totalIncome - f.month.totalExpenses, f.currency)}
+          {formatSignedMoney(
+            f.month.totalIncome -
+              f.month.totalExpenses -
+              f.month.repaid.reduce((sum, r) => sum + r.amount, 0n),
+            f.currency,
+          )}
         </dd>
         {h && !h.isHead && (
           <>

@@ -385,6 +385,10 @@ export interface FinanceView {
     expenses: { category: string; amount: bigint }[];
     totalIncome: bigint;
     totalExpenses: bigint;
+    /** Pension and investment value changes (signed): not cash, left out of the totals. */
+    notCash: { category: string; amount: bigint }[];
+    /** Debt repaid this month by product (loan and mortgage payments beyond interest). */
+    repaid: { product: string; amount: bigint }[];
   };
   history: MonthSummary[];
   taxYear: {
@@ -822,8 +826,6 @@ function financeView(world: World, c: Character): FinanceView {
     convertCurrency(world, amount, currency, country.currency.code);
   const householdTotals = h?.finance ? monthTotals(world, h.id, world.tick, homeValue) : null;
   const totals = { income: new Map<string, bigint>(), expenses: new Map<string, bigint>() };
-  let totalIncome = 0n;
-  let totalExpenses = 0n;
   for (const owner of owners) {
     const t =
       owner === h?.id && householdTotals
@@ -834,9 +836,33 @@ function financeView(world: World, c: Character): FinanceView {
       const map = kind === 'income' ? totals.income : totals.expenses;
       map.set(category, (map.get(category) ?? 0n) + amount);
     }
-    totalIncome += t.income;
-    totalExpenses += t.expenses;
   }
+  // Debt repaid this month (the part of each loan or mortgage payment beyond its interest):
+  // real money out that is not spending, so it is shown separately.
+  const repaidBy = new Map<string, bigint>();
+  for (const tx of world.ledger.journal[String(world.tick)] ?? []) {
+    if (tx.kind !== 'tx.loanPayment' && tx.kind !== 'tx.loanInterest') continue;
+    for (const e of tx.entries) {
+      const a = world.ledger.accounts[e.accountId];
+      if (a?.type !== 'loan' || !a.loan || !owners.includes(a.ownerId)) continue;
+      const product = a.loan.product;
+      repaidBy.set(
+        product,
+        (repaidBy.get(product) ?? 0n) + homeValue(e.debit - e.credit, a.currency),
+      );
+    }
+  }
+  const repaid = [...repaidBy]
+    .map(([product, amount]) => ({ product, amount }))
+    .filter((x) => x.amount > 0n);
+  const NOT_CASH = new Set(['employerPension', 'investment', 'investmentLoss']);
+  const lines = (map: Map<string, bigint>, notCash: boolean) =>
+    [...map]
+      .filter(([category, amount]) => amount !== 0n && NOT_CASH.has(category) === notCash)
+      .map(([category, amount]) => ({ category, amount }))
+      .sort((a, b) => (b.amount > a.amount ? 1 : -1));
+  const sumOf = (map: Map<string, bigint>) =>
+    [...map].reduce((s, [category, amount]) => (NOT_CASH.has(category) ? s : s + amount), 0n);
   const accountsOwned = (owner: string): Account[] =>
     sortedValues(world.ledger.accounts).filter((a) => a.ownerId === owner && a.closedTick === null);
   const personalAccounts = accountsOwned(c.id);
@@ -943,16 +969,18 @@ function financeView(world: World, c: Character): FinanceView {
     },
     month: {
       tick: world.tick,
-      income: [...totals.income]
-        .map(([category, amount]) => ({ category, amount }))
-        .filter((x) => x.amount !== 0n)
-        .sort((a, b) => (b.amount > a.amount ? 1 : -1)),
-      expenses: [...totals.expenses]
-        .map(([category, amount]) => ({ category, amount }))
-        .filter((x) => x.amount !== 0n)
-        .sort((a, b) => (b.amount > a.amount ? 1 : -1)),
-      totalIncome,
-      totalExpenses,
+      income: lines(totals.income, false),
+      expenses: lines(totals.expenses, false),
+      // Pension contributions by the employer and investment value changes never reach the
+      // current account. shortcut: a bond sold above face value is cash but booked as investment
+      // income, so it lands here; split the category if that starts to matter.
+      notCash: [
+        ...lines(totals.income, true),
+        ...lines(totals.expenses, true).map((x) => ({ ...x, amount: -x.amount })),
+      ],
+      totalIncome: sumOf(totals.income),
+      totalExpenses: sumOf(totals.expenses),
+      repaid,
     },
     history: (world.ledger.history[c.id] ?? []).slice(-24),
     taxYear: c.finance ? { ...c.finance.taxYear, yearStartMonth: rules.tax.yearStartMonth } : null,
