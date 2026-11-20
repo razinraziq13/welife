@@ -63,7 +63,9 @@ test('a game played in the browser matches the same months replayed in Node (C-0
   await expect(page).toHaveURL(/\/play\/[^/]+\/life$/);
   for (let i = 0; i < 8; i++) await advanceOnce(page);
   // Settle a decision that may still be open so both sides stop at a committed month.
-  const dialog = page.getByRole('dialog');
+  const dialog = page
+    .getByRole('dialog')
+    .filter({ has: page.getByRole('group', { name: 'Choices' }) });
   if (await dialog.isVisible()) await advanceOnce(page);
 
   await page.goto('/');

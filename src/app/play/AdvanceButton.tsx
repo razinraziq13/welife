@@ -20,6 +20,8 @@ export function AdvanceButton({
 }) {
   const session = useGameStore((s) => s.session);
   const busy = useGameStore((s) => s.busy || s.advancing);
+  // A waiting recap keeps Advance locked until Continue, so months never stack behind it.
+  const recapOpen = useGameStore((s) => s.recap !== null);
   const advance = useGameStore((s) => s.advance);
   const rewindMonths = useGameStore((s) => s.rewindMonths);
   const reasonId = useId();
@@ -56,7 +58,7 @@ export function AdvanceButton({
         <Button
           className="min-w-0 flex-1 rounded-r-none"
           size={size}
-          disabled={busy || reason !== null}
+          disabled={busy || recapOpen || reason !== null}
           aria-describedby={reason ? reasonId : undefined}
           onClick={() => void advance()}
           data-testid="advance-month"

@@ -7,7 +7,16 @@ import type { DashboardLayout, GameSessionView } from '@contracts/saves';
 import { getEngine } from '@app/bridge/engine';
 import { describeError, errorCode } from '@app/bridge/errors';
 import { outcomeText } from '@app/i18n/format';
-import type { FamilyTreeView, PersonDetailView } from '@engine/view';
+import type { FamilyTreeView, GameView, PersonDetailView } from '@engine/view';
+
+/** What one Advance played: shown by the month recap once any decision is answered. */
+export interface MonthRecap {
+  months: number;
+  fromTick: number;
+  stats: GameView['character']['stats'];
+  moneyIn: bigint;
+  moneyOut: bigint;
+}
 import type { BiographyView } from '@engine/viewLegacy';
 
 export type CommandBody = Command extends infer C
@@ -27,6 +36,8 @@ interface GameState {
   /** True for the whole of a multi-month advance (keeps Advance locked between months). */
   advancing: boolean;
   lastActivity: ActivityResult | null;
+  recap: MonthRecap | null;
+  closeRecap: () => void;
   /** Short status message announced to screen readers (shown as a pop-up). */
   message: string | null;
   /** Whether the message reports something done or something that could not be done. */
@@ -89,11 +100,23 @@ export const useGameStore = create<GameState>()((set, get) => ({
   busy: false,
   advancing: false,
   lastActivity: null,
+  recap: null,
   message: null,
   messageKind: 'success',
 
+  closeRecap() {
+    set({ recap: null });
+  },
+
   async open(saveId) {
-    set({ saveId, phase: 'loading', error: null, errorCode: null, lastActivity: null });
+    set({
+      saveId,
+      phase: 'loading',
+      error: null,
+      errorCode: null,
+      lastActivity: null,
+      recap: null,
+    });
     try {
       const session = await getEngine().call('game.open', { saveId });
       if (get().saveId === saveId) set({ session, phase: 'ready' });
@@ -110,6 +133,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
       error: null,
       errorCode: null,
       lastActivity: null,
+      recap: null,
       message: null,
       messageKind: 'success',
     });
@@ -154,6 +178,10 @@ export const useGameStore = create<GameState>()((set, get) => ({
         .filter((a) => a.status === 'offered')
         .map((a) => a.id);
     const known = new Set(offers());
+    const start = get().session?.view;
+    let played = 0;
+    let moneyIn = 0n;
+    let moneyOut = 0n;
     try {
       for (let i = 0; i < months; i++) {
         const view = get().session?.view;
@@ -161,13 +189,34 @@ export const useGameStore = create<GameState>()((set, get) => ({
         const outcome = await get().send({ type: 'advance', expectedTick: view.tick });
         if (outcome?.status !== 'applied' || outcome.kind !== 'advanced') break;
         set({ lastActivity: null });
+        // shortcut: a month that stops for a decision is left out of the money totals; it
+        // only lands once the choice is made. Fine while the recap is a summary.
+        played += 1;
+        const month = get().session?.view.finance.month;
+        if (month) {
+          moneyIn += month.totalIncome;
+          moneyOut += month.totalExpenses + month.repaid.reduce((s, r) => s + r.amount, 0n);
+        }
         if (offers().some((id) => !known.has(id))) {
           set({ message: 'A job offer arrived. See Career to answer it.', messageKind: 'success' });
           break;
         }
       }
     } finally {
-      set({ advancing: false });
+      set({
+        advancing: false,
+        ...(start && played > 0
+          ? {
+              recap: {
+                months: played,
+                fromTick: start.tick,
+                stats: start.character.stats,
+                moneyIn,
+                moneyOut,
+              },
+            }
+          : {}),
+      });
     }
   },
 
@@ -214,6 +263,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
         session,
         busy: false,
         lastActivity: null,
+        recap: null,
         messageKind: 'success',
         message: `Rewound to a new timeline: ${session.branch.name}.`,
       });
@@ -245,6 +295,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
         session,
         busy: false,
         lastActivity: null,
+        recap: null,
         messageKind: 'success',
         message: `Switched to ${session.branch.name}.`,
       });

@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Month recap:** after Advance you see what changed: your stats, money in and out, and what happened. Five tabs now (Life, Career, Social, Money, More) and one wide Advance button.
+
 - **New look, step 1:** the Life screen has a compact character header with your current account and a list of colourful action rows; choose a game colour (Jade, Grape, Guava or Ocean) in Settings.
 
 - **Take over a child:** Legacy, Hand over now lists your children and grandchildren of any age, so you can carry on as a young child while your character lives on.

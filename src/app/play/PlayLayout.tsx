@@ -15,6 +15,7 @@ import { describeError } from '@app/bridge/errors';
 import { useGameStore } from '@app/stores/gameStore';
 import { AdvanceButton } from './AdvanceButton';
 import { EventDialog } from './EventDialog';
+import { MonthRecap } from './MonthRecap';
 
 export const TABS = [
   { to: 'life', label: 'Life', icon: Home },
@@ -197,6 +198,7 @@ export function PlayLayout() {
         )}
         {view.lifeStatus === 'succession' && <SuccessionPanel />}
         <EventDialog />
+        <MonthRecap />
         <AchievementToasts saveId={saveId} view={view} base={base} />
         <FeedbackToast />
       </div>

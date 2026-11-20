@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from './fixtures';
-import { advanceOnce, createLife } from './helpers';
+import { advanceOnce, createLife, closeRecap } from './helpers';
 
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -83,14 +83,20 @@ test('an achievement shows a pop-up once, and the story feed tells the latest mo
 test('decisions pause the month until the player chooses', async ({ page }) => {
   test.setTimeout(240_000); // may need many months before a decision comes up (slow under load on WebKit)
   await createLife(page, { seed: 'e2e-decision' });
-  const dialog = page.getByRole('dialog');
+  const dialog = page
+    .getByRole('dialog')
+    .filter({ has: page.getByRole('group', { name: 'Choices' }) });
   const advance = page.getByTestId('advance-month').locator('visible=true').first();
   for (let i = 0; i < 40 && !(await dialog.isVisible()); i++) {
     // Wait until the previous click's months are done (or a decision has opened).
     await expect
-      .poll(async () => (await dialog.isVisible()) || (await advance.isEnabled()), {
-        timeout: 30_000,
-      })
+      .poll(
+        async () =>
+          (await dialog.isVisible()) || (await closeRecap(page)) || (await advance.isEnabled()),
+        {
+          timeout: 30_000,
+        },
+      )
       .toBe(true);
     if (await dialog.isVisible()) break;
     await advance.click();
@@ -111,10 +117,12 @@ test('decisions pause the month until the player chooses', async ({ page }) => {
   await page.getByRole('button', { name: 'Decide now' }).click();
   await dialog.getByRole('group', { name: 'Choices' }).getByRole('button').first().click();
   await expect(dialog).toBeHidden();
+  await closeRecap(page);
   await expect(page.getByTestId('advance-month').locator('visible=true').first()).toBeEnabled();
 });
 
 test('rewinding creates a new timeline and the old one can be resumed', async ({ page }) => {
+  test.setTimeout(60_000); // five Advances, each with a recap to close
   const saveId = await createLife(page, { seed: 'e2e-rewind' });
   for (let i = 0; i < 5; i++) await advanceOnce(page);
   await page.goto(`/play/${saveId}/timeline`);
@@ -232,9 +240,21 @@ test('step one month forward and back beside Advance', async ({ page }) => {
   await page.getByRole('button', { name: 'Advance 1 month' }).click();
   await expect(page.getByRole('group', { name: 'Step through time' })).toHaveCount(0);
   await expect(advance).not.toHaveText(start ?? '');
+  await expect.poll(() => closeRecap(page), { timeout: 30_000 }).toBe(true);
   await expect(advance).toBeEnabled();
   await timeOptions.click();
   await page.getByRole('button', { name: 'Rewind 1 month' }).click();
   await expect(page.getByTestId('feedback')).toContainText('Rewound to a new timeline');
   await expect(advance).toHaveText(start ?? '');
+});
+
+test('Advance ends with a month recap of stats, money and story', async ({ page }) => {
+  await createLife(page, { seed: 'e2e-rewind' });
+  await page.getByTestId('advance-month').locator('visible=true').first().click();
+  // Read the recap without a locator action: the shared fixture taps Continue on any action.
+  await expect
+    .poll(() => page.evaluate(() => document.querySelector('dialog[open]')?.textContent ?? ''), {
+      timeout: 30_000,
+    })
+    .toMatch(/months? later.*Here is what changed.*Continue/);
 });

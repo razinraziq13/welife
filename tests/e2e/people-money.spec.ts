@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
-import { advanceOnce, createLife, importSave } from './helpers';
+import { advanceOnce, createLife, importSave, closeRecap } from './helpers';
 import { adultSaveJson } from './adultSave';
 
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
@@ -231,10 +231,13 @@ test.describe('companies and property (M5)', () => {
     const before = await advance.textContent();
     await advance.click();
     // Wait for the full advance to finish and answer any decisions along the way.
-    const dialog = page.getByRole('dialog');
+    const dialog = page
+      .getByRole('dialog')
+      .filter({ has: page.getByRole('group', { name: 'Choices' }) });
     await expect
       .poll(
         async () => {
+          if (await closeRecap(page)) return 'recap';
           if (await dialog.isVisible()) {
             const choice = dialog
               .getByRole('group', { name: 'Choices' })

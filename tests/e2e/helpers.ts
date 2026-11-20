@@ -29,9 +29,20 @@ export async function createLife(page: Page, options: LifeOptions = {}): Promise
   return match?.[1] ?? '';
 }
 
+/** Taps Continue on the month recap if it is open (the page behind it is inert). */
+export async function closeRecap(page: Page): Promise<boolean> {
+  const recap = page.getByRole('dialog', { name: /months? later$/ });
+  if (!(await recap.isVisible())) return false;
+  await recap.getByRole('button', { name: 'Continue' }).click();
+  await expect(recap).toBeHidden();
+  return true;
+}
+
 /** Clicks Advance Month once, answering any decision that appears. */
 export async function advanceOnce(page: Page): Promise<void> {
-  const dialog = page.getByRole('dialog');
+  const dialog = page
+    .getByRole('dialog')
+    .filter({ has: page.getByRole('group', { name: 'Choices' }) });
   if (await dialog.isVisible()) {
     await dialog
       .getByRole('group', { name: 'Choices' })
@@ -39,8 +50,10 @@ export async function advanceOnce(page: Page): Promise<void> {
       .first()
       .click();
     await expect(dialog).toBeHidden();
+    await closeRecap(page);
     return;
   }
+  await closeRecap(page);
   const button = page.getByTestId('advance-month').locator('visible=true').first();
   const before = await button.textContent();
   await button.click();
@@ -50,6 +63,7 @@ export async function advanceOnce(page: Page): Promise<void> {
     .poll(
       async () =>
         (await dialog.isVisible()) ||
+        (await closeRecap(page)) ||
         ((await button.textContent()) !== before && (await button.isEnabled())),
       { timeout: 30_000 },
     )
