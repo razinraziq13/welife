@@ -932,7 +932,8 @@ const ROWS: Row[] = [
   ],
   ['postal-worker', 'Postal worker', 'government', 'none', null, ['fitness'], 80, 2],
   // Media
-  ['journalist', 'Journalist', 'media', 'bachelor', 'media', ['reading', 'socializing'], 120, 4],
+  // A relevant diploma or degree (media field) qualifies (decision E93).
+  ['journalist', 'Journalist', 'media', 'diploma', 'media', ['reading', 'socializing'], 120, 4],
   ['video-editor', 'Video editor', 'media', 'diploma', 'media', ['technology', 'art'], 115, 3],
   ['photographer', 'Photographer', 'media', 'diploma', 'arts', ['art', 'technology'], 95, 3],
   [

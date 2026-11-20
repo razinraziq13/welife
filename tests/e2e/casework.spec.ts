@@ -46,4 +46,16 @@ test.describe('professional casework (E93)', () => {
     await expect(page.getByRole('button', { name: 'Cases', exact: true })).toBeVisible();
     await workACase(page, 'Case board', 'Negotiate a settlement');
   });
+
+  test('a journalist with a media diploma verifies a claim and publishes a story', async ({
+    page,
+  }) => {
+    const json = await adultSaveJson('e2e-journalist', {
+      profession: { occupationId: 'journalist', qualification: 'diploma:media', licence: null },
+    });
+    const saveId = await importSave(page, json);
+    await page.goto(`/play/${saveId}/career`);
+    await expect(page.getByRole('button', { name: 'Stories', exact: true })).toBeVisible();
+    await workACase(page, 'Story desk', 'Publish a short news report');
+  });
 });

@@ -110,3 +110,37 @@ describe('lawyer: degree, admission and casework (E93)', () => {
     );
   }, 120_000);
 });
+
+describe('journalist: diploma or degree, verification and integrity (E93)', () => {
+  it('a relevant diploma or degree qualifies; an unrelated one does not', () => {
+    for (const q of ['diploma:media', 'bachelor:media'])
+      expect(
+        jobEligibility(
+          adult(`media-${q}`, [q]).world,
+          playerOf(adult(`media-${q}`, [q])),
+          terms(adult(`media-${q}`, [q]), 'journalist'),
+        ),
+      ).not.toBe('notQualified');
+    const other = adult('media-other', ['diploma:business']);
+    expect(jobEligibility(other.world, playerOf(other), terms(other, 'journalist'))).toBe(
+      'notQualified',
+    );
+  }, 180_000);
+
+  it('publishing with unverified claims brings a correction and costs integrity', () => {
+    let state = advanceMonths(hire(adult('media-story', ['diploma:media']), 'journalist'), 1);
+    const story = cases(state)?.cases.find((k) => k.status === 'offer' && k.takeReason === null);
+    if (!story) throw new Error('no story');
+    state = run(state, { type: 'takeCase', caseId: story.id }).state;
+    const before = cases(state)?.integrity ?? 0;
+    state = run(state, { type: 'resolveCase', caseId: story.id, optionId: 'brief' }).state;
+    expect(cases(state)?.record[0]?.unverified).toBe(true);
+    expect(cases(state)?.integrity).toBeLessThan(before);
+    expect(state.world.notifications.at(-1)?.messageKey).toBe('ntf.storyCorrection');
+  }, 120_000);
+
+  it('a video editor sees why professional reporting is not open to them', () => {
+    const state = advanceMonths(hire(adult('media-support', ['diploma:media']), 'video-editor'), 1);
+    expect(cases(state)?.block).toMatch(/relevant diploma or degree/);
+  }, 120_000);
+});

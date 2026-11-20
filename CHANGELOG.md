@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Journalists: credential and story desk.** The journalist role now needs a relevant (media) diploma or degree; unrelated or unfinished study does not count. Journalists get a story desk in Career, Stories: take a story, verify claims, interview sources and draft, then publish a short report or an in-depth feature. Publishing with unverified or disputed claims brings a correction and costs integrity; verified reporting builds it.
+
 - **Lawyers: admission and cases.** Practising as a lawyer now needs a law degree and admission: work as a trainee lawyer for your country's supervised months, then pass the licensing exam (a law diploma leads to paralegal work, never practice; a serious unspent conviction suspends it). Admitted lawyers get a case board in Career, Cases: take a client's case, examine the evidence, talk to the client and prepare, then settle or go to a hearing; the result and its main reason are explained and kept in your career record.
 
 - **Business: market research.** Commission a customer survey (10% of the local median wage, paid by the company, once a month) for a likely demand range next month at your price and at 10% cheaper or dearer, next to what your free staff can serve.

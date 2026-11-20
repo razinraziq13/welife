@@ -229,6 +229,8 @@ export const enPlay: Record<string, string> = {
   'bio.signedLabel': 'Signed a record deal with {label}.',
   'bio.goldenNoteNominated': 'Nominated for a Golden Note award for {title}.',
   'bio.goldenNoteWon': 'Won a Golden Note award for {title}.',
+  'ntf.storyCorrection':
+    '{title} went out with unverified or disputed claims: a correction was published and trust in your reporting fell.',
   'out.case.taken': 'You took on {title}. Work on it before the deadline.',
   'out.case.declined': 'You passed on it.',
   'out.case.corroborated': 'That item holds up: it supports your position.',

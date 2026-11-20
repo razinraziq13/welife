@@ -121,6 +121,71 @@ export const PROFESSION: Partial<Record<Profession, ProfessionConfig>> = {
       'Daniel Okafor',
     ],
   },
+  media: {
+    // No licence: the gate is a relevant diploma or degree (media field), checked by meetsEducation.
+    practising: ['journalist'],
+    trainee: null,
+    support: ['video-editor', 'broadcast-technician', 'social-media-manager', 'copywriter'],
+    licence: null,
+    supportReason:
+      'Professional reporting requires a journalist role, which needs a relevant diploma or degree.',
+    skills: ['reading', 'socializing'],
+    templates: [
+      {
+        kind: 'local',
+        title: 'Council budget cuts',
+        items: ['Council statement', 'Budget papers', 'Resident account'],
+      },
+      {
+        kind: 'business',
+        title: 'New factory opening',
+        items: ['Company announcement', 'Hiring figures', 'Union comment', 'Planning records'],
+      },
+      {
+        kind: 'entertainment',
+        title: 'Film production delays',
+        items: ['Studio statement', 'Crew member account', 'Filming schedule'],
+      },
+      {
+        kind: 'politics',
+        title: 'Election debate claims',
+        items: ['Candidate claim', 'Official statistics', 'Expert view', 'Campaign leaflet'],
+      },
+      {
+        kind: 'science',
+        title: 'Hospital waiting times',
+        items: ['Health board report', 'Patient account', 'Researcher interview'],
+      },
+      {
+        kind: 'investigative',
+        title: 'Missing housing funds',
+        items: [
+          'Leaked memo',
+          'Contract records',
+          'Whistleblower account',
+          'Official reply',
+          'Bank filings',
+        ],
+      },
+    ],
+    actions: {
+      examine: 'Verify the next claim',
+      clarify: 'Interview a source',
+      prepare: 'Draft and revise',
+    },
+    options: [
+      { id: 'brief', label: 'Publish a short news report', risky: false },
+      { id: 'feature', label: 'Publish an in-depth feature', risky: true },
+    ],
+    parties: [
+      'Riverbend Council',
+      'Northgate Logistics',
+      'Lumen Pictures',
+      'Harbourside Clinic',
+      'A local resident',
+      'Greenway Schools Trust',
+    ],
+  },
 };
 
 /** Supervised training months before the admission or registration exam (fictionalised). */
@@ -501,6 +566,10 @@ export function resolveCase(
   ].slice(-60);
   const delta = { good: 40, mixed: 10, poor: -30 }[outcome];
   cw.trust = clamp(cw.trust + delta, 0, 1000);
+  // Integrity: relying on unchecked or disputed material costs it (a correction, for a story).
+  cw.integrity = clamp(cw.integrity + (unchecked + contested > 0 ? -40 : 15), 0, 1000);
+  if (unchecked + contested > 0 && k.profession === 'media')
+    addNotification(world, 'work', 'ntf.storyCorrection', { title: k.title }, 'career');
   c.career.reputation = clamp(c.career.reputation + Math.floor(delta / 2), 0, 1000);
   const job = p ? activeEmployment(world, c) : null;
   if (job) job.performance = clamp(job.performance + delta, 0, 1000);
