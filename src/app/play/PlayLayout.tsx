@@ -8,6 +8,7 @@ import {
   Home,
   Loader2,
   Menu,
+  ShoppingBag,
   Wallet,
 } from 'lucide-react';
 import { Avatar } from '@app/components/avatar/Avatar';
@@ -30,6 +31,7 @@ export const TABS = [
   { to: 'career', label: 'Career', icon: Briefcase },
   { to: 'finance', label: 'Finance', icon: Wallet },
   { to: 'social', label: 'Social', icon: HeartHandshake },
+  { to: 'shopping', label: 'Shopping', icon: ShoppingBag },
   { to: 'more', label: 'More', icon: Menu },
 ] as const;
 
@@ -238,26 +240,26 @@ export function PlayLayout() {
         </div>
       </div>
 
-      {/* Phone: Advance and the five tabs stay within thumb reach. */}
+      {/* Phone: Advance and the tabs stay within thumb reach. */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
         <div className="px-3 pt-2">
           <AdvanceButton size="md" />
         </div>
         <nav aria-label="Game sections">
-          <ul className="grid grid-cols-5">
+          <ul className="grid grid-cols-6">
             {TABS.map(({ to, label, icon: Icon }) => (
               <li key={to}>
                 <NavLink
                   to={`${base}/${to}`}
                   className={({ isActive }) =>
                     cn(
-                      'flex h-14 flex-col items-center justify-center gap-0.5 text-xs font-medium',
+                      'flex h-14 min-w-0 flex-col items-center justify-center gap-0.5 text-[0.6875rem] font-medium sm:text-xs',
                       isActive ? 'text-primary' : 'text-muted',
                     )
                   }
                 >
                   <Icon aria-hidden="true" className="size-5" />
-                  {label}
+                  <span className="max-w-full truncate">{label}</span>
                 </NavLink>
               </li>
             ))}

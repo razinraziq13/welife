@@ -49,6 +49,8 @@ export const enEnterprise: Record<string, string> = {
   'out.businessClosed': 'Company closed.',
   'out.acquired': 'Competitor bought.',
   'out.propertyBought': 'Property bought.',
+  'out.vehicleBought': 'You bought the {name}.',
+  'tx.vehicleBought': 'Bought {name}',
   'out.movedIntoProperty': 'You moved into your property.',
   'out.propertyLet': 'Property listed for rent.',
   'out.stoppedLetting': 'No longer letting the property.',

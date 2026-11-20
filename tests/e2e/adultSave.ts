@@ -32,7 +32,7 @@ function month(state: SimState): SimState {
  */
 export async function adultSaveJson(
   seed = 'e2e-adult',
-  options: { rivalOffer?: boolean; age?: number } = {},
+  options: { rivalOffer?: boolean; age?: number; cashGiftMinor?: bigint } = {},
 ): Promise<string> {
   let state: SimState = {
     world: createWorld(`world-${seed}`, {
@@ -91,7 +91,7 @@ export async function adultSaveJson(
   const checkingId = adult?.finance?.checkingId;
   const checking = checkingId ? world.ledger.accounts[checkingId] : undefined;
   if (adult && checking) {
-    const gift = 60_000_000n;
+    const gift = options.cashGiftMinor ?? 60_000_000n;
     const equityId = `${adult.id}~equity~fixtureGift`;
     world.ledger.accounts[equityId] = {
       ...checking,

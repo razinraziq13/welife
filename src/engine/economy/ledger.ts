@@ -24,6 +24,7 @@ export const DEBIT_NORMAL: ReadonlySet<AccountType> = new Set([
   'retirement',
   'investment',
   'property',
+  'vehicle',
   'stake',
   'expense',
 ]);
@@ -33,6 +34,7 @@ export const ASSET_TYPES: ReadonlySet<AccountType> = new Set([
   'retirement',
   'investment',
   'property',
+  'vehicle',
   'stake',
 ]);
 export const LIABILITY_TYPES: ReadonlySet<AccountType> = new Set(['loan', 'arrears']);
@@ -57,6 +59,7 @@ export interface OpenAccountOptions {
   rateBp?: number;
   loan?: Account['loan'];
   category?: string;
+  vehicle?: Account['vehicle'];
 }
 
 /** Opens a balance-sheet account (checking, savings, retirement, loan, arrears). */
@@ -79,6 +82,7 @@ export function openAccount(
     openedTick: world.tick,
     closedTick: null,
     loan: options.loan ?? null,
+    ...(options.vehicle ? { vehicle: options.vehicle } : {}),
   };
   return id;
 }

@@ -202,6 +202,7 @@ const ASSET_TYPES_FX = new Set([
   'retirement',
   'investment',
   'property',
+  'vehicle',
   'stake',
 ]);
 const LIABILITY_TYPES_FX = new Set(['loan', 'arrears']);

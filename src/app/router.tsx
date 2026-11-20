@@ -68,6 +68,11 @@ export const router = createBrowserRouter(
                 import('@app/play/tabs/SocialTab').then((m) => ({ Component: m.SocialTab })),
             },
             {
+              path: 'shopping',
+              lazy: () =>
+                import('@app/play/tabs/ShoppingTab').then((m) => ({ Component: m.ShoppingTab })),
+            },
+            {
               path: 'more',
               lazy: () => import('@app/play/tabs/MoreTab').then((m) => ({ Component: m.MoreTab })),
             },

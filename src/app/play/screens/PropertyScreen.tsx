@@ -222,7 +222,13 @@ function OwnedCard({ p, view }: { p: Owned; view: GameView }) {
   );
 }
 
-function ListingsCard({ view }: { view: GameView }) {
+export function PropertyListingsCard({
+  view,
+  residentialOnly = false,
+}: {
+  view: GameView;
+  residentialOnly?: boolean;
+}) {
   const { send, disabled } = useAct();
   const property = view.enterprise.property;
   const depositId = useId();
@@ -230,15 +236,19 @@ function ListingsCard({ view }: { view: GameView }) {
   const [deposit, setDeposit] = useState(Math.max(property.depositPercent, 20));
   const [term, setTerm] = useState(300);
   const cur = view.country.currency;
+  const market = residentialOnly ? 'Homes for sale' : 'Property for sale';
+  const listings = residentialOnly
+    ? property.listings.filter((listing) => listing.kind !== 'commercial')
+    : property.listings;
   if (view.character.age.years < 18)
     return (
-      <Card title="Property for sale">
+      <Card title={market}>
         <p className="text-sm text-muted">You can buy property from 18.</p>
       </Card>
     );
   return (
     <Card
-      title={`Property for sale in ${view.character.location.name}`}
+      title={`${market} in ${view.character.location.name}`}
       description={`Lenders need a deposit of at least ${String(property.depositPercent)}%. Mortgage rate about ${formatBp(property.mortgageRateBp)} a year; transfer costs about ${formatBp(property.transferBp)}.`}
     >
       <div className="mb-3 flex flex-wrap items-end gap-3">
@@ -283,13 +293,13 @@ function ListingsCard({ view }: { view: GameView }) {
           </select>
         </div>
       </div>
-      {property.listings.length === 0 ? (
+      {listings.length === 0 ? (
         <p className="text-sm text-muted">
           Nothing for sale right now. New listings appear each month.
         </p>
       ) : (
         <ul className="divide-y divide-border">
-          {property.listings.map((l) => {
+          {listings.map((l) => {
             const depositMinor = (l.askingMinor * BigInt(deposit)) / 100n;
             const borrow = l.askingMinor - depositMinor;
             const payment =
@@ -359,7 +369,7 @@ export function PropertyScreen() {
       ) : (
         owned.map((p) => <OwnedCard key={p.id} p={p} view={view} />)
       )}
-      <ListingsCard view={view} />
+      <PropertyListingsCard view={view} />
     </div>
   );
 }

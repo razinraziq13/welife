@@ -214,7 +214,7 @@ function bequeath(
   return amount;
 }
 
-/** Hands over a whole asset or debt account (property, mortgage, stake) to an heir. */
+/** Hands over a whole asset or debt account to an heir. */
 function handOver(
   world: World,
   d: Character,
@@ -225,11 +225,12 @@ function handOver(
   const next = openAccount(
     world,
     heir.id,
-    account.type as 'property' | 'stake' | 'loan',
+    account.type as 'property' | 'vehicle' | 'stake' | 'loan',
     currency,
     {
       category: account.category,
       rateBp: account.rateBp,
+      ...(account.vehicle ? { vehicle: { ...account.vehicle } } : {}),
     },
   );
   const created = world.ledger.accounts[next];
@@ -421,6 +422,11 @@ export function settleEstate(world: World, d: Character): Estate | null {
       );
     });
     if (left > 0n) bequeath(world, d, account, left, null, null);
+  }
+  for (const vehicle of accounts) {
+    if (vehicle.type !== 'vehicle' || !main) continue;
+    amounts.set(main.id, (amounts.get(main.id) ?? 0n) + value(vehicle));
+    handOver(world, d, vehicle, main, vehicle.currency);
   }
   for (const property of sortedValues(world.properties)) {
     const owner = property.owners.find((o) => o.ownerId === d.id);

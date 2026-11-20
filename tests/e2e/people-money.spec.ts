@@ -528,3 +528,40 @@ test.describe('government bonds', () => {
     await expect(page.getByText(/10-year at/)).toHaveCount(0);
   });
 });
+
+test.describe('Shopping', () => {
+  test.describe.configure({ timeout: 120_000 });
+
+  test('browses the shops and keeps a purchased vehicle after reload', async ({ page }) => {
+    const saveId = await importSave(
+      page,
+      await adultSaveJson('e2e-shopping', { cashGiftMinor: 1_000_000_000n }),
+    );
+    await page.getByRole('link', { name: 'Shopping', exact: true }).last().click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Shopping' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Homes for sale/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Manage your properties' })).toBeVisible();
+    await page.getByLabel('Deposit', { exact: true }).selectOption('100');
+    await page
+      .getByRole('button', { name: /^Buy the (apartment|house) for/ })
+      .first()
+      .click();
+    await expect(page.getByTestId('feedback')).toContainText('Property bought.');
+    await page.getByText('Aeroplanes', { exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Buy Selat Trainer' })).toBeVisible();
+    await page.getByText('Helicopters', { exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Buy Bayu Scout' })).toBeVisible();
+    await page.getByText('New cars', { exact: true }).click();
+    await expect(page.getByText('Compact hatchback · New')).toBeVisible();
+    await page.getByText('Used cars', { exact: true }).click();
+    await expect(page.getByText(/Compact hatchback.*Condition/)).toBeVisible();
+    await page.getByRole('button', { name: 'Buy Meranti City' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Confirm purchase' }).click();
+    await expect(page.getByTestId('feedback')).toContainText('You bought the Meranti City.');
+    await expect(page.getByRole('region', { name: 'Your vehicles' })).toContainText('Bought used');
+    await page.reload();
+    await expect(page).toHaveURL(new RegExp(`/play/${saveId}/shopping$`));
+    await expect(page.getByRole('region', { name: 'Your vehicles' })).toContainText('Meranti City');
+    await expectAccessible(page);
+  });
+});

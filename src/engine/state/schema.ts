@@ -245,6 +245,7 @@ export const ACCOUNT_TYPES = [
   'retirement',
   'investment',
   'property',
+  'vehicle',
   'stake',
   'expense',
   'loan',
@@ -824,6 +825,19 @@ export const LoanTermsSchema = z
   })
   .strict();
 
+export const VEHICLE_KINDS = ['car', 'aeroplane', 'helicopter'] as const;
+export type VehicleKind = (typeof VEHICLE_KINDS)[number];
+
+const VehicleSchema = z.strictObject({
+  offerId: Id,
+  kind: z.enum(VEHICLE_KINDS),
+  name: z.string().min(1).max(50),
+  yearsUsed: z.number().int().min(0).max(100),
+  condition: z.number().int().min(1).max(100),
+  purchasedTick: Tick,
+});
+export type Vehicle = z.infer<typeof VehicleSchema>;
+
 export const AccountSchema = z
   .object({
     id: Id,
@@ -842,6 +856,8 @@ export const AccountSchema = z
     loan: LoanTermsSchema.nullable(),
     /** Investment funds: money put in, less the cost of what was sold (optional: older saves). */
     costMinor: NonNegativeMinor.optional(),
+    /** Vehicles are individual assets, kept in their purchase currency. */
+    vehicle: VehicleSchema.optional(),
     /** A fixed-term government bond held to maturity; the balance is its face value. */
     bond: z
       .object({
