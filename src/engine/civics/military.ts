@@ -1,7 +1,7 @@
 import { sortedValues } from '../core/data';
 import { applyPercent } from '../core/money';
 import { addBiography, addNotification, ageYears, nextId, withRng } from '../core/world';
-import { changeNeed, changeStat } from '../characters/stats';
+import { changeNeed, changeSkill, changeStat } from '../characters/stats';
 import { endEmployment } from '../career/jobs';
 import { leaveEducation } from '../education/school';
 import { medianWage } from '../economy/economy';
@@ -59,7 +59,8 @@ export type MilitaryRejection =
   | 'cannotDefer'
   | 'notCalled'
   | 'cannotLeave'
-  | 'notServing';
+  | 'notServing'
+  | 'conscriptRole';
 
 export const MILITARY_MESSAGES: Record<MilitaryRejection, string> = {
   tooYoung: 'You are too young to enlist.',
@@ -75,7 +76,36 @@ export const MILITARY_MESSAGES: Record<MilitaryRejection, string> = {
   notCalled: 'You have no call-up to answer.',
   cannotLeave: 'You can leave only after 24 months of volunteer service.',
   notServing: 'You are not serving.',
+  conscriptRole:
+    'Specialties and postings are for volunteers; conscripts serve where they are sent.',
 };
+
+export const SPECIALTIES = ['logistics', 'engineering', 'medical', 'administration'] as const;
+export type Specialty = (typeof SPECIALTIES)[number];
+/** The skill each specialty trains every month (and that civilian employers value). */
+export const SPECIALTY_SKILL = {
+  logistics: 'logic',
+  engineering: 'technology',
+  medical: 'care',
+  administration: 'business',
+} as const;
+/** Overseas: +25% pay and better promotion odds, at a cost in stress and family time. */
+const OVERSEAS_PAY_PERCENT = 125;
+const OVERSEAS_PROMOTION_BONUS = 15;
+
+/** Chooses a volunteer's specialty and posting (Career Expansion: military career). */
+export function setServiceRole(
+  world: World,
+  c: Character,
+  specialty: Specialty,
+  posting: 'home' | 'overseas',
+): void {
+  const record = currentService(world, c);
+  if (record?.status !== 'serving') throw new MilitaryError('notServing');
+  if (record.kind !== 'volunteer') throw new MilitaryError('conscriptRole');
+  record.specialty = specialty;
+  record.posting = posting;
+}
 
 export class MilitaryError extends Error {
   readonly code: MilitaryRejection;
@@ -227,7 +257,8 @@ export function monthlyPay(world: World, record: ServiceRecord): bigint {
   const median = medianWage(world, record.countryCode);
   if (record.kind !== 'volunteer') return applyPercent(median, CONSCRIPT_PAY);
   const table = record.track === 'officer' ? OFFICER_PAY : ENLISTED_PAY;
-  return applyPercent(median, table[Math.min(record.rank, table.length - 1)] ?? 100);
+  const pay = applyPercent(median, table[Math.min(record.rank, table.length - 1)] ?? 100);
+  return record.posting === 'overseas' ? applyPercent(pay, OVERSEAS_PAY_PERCENT) : pay;
 }
 
 function callUps(world: World, c: Character): void {
@@ -307,12 +338,17 @@ export function processService(world: World): void {
       changeStat(world, c, 'health', 4, 'military:service');
       changeStat(world, c, 'stress', 6, 'military:service');
       changeNeed(c, 'leisure', -60);
+      if (record.specialty)
+        changeSkill(world, c, SPECIALTY_SKILL[record.specialty], 8, 'military:specialty');
+      if (record.posting === 'overseas') {
+        changeStat(world, c, 'stress', 8, 'military:overseas');
+        changeNeed(c, 'social', -40);
+      }
       const steps = record.track === 'officer' ? OFFICER_STEPS : ENLISTED_STEPS;
       const cap = record.kind === 'volunteer' ? steps.length : Math.min(2, steps.length);
       const need = steps[record.rank];
       if (record.rank < cap && need !== undefined && record.monthsInRank >= need) {
-        const chance =
-          30 + Math.floor(c.stats.discipline / 20) + Math.floor(c.stats.socialSkill / 40);
+        const chance = promotionChance(c, record);
         if (withRng(world, 'civics', (rng) => rng.int(100) < chance)) {
           record.rank += 1;
           record.monthsInRank = 0;
@@ -344,6 +380,16 @@ export function processService(world: World): void {
       }
     }
   }
+}
+
+/** Monthly chance (percent) of promotion once the time in rank is served. */
+export function promotionChance(c: Character, record: ServiceRecord): number {
+  return (
+    30 +
+    Math.floor(c.stats.discipline / 20) +
+    Math.floor(c.stats.socialSkill / 40) +
+    (record.posting === 'overseas' ? OVERSEAS_PROMOTION_BONUS : 0)
+  );
 }
 
 export function isServing(world: World, characterId: string): boolean {

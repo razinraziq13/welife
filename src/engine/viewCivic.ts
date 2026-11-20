@@ -27,6 +27,8 @@ import {
   enlistmentCheck,
   liable,
   monthlyPay,
+  promotionChance,
+  type Specialty,
   rankTitle,
   MIN_SERVICE_BEFORE_LEAVING,
 } from './civics/military';
@@ -194,6 +196,10 @@ export interface CivicView {
       canDefer: boolean;
       canLeave: boolean;
       canReenlist: boolean;
+      specialty: Specialty | null;
+      posting: 'home' | 'overseas';
+      /** Monthly promotion chance (percent) once the time in rank is served. */
+      promotionChance: number;
     } | null;
     history: { id: string; kind: string; status: string; rank: string; monthsServed: number }[];
     enlist: { enlisted: string[]; officer: string[] };
@@ -467,6 +473,9 @@ export function projectCivic(world: World, c: Character): CivicView {
               service.kind === 'volunteer' &&
               service.endTick !== null &&
               service.endTick - world.tick <= 6,
+            specialty: service.specialty ?? null,
+            posting: service.posting ?? 'home',
+            promotionChance: promotionChance(c, service),
           }
         : null,
       history: sortedValues(world.civics.service)

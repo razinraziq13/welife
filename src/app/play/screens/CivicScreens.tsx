@@ -797,6 +797,10 @@ export function MilitaryScreen() {
   const { send, disabled } = useAct();
   const [branch, setBranch] = useState<'army' | 'navy' | 'airForce'>('army');
   const [track, setTrack] = useState<'enlisted' | 'officer'>('enlisted');
+  const [specialty, setSpecialty] = useState<
+    'logistics' | 'engineering' | 'medical' | 'administration' | null
+  >(null);
+  const [posting, setPosting] = useState<'home' | 'overseas' | null>(null);
   const reasonsId = useId();
   if (!view) return null;
   const m = view.civic.military;
@@ -842,8 +846,64 @@ export function MilitaryScreen() {
                   : month(view, m.current.reportTick),
               ],
               ['Monthly pay', <Money key="pay" minor={m.current.payMinor} currency={cur} />],
+              ...(serving && m.current.kind === 'volunteer'
+                ? ([
+                    [
+                      'Specialty',
+                      m.current.specialty ? t(`specialty.${m.current.specialty}`) : 'Not chosen',
+                    ],
+                    ['Posting', m.current.posting === 'overseas' ? 'Overseas' : 'Home'],
+                    ['Promotion chance', `${String(m.current.promotionChance)}% a month when due`],
+                  ] as [string, string][])
+                : []),
             ]}
           />
+          {serving && m.current.kind === 'volunteer' && (
+            <div className="mt-3 flex flex-col gap-3 border-t border-border pt-3">
+              <ChoiceGroup
+                legend="Specialty"
+                name="specialty"
+                value={specialty ?? m.current.specialty ?? 'logistics'}
+                onChange={setSpecialty}
+                options={(['logistics', 'engineering', 'medical', 'administration'] as const).map(
+                  (v) => ({
+                    value: v,
+                    label: t(`specialty.${v}`),
+                    description: t(`specialtyHint.${v}`),
+                  }),
+                )}
+              />
+              <ChoiceGroup
+                legend="Posting"
+                name="posting"
+                value={posting ?? m.current.posting}
+                onChange={setPosting}
+                options={[
+                  { value: 'home', label: 'Home', description: 'Normal pay; time for family.' },
+                  {
+                    value: 'overseas',
+                    label: 'Overseas',
+                    description:
+                      '25% more pay and better promotion odds; more stress, less family time.',
+                  },
+                ]}
+              />
+              <Button
+                size="sm"
+                className="self-start"
+                disabled={disabled}
+                onClick={() =>
+                  void send({
+                    type: 'setServiceRole',
+                    specialty: specialty ?? m.current?.specialty ?? 'logistics',
+                    posting: posting ?? m.current?.posting ?? 'home',
+                  })
+                }
+              >
+                Confirm role
+              </Button>
+            </div>
+          )}
           <div className="mt-3 flex flex-wrap gap-2">
             {m.current.status === 'called' && (
               <Button

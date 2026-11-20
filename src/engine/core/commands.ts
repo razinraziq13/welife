@@ -93,7 +93,15 @@ import { familyHomeFor } from '../social/family';
 import { HealthError, treat } from '../civics/health';
 import { LawError, hireLawyer, setPlea } from '../civics/law';
 import { MigrationError, applyForStatus, relocate, withdrawApplication } from '../civics/migration';
-import { MilitaryError, deferService, enlist, leaveService, reenlist } from '../civics/military';
+import {
+  MilitaryError,
+  SPECIALTIES,
+  deferService,
+  enlist,
+  leaveService,
+  reenlist,
+  setServiceRole,
+} from '../civics/military';
 import {
   CAMPAIGN_ACTIONS,
   PoliticsError,
@@ -320,6 +328,10 @@ export const CommandSchema = z.discriminatedUnion('type', [
   command('enlist', { branch: z.enum(SERVICE_BRANCHES), track: z.enum(['enlisted', 'officer']) }),
   command('deferService', {}),
   command('reenlist', {}),
+  command('setServiceRole', {
+    specialty: z.enum(SPECIALTIES),
+    posting: z.enum(['home', 'overseas']),
+  }),
   command('leaveService', {}),
   command('joinParty', { partyId: z.string().min(1).max(40) }),
   command('leaveParty', {}),
@@ -755,6 +767,9 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
     case 'reenlist':
       reenlist(world, player);
       return done('out.reenlisted');
+    case 'setServiceRole':
+      setServiceRole(world, player, cmd.specialty, cmd.posting);
+      return done('out.serviceRole', { specialty: cmd.specialty, posting: cmd.posting });
     case 'leaveService':
       leaveService(world, player);
       return done('out.leftService');

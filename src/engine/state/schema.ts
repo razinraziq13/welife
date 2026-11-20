@@ -1243,6 +1243,9 @@ export const ServiceRecordSchema = z
     endTick: Tick.nullable(),
     monthsInRank: z.number().int().min(0),
     monthsServed: z.number().int().min(0),
+    /** Career Expansion (optional: older saves lack them). */
+    specialty: z.enum(['logistics', 'engineering', 'medical', 'administration']).optional(),
+    posting: z.enum(['home', 'overseas']).optional(),
   })
   .strict();
 export type ServiceRecord = z.infer<typeof ServiceRecordSchema>;
