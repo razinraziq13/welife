@@ -186,6 +186,67 @@ export const PROFESSION: Partial<Record<Profession, ProfessionConfig>> = {
       'Greenway Schools Trust',
     ],
   },
+  medicine: {
+    // Fictional, non-graphic care coordination: no diagnoses, drugs or procedures (spec rule).
+    practising: ['doctor'],
+    trainee: 'resident-doctor',
+    support: [
+      'nurse',
+      'paramedic',
+      'care-assistant',
+      'medical-receptionist',
+      'lab-technician',
+      'physiotherapist',
+    ],
+    licence: 'licence.medicine',
+    supportReason:
+      'Seeing patients as a doctor requires a medical degree and registration; a diploma or another health role does not qualify.',
+    skills: ['science', 'care', 'logic'],
+    templates: [
+      {
+        kind: 'walkIn',
+        title: 'Busy walk-in clinic',
+        items: ['Visit history', 'Patient account', 'Waiting list'],
+      },
+      {
+        kind: 'returning',
+        title: 'Returning patient',
+        items: ['Previous visit notes', 'Patient account', 'Follow-up letter'],
+      },
+      {
+        kind: 'unclear',
+        title: 'Unclear test summary',
+        items: ['Test summary', 'Specialist note', 'Patient account', 'Earlier results'],
+      },
+      {
+        kind: 'referral',
+        title: 'Referral coordination',
+        items: ['Referral letter', 'Service waiting times', 'Patient account'],
+      },
+      {
+        kind: 'publicHealth',
+        title: 'Community health campaign',
+        items: ['Community survey', 'Clinic records', 'Outreach plan', 'Partner schools'],
+      },
+    ],
+    actions: {
+      examine: 'Review the next information card',
+      clarify: 'Talk with the patient',
+      prepare: 'Consult a colleague',
+    },
+    options: [
+      { id: 'followUp', label: 'Arrange follow-up care', risky: false },
+      { id: 'refer', label: 'Refer to a specialist service', risky: true },
+    ],
+    parties: [
+      'Aiden Walker',
+      'Siti Aminah',
+      'Grace Chen',
+      'Rahul Mehta',
+      'Lucia Romano',
+      'Kwame Mensah',
+    ],
+  },
 };
 
 /** Supervised training months before the admission or registration exam (fictionalised). */

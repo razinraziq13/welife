@@ -144,3 +144,49 @@ describe('journalist: diploma or degree, verification and integrity (E93)', () =
     expect(cases(state)?.block).toMatch(/relevant diploma or degree/);
   }, 120_000);
 });
+
+describe('doctor: medical degree, registration and patient cases (E95)', () => {
+  it('a nursing or health diploma never makes you a doctor', () => {
+    const nurse = hire(adult('med-nurse', ['bachelor:nursing']), 'nurse');
+    expect(jobEligibility(nurse.world, playerOf(nurse), terms(nurse, 'doctor'))).toBe(
+      'notQualified',
+    );
+    expect(cases(advanceMonths(nurse, 1))?.block).toMatch(/medical degree and registration/);
+  }, 120_000);
+
+  it('a medical degree without registration cannot be hired as a doctor', () => {
+    const state = adult('med-degree', ['bachelor:medicine']);
+    expect(jobEligibility(state.world, playerOf(state), terms(state, 'doctor'))).toBe(
+      'notLicensed',
+    );
+    expect(
+      jobEligibility(state.world, playerOf(state), terms(state, 'resident-doctor')),
+    ).toBeNull();
+  }, 120_000);
+
+  it('a resident only takes routine patients until registered', () => {
+    const state = advanceMonths(
+      hire(adult('med-resident', ['bachelor:medicine']), 'resident-doctor'),
+      3,
+    );
+    const view = cases(state);
+    expect(view?.supervised).toBe(true);
+    for (const k of view?.cases ?? [])
+      if (!k.routine && k.status === 'offer') expect(k.takeReason).toMatch(/routine/);
+    expect(view?.exam?.trainingNeeded).toBe(trainingRequired('medicine', 'MY'));
+  }, 120_000);
+
+  it('a registered doctor sees a patient case through to follow-up care', () => {
+    let state = adult('med-practice', ['bachelor:medicine']);
+    playerOf(state).flags['licence.medicine'] = true;
+    state = advanceMonths(hire(state, 'doctor'), 1);
+    const patient = cases(state)?.cases.find((k) => k.status === 'offer' && k.takeReason === null);
+    if (!patient) throw new Error('no patient');
+    state = run(state, { type: 'takeCase', caseId: patient.id }).state;
+    state = run(state, { type: 'workOnCase', caseId: patient.id, action: 'examine' }).state;
+    const r = run(state, { type: 'resolveCase', caseId: patient.id, optionId: 'followUp' });
+    expect(r.outcome.status).toBe('applied');
+    expect(cases(r.state)?.record[0]?.profession).toBe('medicine');
+    expect(checkLedger(r.state.world)).toEqual([]);
+  }, 120_000);
+});

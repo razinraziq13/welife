@@ -137,7 +137,12 @@ describe('music career (E90)', () => {
 
   it('simulated mode writes, records and releases on its own', () => {
     let state = checked(musician('music-auto'), { type: 'setMusicAutopilot', value: true }).state;
-    state = advanceMonths(state, 12);
+    for (let m = 0; m < 12; m++) {
+      state = advanceMonths(state, 1);
+      // Life can end a job (a layoff, say); stay a musician without touching music decisions.
+      if (!music(state)?.isMusician)
+        state = checked(state, { type: 'startCreativePath', occupationId: 'musician' }).state;
+    }
     expect(music(state)?.releases.length).toBeGreaterThan(0);
     expect(checkLedger(state.world)).toEqual([]);
   }, 180_000);

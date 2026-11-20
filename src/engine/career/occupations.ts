@@ -804,7 +804,28 @@ const ROWS: Row[] = [
   // Healthcare
   ['care-assistant', 'Care assistant', 'healthcare', 'none', null, ['care', 'fitness'], 75, 2],
   ['nurse', 'Nurse', 'healthcare', 'bachelor', 'nursing', ['care', 'science'], 140, 4],
-  ['doctor', 'Doctor', 'healthcare', 'bachelor', 'medicine', ['science', 'care', 'logic'], 280, 4],
+  [
+    'doctor',
+    'Doctor',
+    'healthcare',
+    'bachelor',
+    'medicine',
+    ['science', 'care', 'logic'],
+    280,
+    4,
+    { licence: 'licence.medicine' },
+  ],
+  // Supervised training after the medical degree, before registration (decision E95).
+  [
+    'resident-doctor',
+    'Resident doctor',
+    'healthcare',
+    'bachelor',
+    'medicine',
+    ['science', 'care'],
+    180,
+    0,
+  ],
   ['pharmacist', 'Pharmacist', 'healthcare', 'master', 'sciences', ['science', 'care'], 210, 4],
   [
     'paramedic',

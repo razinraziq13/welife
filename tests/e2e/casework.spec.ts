@@ -58,4 +58,20 @@ test.describe('professional casework (E93)', () => {
     await expect(page.getByRole('button', { name: 'Stories', exact: true })).toBeVisible();
     await workACase(page, 'Story desk', 'Publish a short news report');
   });
+
+  test('a registered doctor reviews a patient case and arranges follow-up care', async ({
+    page,
+  }) => {
+    const json = await adultSaveJson('e2e-doctor', {
+      profession: {
+        occupationId: 'doctor',
+        qualification: 'bachelor:medicine',
+        licence: 'licence.medicine',
+      },
+    });
+    const saveId = await importSave(page, json);
+    await page.goto('/play/' + saveId + '/career');
+    await expect(page.getByRole('button', { name: 'Patients', exact: true })).toBeVisible();
+    await workACase(page, 'Patient queue', 'Arrange follow-up care');
+  });
 });
