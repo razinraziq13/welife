@@ -230,20 +230,21 @@ test('the New Life wizard is accessible (WCAG A/AA)', async ({ page }) => {
   }
 });
 
-test('step one month forward and back beside Advance', async ({ page }) => {
+test('time options step four months forward and back', async ({ page }) => {
   await createLife(page, { seed: 'e2e-rewind' });
   await advanceOnce(page);
   const advance = page.getByTestId('advance-month').locator('visible=true').first();
   const start = await advance.textContent();
   const timeOptions = page.getByRole('button', { name: 'Time options' }).locator('visible=true');
   await timeOptions.click();
-  await page.getByRole('button', { name: 'Advance 1 month' }).click();
+  await page.getByRole('button', { name: 'Advance 4 months' }).click();
   await expect(page.getByRole('group', { name: 'Step through time' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /1 month$/ })).toHaveCount(0);
   await expect(advance).not.toHaveText(start ?? '');
   await expect.poll(() => closeRecap(page), { timeout: 30_000 }).toBe(true);
   await expect(advance).toBeEnabled();
   await timeOptions.click();
-  await page.getByRole('button', { name: 'Rewind 1 month' }).click();
+  await page.getByRole('button', { name: 'Rewind 4 months' }).click();
   await expect(page.getByTestId('feedback')).toContainText('Rewound to a new timeline');
   await expect(advance).toHaveText(start ?? '');
 });

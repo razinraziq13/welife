@@ -97,9 +97,7 @@ export function AdvanceButton({
             >
               {(
                 [
-                  ['Advance 1 month', 1],
                   ['Advance 4 months', 4],
-                  ['Rewind 1 month', -1],
                   ['Rewind 4 months', -4],
                 ] as const
               ).map(([label, months]) => (
