@@ -66,6 +66,18 @@ export function adultSkills(rng: Rng): Skills {
   return skills;
 }
 
+/**
+ * Catches up a growing person's skills to their age: each skill rises to at least a seeded
+ * level that grows with age (as school and daily life would give), and never falls. NPC
+ * children only learn this way; the player's character learns month by month instead.
+ */
+export function catchUpSkills(rng: Rng, skills: Skills, ageYears: number): void {
+  const cap = Math.min(450, Math.max(0, ageYears * 25));
+  const floor = Math.min(250, Math.max(0, ageYears * 12));
+  if (cap === 0) return;
+  for (const key of SKILL_KEYS) skills[key] = Math.max(skills[key], rng.range(floor, cap));
+}
+
 /** Skills for a child of the given age (grows roughly with age). */
 export function childSkills(rng: Rng, ageYears: number): Skills {
   const skills = zeroRecord(SKILL_KEYS, 0);

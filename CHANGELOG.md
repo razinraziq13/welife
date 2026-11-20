@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Children raised off-screen learn too.** Children born during play kept every skill at 0 until you played them, because only the character you play learnt from school. They now catch up once a school year (up to 26) to a level that fits their age, and anyone you take over (a child or an heir) catches up at that moment, so older saves are fixed when you switch.
+
 - **Overdue bills are paid from savings too.** Overdue bills used to be paid only from the current account, so money arriving in savings (birthday money, interest) sat idle while the 1% monthly late fee grew. They are now paid from the current account, then savings, and Money explains what overdue bills are.
 
 - **Job board:** actor, musician and film director roles are only started from Career, Paths (no longer advertised in Job App), and the board is fuller: 6 to 10 new jobs a month, up to 50 listed. Transactions now read "Royalties" for both book and music royalties (one label used to overwrite the other).

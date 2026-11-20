@@ -1,6 +1,6 @@
-import { addBiography, addNotification, ageYears } from '../core/world';
+import { addBiography, addNotification, ageYears, withRng } from '../core/world';
 import { monthIndex } from '../core/clock';
-import { emptyFinance } from '../characters/factory';
+import { catchUpSkills, emptyFinance } from '../characters/factory';
 import { currencyFor, ensurePlayerAccounts, rentFor } from '../economy/finance';
 import { netWorthIn } from '../economy/fx';
 import { openAccount } from '../economy/ledger';
@@ -227,6 +227,10 @@ export function takeControl(world: World, heir: Character, reason: 'heir' | 'swi
   world.legacy.generation = Math.max(world.legacy.generation, generation);
   heir.tier = 'close';
   if (previous?.death === null) previous.tier = 'close';
+  // An heir raised off-screen may lag behind (saves from before NPC skill growth): catch up.
+  withRng(world, 'npc', (rng) => {
+    catchUpSkills(rng, heir.skills, ageYears(world, heir));
+  });
 
   heir.finance ??= emptyFinance(world.tick);
   ensurePlayerAccounts(world, heir);

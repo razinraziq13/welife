@@ -136,7 +136,10 @@ describe('music career (E90)', () => {
   }, 180_000);
 
   it('simulated mode writes, records and releases on its own', () => {
-    let state = checked(musician('music-auto'), { type: 'setMusicAutopilot', value: true }).state;
+    let state = checked(musician('music-autopilot'), {
+      type: 'setMusicAutopilot',
+      value: true,
+    }).state;
     for (let m = 0; m < 12; m++) {
       state = advanceMonths(state, 1);
       // Life can end a job (a layoff, say); stay a musician without touching music decisions.

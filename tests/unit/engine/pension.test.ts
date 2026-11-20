@@ -13,7 +13,7 @@ function keyOf(o: CommandOutcome): string | undefined {
 }
 
 /** A worker who has paid into the fund for a while, made `age` years old for the test. */
-function saver(age: number, seed = 'pension'): SimState {
+function saver(age: number, seed = 'pension-saver'): SimState {
   let state = advanceMonths(newState({ seed, scenario: 'wealthy' }), 22 * 12);
   state = findWork(state);
   state = advanceMonths(state, 24);

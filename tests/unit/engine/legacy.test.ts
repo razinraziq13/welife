@@ -188,6 +188,33 @@ describe('ten generations (M7 exit)', () => {
 });
 
 describe('succession on death (decision D7)', () => {
+  it('a child raised off-screen has skills fitting their age, also when taken over', () => {
+    let state = advanceMonths(newState({ seed: 'child-skills', countryCode: 'GB' }), 25 * 12);
+    state = advanceMonths(startFamily(state, 1), 10 * 12);
+    const parent = playerOf(state);
+    const child = Object.values(state.world.familyLinks)
+      .filter((l) => l.parentId === parent.id)
+      .map((l) => state.world.characters[l.childId])
+      .find((c) => c?.death === null);
+    if (!child) throw new Error('no child');
+    const average = (c: Character) =>
+      Object.values(c.skills).reduce((sum, v) => sum + v, 0) / Object.keys(c.skills).length;
+    // Learnt as an NPC, a school year at a time.
+    expect(average(child)).toBeGreaterThan(80);
+    // A save from before this fix: the child has no skills at all until taken over.
+    const world = structuredClone(state.world);
+    const old = world.characters[child.id];
+    if (!old) throw new Error('no child');
+    for (const k of Object.keys(old.skills) as (keyof typeof old.skills)[]) old.skills[k] = 0;
+    const taken = checked(
+      { world, pending: null },
+      { type: 'continueAs', characterId: child.id },
+    ).state;
+    const now = taken.world.characters[child.id];
+    if (!now) throw new Error('no child');
+    expect(Math.min(...Object.values(now.skills))).toBeGreaterThan(0);
+  }, 120_000);
+
   it('a young child can be taken over while alive and grows up in the family home', () => {
     let state = advanceMonths(newState({ seed: 'young-heir', countryCode: 'GB' }), 25 * 12);
     state = advanceMonths(startFamily(state, 1), 3);

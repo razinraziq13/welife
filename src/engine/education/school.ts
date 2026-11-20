@@ -1,6 +1,7 @@
 import { clamp, sortedKeys } from '../core/data';
 import { addBiography, addNotification, ageYears, nextId, withRng } from '../core/world';
 import { changeSkill, changeStat } from '../characters/stats';
+import { catchUpSkills } from '../characters/factory';
 import { getLocation } from '../world/countries';
 import { getRules } from '../world/rules';
 import { meetPeople, schoolCohort } from '../social/npcs';
@@ -500,6 +501,11 @@ function startStage(world: World, c: Character, stage: EducationStage): void {
 function npcSchoolYear(world: World, c: Character): void {
   const rules = getRules(c.countryCode).education;
   const age = ageYears(world, c);
+  // NPCs do not have the player's monthly lessons: their skills catch up once a school year.
+  if (age <= 26)
+    withRng(world, 'npc', (rng) => {
+      catchUpSkills(rng, c.skills, age);
+    });
   if (age < rules.preschoolAge || age > 26) return;
   let start = rules.primaryStartAge;
   for (const s of rules.stages) {
