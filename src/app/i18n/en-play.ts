@@ -124,6 +124,11 @@ export const enPlay: Record<string, string> = {
   'work.studySpecialty': 'You studied for your specialism ({progress}% of the way).',
   'work.specialised': 'You earned your specialism: {specialty}. Your pay rose by 10%.',
   'work.audition.cast': 'They cast you! The role pays {amountText}.',
+  'work.audition.film':
+    'Cast as {role} in a film! The fee of {amountText} is paid now; shooting takes two months.',
+  'work.audition.tv':
+    'Cast as {role} in a TV series: {amountText} a month for three months of episodes.',
+  'ntf.productionWrapped': 'Your {kind} wrapped. Another screen credit ({role}) for your CV.',
   'work.audition.notThisTime': 'Not this time. Every audition is practice.',
   'work.rehearse': 'Rehearsals went well. Your craft is getting sharper.',
   'work.promoteYourself': 'You put your work out there. Your reputation grew.',
@@ -140,6 +145,7 @@ export const enPlay: Record<string, string> = {
   'ntf.specialised': 'You earned your specialism: {specialty}.',
   'tx.overtime': 'Overtime',
   'tx.gig': 'Paid role',
+  'tx.tvEpisodes': 'TV episodes',
   'tx.course': 'Professional course',
   'memory.tookCredit': 'They took credit for your work',
   'memory.reportedMe': 'You reported them to the manager',

@@ -57,6 +57,7 @@ import {
   WORK_ACTIONS,
   WORK_ACTION_IDS,
   WORK_ACTION_MESSAGES,
+  actingRole,
   careerTrack,
   jobSatisfaction,
   workActionBlock,
@@ -234,6 +235,17 @@ export interface JobView {
 
 export interface CareerView {
   track: CareerTrack | null;
+  /** Performing track: screen credits, the role auditions now offer, the current production. */
+  acting: {
+    credits: number;
+    nextRole: 'extra' | 'supporting' | 'lead';
+    contract: {
+      kind: 'film' | 'tv';
+      role: 'extra' | 'supporting' | 'lead';
+      monthlyMinor: bigint;
+      monthsLeft: number;
+    } | null;
+  } | null;
   reputation: number;
   specialty: string | null;
   specialtyProgress: number;
@@ -633,6 +645,14 @@ function careerView(world: World, c: Character, e: Employment | undefined): Care
   const track = e ? careerTrack(e) : null;
   return {
     track,
+    acting:
+      track === 'performing'
+        ? {
+            credits: c.career.credits ?? 0,
+            nextRole: actingRole(c),
+            contract: c.career.contract ?? null,
+          }
+        : null,
     reputation: c.career.reputation,
     specialty: c.career.specialty,
     specialtyProgress: c.career.specialtyProgress,

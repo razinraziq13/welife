@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import { Briefcase, Landmark, Lock, Star, Store, UserRound } from 'lucide-react';
 import type { GameView } from '@engine/view';
 import { StatBar } from '@app/components/StatBar';
+import { Money } from '@app/components/Money';
 import { ActionButton } from './ActionButton';
 import { Card } from '@app/components/ui/card';
 import { t } from '@app/i18n/en';
@@ -18,6 +19,7 @@ export function CareerPlayCard({ view, base }: { view: GameView; base: string })
   const busy = useGameStore((s) => s.busy);
   const pending = view.pendingEvent !== null;
   const c = view.work.career;
+  const currency = view.country.currency;
   const job = view.work.job;
   if (!job && !c.ownsBusiness && !c.inPolitics) return null;
   const hoursLeft = Math.max(0, view.time.totalHours - view.time.usedHours);
@@ -55,6 +57,31 @@ export function CareerPlayCard({ view, base }: { view: GameView; base: string })
             )}
           </div>
         </div>
+
+        {c.acting && (
+          <div className="rounded-xl bg-surface-2 p-3 text-sm">
+            <h3 className="font-semibold text-fg">Screen work</h3>
+            <p className="mt-1 text-muted">
+              {c.acting.credits} screen credit{c.acting.credits === 1 ? '' : 's'}. Auditions now
+              offer {c.acting.nextRole} roles (supporting from 2 credits; lead from 5 credits and
+              reputation 50).
+            </p>
+            {c.acting.contract && (
+              <p className="mt-1 text-fg">
+                Working on a {c.acting.contract.kind === 'film' ? 'film' : 'TV series'} as{' '}
+                {c.acting.contract.role}
+                {c.acting.contract.monthlyMinor > 0n && (
+                  <>
+                    {' '}
+                    for <Money minor={c.acting.contract.monthlyMinor} currency={currency} /> a month
+                  </>
+                )}
+                , {c.acting.contract.monthsLeft} month
+                {c.acting.contract.monthsLeft === 1 ? '' : 's'} to go.
+              </p>
+            )}
+          </div>
+        )}
 
         {c.satisfaction && (
           <div>

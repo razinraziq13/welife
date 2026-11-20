@@ -66,7 +66,14 @@ export const WORK_ACTIONS: Record<
 };
 
 export type WorkActionBlock =
-  'noJob' | 'otherTrack' | 'doneThisMonth' | 'noTime' | 'tooTired' | 'cannotAfford' | 'specialised';
+  | 'noJob'
+  | 'otherTrack'
+  | 'doneThisMonth'
+  | 'noTime'
+  | 'tooTired'
+  | 'cannotAfford'
+  | 'specialised'
+  | 'underContract';
 
 export const WORK_ACTION_MESSAGES: Record<WorkActionBlock, string> = {
   noJob: 'You need a job for this.',
@@ -75,6 +82,7 @@ export const WORK_ACTION_MESSAGES: Record<WorkActionBlock, string> = {
   noTime: 'You have no free time left this month.',
   tooTired: 'You are too tired; rest first.',
   cannotAfford: 'You cannot afford the course fee right now.',
+  underContract: 'You are already working on a production; finish it first.',
   specialised: 'You have already earned your specialism.',
 };
 
@@ -133,6 +141,7 @@ export function workActionBlock(
   if (!e) return 'noJob';
   const def = WORK_ACTIONS[id];
   if (careerTrack(e) !== def.track) return 'otherTrack';
+  if (id === 'audition' && c.career.contract) return 'underContract';
   if (world.activity.tick === world.tick && (world.activity.counts[countKey(id)] ?? 0) > 0)
     return 'doneThisMonth';
   const t = timeBudget(world);
@@ -280,12 +289,25 @@ export function performWorkAction(world: World, c: Character, id: WorkActionId):
         roll() <
         clamp(15 + Math.floor(skillAvg / 12) + Math.floor(c.career.reputation / 40), 5, 85);
       if (cast) {
-        const fee = applyPercent(medianWage(world, c.countryCode), 30);
+        const role = actingRole(c);
+        const film = roll() < 50;
+        const median = medianWage(world, c.countryCode);
+        // Film pays a fee up front for a 2-month shoot; TV pays monthly for 3 months.
+        const fee = film ? applyPercent(median, FILM_FEE_PERCENT[role]) : 0n;
         const into = c.finance?.checkingId ?? c.finance?.savingsId;
-        if (into) receiveIncome(world, c.id, into, 'gigs', fee, 'tx.gig');
+        if (film && into) receiveIncome(world, c.id, into, 'gigs', fee, 'tx.gig');
+        c.career.contract = {
+          kind: film ? 'film' : 'tv',
+          role,
+          monthlyMinor: film ? 0n : applyPercent(median, TV_MONTH_PERCENT[role]),
+          monthsLeft: film ? 2 : 3,
+        };
         reputation(c, 40);
         bump(e, 30);
-        return done('success', 'work.audition.cast', { amount: fee.toString() });
+        return done('success', `work.audition.${film ? 'film' : 'tv'}`, {
+          role,
+          amount: (film ? fee : c.career.contract.monthlyMinor).toString(),
+        });
       }
       changeStat(world, c, 'confidence', -20, 'work:audition');
       changeStat(world, c, 'stress', 10, 'work:audition');
@@ -351,7 +373,34 @@ export function jobSatisfaction(world: World, c: Character, e: Employment): Sati
  * Monthly career upkeep for the player: reputation follows performance, and satisfaction
  * nudges happiness. Called from the job's monthly step.
  */
+/** Role offered at an audition: grows with screen credits (lead also needs reputation). */
+export function actingRole(c: Character): 'extra' | 'supporting' | 'lead' {
+  const credits = c.career.credits ?? 0;
+  if (credits >= 5 && c.career.reputation >= 500) return 'lead';
+  return credits >= 2 ? 'supporting' : 'extra';
+}
+/** Pay as a percentage of the local median monthly wage. */
+const FILM_FEE_PERCENT = { extra: 30, supporting: 150, lead: 600 } as const;
+const TV_MONTH_PERCENT = { extra: 25, supporting: 80, lead: 250 } as const;
+const CREDIT_REPUTATION = { extra: 10, supporting: 25, lead: 60 } as const;
+
+/** Monthly: TV pay, and a screen credit when a production wraps. */
+function actingMonth(world: World, c: Character): void {
+  const k = c.career.contract;
+  if (!k) return;
+  const into = c.finance?.checkingId ?? c.finance?.savingsId;
+  if (k.monthlyMinor > 0n && into)
+    receiveIncome(world, c.id, into, 'gigs', k.monthlyMinor, 'tx.tvEpisodes');
+  k.monthsLeft -= 1;
+  if (k.monthsLeft > 0) return;
+  c.career.credits = (c.career.credits ?? 0) + 1;
+  reputation(c, CREDIT_REPUTATION[k.role]);
+  addNotification(world, 'work', 'ntf.productionWrapped', { kind: k.kind, role: k.role }, 'career');
+  c.career.contract = undefined;
+}
+
 export function careerMonth(world: World, c: Character, e: Employment): void {
+  actingMonth(world, c);
   if (e.performance >= 700) reputation(c, 5);
   else if (e.performance < 300) reputation(c, -10);
   const { score } = jobSatisfaction(world, c, e);

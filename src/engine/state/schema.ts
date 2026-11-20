@@ -524,6 +524,18 @@ export const CharacterSchema = z
         specialtyProgress: Percent,
         /** Community standing from volunteering, 0-1000 (optional: older saves lack it). */
         community: Fixed.optional(),
+        /** Acting: screen credits earned and the contract in progress (optional). */
+        credits: z.number().int().min(0).optional(),
+        contract: z
+          .object({
+            kind: z.enum(['film', 'tv']),
+            role: z.enum(['extra', 'supporting', 'lead']),
+            /** TV pay per month (4 episodes); film is paid up front, so 0. */
+            monthlyMinor: NonNegativeMinor,
+            monthsLeft: z.number().int().min(0).max(12),
+          })
+          .strict()
+          .optional(),
       })
       .strict()
       .default({ reputation: 200, specialty: null, specialtyProgress: 0 }),
