@@ -1,9 +1,7 @@
 import { useId, useState } from 'react';
-import type { Fund } from '@engine/state/schema';
 import type { GameView } from '@engine/view';
 import { AmountForm, Money } from '@app/components/Money';
 import { Button } from '@app/components/ui/button';
-import { ChoiceGroup } from '@app/components/ui/choice-group';
 import { t } from '@app/i18n/en';
 import { formatShortMonth } from '@app/i18n/format';
 import { cn } from '@app/lib/cn';
@@ -19,16 +17,6 @@ const changeFormat = new Intl.NumberFormat('en', {
   signDisplay: 'exceptZero',
 });
 
-const descriptions: Record<Fund, string> = {
-  stocks: 'Broad stock market',
-  technology: 'Faster swings in tech',
-  consumer: 'Everyday essentials',
-  selara: 'Individual tech stock',
-  meranti: 'Individual food stock',
-  bonds: 'Interest-rate exposure',
-  bitcoin: 'High volatility',
-};
-
 function indexValue(indexBp: number): string {
   return indexFormat.format(indexBp / 100);
 }
@@ -39,6 +27,16 @@ function changeText(from: number, to: number): string {
 
 function changeTone(change: number): string {
   return change > 0 ? 'text-success' : change < 0 ? 'text-danger' : 'text-muted';
+}
+
+export function MarketMovement({ market }: { market: Investment }) {
+  const [prior, latest] = market.history.slice(-2);
+  if (!prior || !latest) return <span className="text-muted">No history yet</span>;
+  return (
+    <span className={cn('tabular-nums', changeTone(latest.indexBp - prior.indexBp))}>
+      {changeText(prior.indexBp, latest.indexBp)}
+    </span>
+  );
 }
 
 function MarketChart({ market, view }: { market: Investment; view: GameView }) {
@@ -199,27 +197,21 @@ function MarketChart({ market, view }: { market: Investment; view: GameView }) {
   );
 }
 
-export function InvestmentMarket({ view, disabled }: { view: GameView; disabled: boolean }) {
+export function InvestmentMarket({
+  view,
+  market: current,
+  disabled,
+}: {
+  view: GameView;
+  market: Investment;
+  disabled: boolean;
+}) {
   const send = useGameStore((s) => s.send);
-  const [fund, setFund] = useState<Fund>('stocks');
-  const { markets } = view.enterprise.investments;
   const currency = view.finance.currency;
-  const current = markets.find((market) => market.id === fund);
-  if (!current) return null;
+  const fund = current.id;
   const gain = current.costMinor === null ? null : current.balanceMinor - current.costMinor;
   return (
     <div className="flex flex-col gap-3">
-      <ChoiceGroup
-        legend="Choose an investment"
-        name="investment-market"
-        value={fund}
-        onChange={setFund}
-        options={markets.map(({ id }) => ({
-          value: id,
-          label: t(`fund.${id}`),
-          description: descriptions[id],
-        }))}
-      />
       <MarketChart market={current} view={view} />
       <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
         <div>

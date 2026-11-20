@@ -82,6 +82,7 @@ import {
   InvestmentError,
   buyBond,
   buyFund,
+  liquidateInvestments,
   sellBond,
   sellFund,
 } from '../economy/investments';
@@ -336,6 +337,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
     amountMinor: AmountMinor,
   }),
   command('sellBond', { accountId: EntityId }),
+  command('liquidateInvestments', {}),
   // Milestone 6: migration, health, law, religion, military, politics, royal duties.
   command('applyVisa', {
     countryCode: z.string().length(2),
@@ -782,6 +784,9 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
     case 'sellBond':
       sellBond(world, player, cmd.accountId);
       return done('out.bondSold');
+    case 'liquidateInvestments':
+      liquidateInvestments(world, player);
+      return done('out.investmentsLiquidated');
     case 'applyVisa': {
       const app = applyForStatus(world, player, cmd.countryCode, cmd.route, cmd.renounce);
       return done('out.visaApplied', {

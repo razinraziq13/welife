@@ -230,8 +230,7 @@ test.describe('companies and property (M5)', () => {
     const advance = page.getByTestId('advance-month').locator('visible=true').first();
     const before = await advance.textContent();
     await advance.click();
-    // The month is committed when the Advance button moves on; until then, answer any
-    // decision (several can fall in one month) with an available choice.
+    // Wait for the full advance to finish and answer any decisions along the way.
     const dialog = page.getByRole('dialog');
     await expect
       .poll(
@@ -245,7 +244,9 @@ test.describe('companies and property (M5)', () => {
               await choice.click({ timeout: 2_000 }).catch(() => null);
             return 'deciding';
           }
-          return (await advance.textContent()) === before ? 'waiting' : 'done';
+          return (await advance.isEnabled()) && (await advance.textContent()) !== before
+            ? 'done'
+            : 'waiting';
         },
         { timeout: 60_000, intervals: [300] },
       )
@@ -258,12 +259,11 @@ test.describe('companies and property (M5)', () => {
 
     await page.goto(`/play/${saveId}/finance`);
     await expect(page.getByRole('heading', { level: 2, name: 'Investments' })).toBeVisible();
-    await page.getByText('Bitcoin', { exact: true }).click();
+    await page.getByRole('link', { name: 'Open investments' }).click();
+    await page.getByRole('link', { name: 'Crypto', exact: true }).click();
+    await page.getByRole('link', { name: /^Bitcoin/ }).click();
     await page.getByLabel(/^Buy Bitcoin/).fill('500');
-    await page
-      .getByRole('region', { name: 'Investments', exact: true })
-      .getByRole('button', { name: 'Buy', exact: true })
-      .click();
+    await page.getByRole('button', { name: 'Buy', exact: true }).click();
     await expect(page.getByTestId('feedback')).toContainText('Investment bought');
   });
 });
@@ -483,7 +483,7 @@ test.describe('retirement fund lump sum', () => {
   });
 });
 
-test.describe('government bonds', () => {
+test.describe('investments dashboard', () => {
   test.describe.configure({ timeout: 120_000 });
   let json = '';
   test.beforeAll(async () => {
@@ -493,7 +493,12 @@ test.describe('government bonds', () => {
   test('choose an investment, view monthly moves and trade Bitcoin', async ({ page }) => {
     const saveId = await importSave(page, json);
     await page.goto(`/play/${saveId}/finance`);
-    await page.getByText('Bitcoin', { exact: true }).click();
+    await page.getByRole('link', { name: 'Open investments' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Investments' })).toBeVisible();
+    await page.getByRole('link', { name: 'Crypto', exact: true }).click();
+    const bitcoin = page.getByRole('link', { name: /^Bitcoin/ });
+    await expect(bitcoin).toContainText(/[-+]?\d+(\.\d+)?%/);
+    await bitcoin.click();
     const chart = page.getByRole('region', { name: 'Bitcoin price history' });
     await expect(chart.getByText(/this month/)).toBeVisible();
     await chart.getByRole('button', { name: '6 months', exact: true }).click();
@@ -501,39 +506,89 @@ test.describe('government bonds', () => {
     await expect(chart.getByRole('row')).toHaveCount(8);
     await chart.getByRole('button', { name: '24 months', exact: true }).click();
     await expect(chart.getByRole('row')).toHaveCount(26);
+    await expectAccessible(page);
 
     await page.getByLabel(/^Buy Bitcoin/).fill('100');
-    const investments = page.getByRole('region', { name: 'Investments', exact: true });
-    await investments.getByRole('button', { name: 'Buy', exact: true }).click();
+    await page.getByRole('button', { name: 'Buy', exact: true }).click();
     await expect(page.getByTestId('feedback')).toContainText('Investment bought');
-    await expect(investments.getByText('Cost basis')).toBeVisible();
+    await expect(page.getByText('Cost basis')).toBeVisible();
+    await page.getByRole('link', { name: 'Portfolio', exact: true }).click();
+    const holdings = page.getByRole('region', { name: 'Your holdings' });
+    await holdings.getByRole('link', { name: /^Bitcoin/ }).click();
     await page.getByLabel(/^Sell Bitcoin/).fill('50');
     await page.getByLabel(/^Sell Bitcoin/).press('Enter');
     await expect(page.getByTestId('feedback')).toContainText('Investment sold');
-    await page.getByText('Technology stock fund', { exact: true }).click();
+    await page.getByRole('link', { name: 'Funds', exact: true }).click();
+    await page.getByRole('link', { name: /^Technology stock fund/ }).click();
     await expect(
       page.getByRole('region', { name: 'Technology stock fund price history' }),
     ).toBeVisible();
-    await page.getByText('Selara Systems', { exact: true }).click();
+    await page.getByRole('link', { name: 'Stocks', exact: true }).click();
+    await page.getByRole('link', { name: /^Selara Systems/ }).click();
     await expect(page.getByRole('region', { name: 'Selara Systems price history' })).toBeVisible();
   });
 
   test('buy a bond, see its interest and sale price, sell it early', async ({ page }) => {
     const saveId = await importSave(page, json);
     await page.goto(`/play/${saveId}/finance`);
-    await expect(page.getByRole('heading', { level: 3, name: 'Government bonds' })).toBeVisible();
+    await page.getByRole('link', { name: 'Open investments' }).click();
+    await page.getByRole('link', { name: 'Bonds', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Government bonds' })).toBeVisible();
     await page.getByText(/^10 years$/).click();
     await page.getByLabel(/^Buy bonds/).fill('1000');
+    await expect(page.getByText(/^Monthly interest /)).toBeVisible();
     await page.getByRole('button', { name: 'Buy bonds', exact: true }).click();
     const feedback = page.getByTestId('feedback');
     await expect(feedback).toContainText('10-year government bond');
     await expect(page.getByText(/10-year at/)).toBeVisible();
-    await expect(page.getByText(/a month · repaid .* if sold now/)).toBeVisible();
+    await expect(page.getByText(/a month · matures/)).toBeVisible();
+    await expect(page.getByText(/if sold now/)).toBeVisible();
     await expectAccessible(page);
-    await page.getByRole('button', { name: 'Sell', exact: true }).last().click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Sell' }).click();
+    await page.getByRole('link', { name: 'Portfolio', exact: true }).click();
+    await page.getByRole('link', { name: /10-year government bond/ }).click();
+    const sellEarly = page.getByRole('button', { name: 'Sell early', exact: true });
+    const sale = page.getByRole('dialog', { name: 'Sell this bond early?' });
+    await sellEarly.press('Enter');
+    await sale.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(sellEarly).toBeFocused();
+    await sellEarly.click();
+    await sale.getByRole('button', { name: 'Sell', exact: true }).click();
     await expect(feedback).toContainText('Bond sold');
     await expect(page.getByText(/10-year at/)).toHaveCount(0);
+  });
+
+  test('quotes and sells a mixed portfolio in one action', async ({ page }) => {
+    const saveId = await importSave(page, json);
+    await page.goto(`/play/${saveId}/finance/investments/crypto/bitcoin`);
+    await page.getByLabel(/^Buy Bitcoin/).fill('100');
+    await page.getByRole('button', { name: 'Buy', exact: true }).click();
+    const feedback = page.getByTestId('feedback');
+    await expect(feedback).toContainText('Investment bought');
+    await page.getByRole('link', { name: 'Bonds', exact: true }).click();
+    await page.getByLabel(/^Buy bonds/).fill('200');
+    await page.getByRole('button', { name: 'Buy bonds', exact: true }).click();
+    await expect(feedback).toContainText('5-year government bond');
+    await page.getByRole('link', { name: 'Portfolio', exact: true }).click();
+
+    const portfolio = page.getByRole('region', { name: 'Portfolio', exact: true });
+    const holdings = page.getByRole('region', { name: 'Your holdings' });
+    await expect(holdings.getByRole('link')).toHaveCount(2);
+    const quote = await portfolio.locator('dd').first().innerText();
+    const liquidation = page.getByRole('dialog', { name: 'Sell all investments?' });
+    const sellAll = portfolio.getByRole('button', { name: 'Sell all investments' });
+    await sellAll.click();
+    await expect(liquidation).toContainText(quote);
+    await expect(liquidation).toContainText('sold early and stop paying interest');
+    await liquidation.getByRole('button', { name: 'Cancel' }).click();
+    await expect(holdings.getByRole('link')).toHaveCount(2);
+
+    await sellAll.click();
+    await liquidation.getByRole('button', { name: 'Sell all investments' }).click();
+    await expect(feedback).toContainText('All investments sold');
+    await expect(holdings.getByRole('link')).toHaveCount(0);
+    await expect(sellAll).toHaveCount(0);
+    await page.reload();
+    await expect(holdings.getByText(/make your first investment/)).toBeVisible();
   });
 });
 

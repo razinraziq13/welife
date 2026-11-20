@@ -3,7 +3,7 @@ import { checkInvariants } from '@engine/core/invariants';
 import { divRound, monthlyInterest } from '@engine/core/money';
 import { balanceOf, checkLedger } from '@engine/economy/ledger';
 import { bondSaleValue, bondYieldBp, playerBonds } from '@engine/economy/investments';
-import type { SimState } from '@engine/core/commands';
+import { execute, type SimState } from '@engine/core/commands';
 import { projectGame } from '@engine/view';
 import { MARKET_HISTORY_LIMIT, WorldSchema } from '@engine/state/schema';
 import { checked, findWork, giveMoney } from '../../helpers/reconcile';
@@ -108,6 +108,41 @@ describe('government bonds', () => {
 });
 
 describe('fund gains', () => {
+  it('liquidates market positions and government bonds together at the quoted prices', () => {
+    let state = withPolicyRate(investor('bonds-price'), 300);
+    for (const fund of ['stocks', 'selara', 'bitcoin', 'bonds'] as const) {
+      state = checked(state, { type: 'buyFund', fund, amountMinor: '100000' }).state;
+    }
+    state = checked(state, { type: 'buyBond', termMonths: 12, amountMinor: '100000' }).state;
+    state = checked(state, { type: 'buyBond', termMonths: 120, amountMinor: '100000' }).state;
+    state = withPolicyRate(state, 600);
+
+    const before = checking(state);
+    const quote = projectGame(state).enterprise.investments;
+    const proceeds =
+      quote.markets.reduce((total, market) => total + market.balanceMinor, 0n) +
+      quote.bonds.reduce((total, bond) => total + bond.saleValueMinor, 0n);
+    expect(proceeds).toBeLessThan(600_000n);
+
+    const command = { type: 'liquidateInvestments', id: 'liquidate-portfolio' } as const;
+    const result = execute(state, command);
+    expect(result.outcome).toMatchObject({ status: 'applied', key: 'out.investmentsLiquidated' });
+    expect(checking(result.state)).toBe(before + proceeds);
+    const remaining = projectGame(result.state).enterprise.investments;
+    expect(remaining.markets.every((market) => market.balanceMinor === 0n)).toBe(true);
+    expect(remaining.bonds).toEqual([]);
+    expect(checkLedger(result.state.world)).toEqual([]);
+    expect(checking(state)).toBe(before);
+
+    const duplicate = execute(result.state, command);
+    expect(duplicate.outcome).toMatchObject({ status: 'rejected', reason: 'duplicate' });
+    expect(duplicate.state).toBe(result.state);
+    expect(run(result.state, { type: 'liquidateInvestments' }).outcome).toMatchObject({
+      status: 'rejected',
+      key: 'err.InvestmentError.emptyPortfolio',
+    });
+  });
+
   it('starts chart history for older saves and marks each new investment at its own market price', () => {
     const older = investor('investment-market');
     const country = playerOf(older).countryCode;

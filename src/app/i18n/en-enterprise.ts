@@ -68,6 +68,7 @@ export const enEnterprise: Record<string, string> = {
   'out.fundSold': 'Investment sold.',
   'out.bondBought': 'You bought a {years}-year government bond. It pays interest every month.',
   'out.bondSold': 'Bond sold at the current price; the money is in your current account.',
+  'out.investmentsLiquidated': 'All investments sold. The proceeds are in your current account.',
 
   // Transactions and categories
   'tx.businessCapital': 'Invested in {business}',

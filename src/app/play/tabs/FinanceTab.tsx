@@ -6,7 +6,7 @@ import type { GameView } from '@engine/view';
 import { PageHeader } from '@app/components/PageHeader';
 import { StatBar } from '@app/components/StatBar';
 import { AmountForm, Money } from '@app/components/Money';
-import { Button } from '@app/components/ui/button';
+import { Button, buttonVariants } from '@app/components/ui/button';
 import { Card } from '@app/components/ui/card';
 import { ChoiceGroup } from '@app/components/ui/choice-group';
 import { ConfirmDialog } from '@app/components/ui/confirm-dialog';
@@ -22,7 +22,7 @@ import {
 import { useGameStore } from '@app/stores/gameStore';
 import { tickToMonth } from '../widgets';
 import { ActionButton } from '../ActionButton';
-import { InvestmentMarket } from '../InvestmentMarket';
+import { portfolioSaleValue } from '../portfolio';
 
 function useAct() {
   const send = useGameStore((s) => s.send);
@@ -761,91 +761,29 @@ function EconomyCard({ view }: { view: GameView }) {
 }
 
 function InvestmentsCard({ view }: { view: GameView }) {
-  const { send, disabled } = useAct();
-  const inv = view.enterprise.investments;
-  const cur = { ...view.finance.currency };
-  const [term, setTerm] = useState<12 | 60 | 120>(60);
-  const [selling, setSelling] = useState<(typeof inv.bonds)[number] | null>(null);
-  if (view.character.age.years < 18) return null;
+  const unlocked = view.character.age.years >= 18;
   return (
-    <Card
-      title="Investments"
-      description="Compare simulated stocks, funds and Bitcoin. Market values update each game month."
-    >
-      <InvestmentMarket view={view} disabled={disabled} />
-
-      <div className="mt-5 border-t border-border pt-3">
-        <h3 className="text-sm font-semibold text-fg">Government bonds</h3>
-        <p className="mt-1 text-sm text-muted">
-          Lend money to the government for a fixed time at a fixed rate. You get interest every
-          month and your money back at the end. Selling early pays today&apos;s price: less if
-          interest rates have risen since you bought, more if they have fallen.
-        </p>
-        <div className="mt-3 flex flex-col gap-3">
-          <ChoiceGroup
-            legend="Term"
-            name="bond-term"
-            value={String(term)}
-            onChange={(v) => {
-              setTerm(Number(v) as 12 | 60 | 120);
-            }}
-            options={inv.bondOffers.map((o) => ({
-              value: String(o.termMonths),
-              label: `${String(o.termMonths / 12)} year${o.termMonths === 12 ? '' : 's'}`,
-              description: `${formatBp(o.yieldBp)} a year, fixed`,
-            }))}
-          />
-          <AmountForm
-            label="Buy bonds"
-            currency={cur}
-            submitLabel="Buy bonds"
-            disabled={disabled}
-            onSubmit={(minor) => send({ type: 'buyBond', termMonths: term, amountMinor: minor })}
-          />
-        </div>
-        {inv.bonds.length > 0 && (
-          <ul className="mt-3 divide-y divide-border text-sm">
-            {inv.bonds.map((b) => (
-              <li key={b.id} className="flex flex-wrap items-center gap-2 py-2.5">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-fg">
-                    <Money minor={b.faceMinor} currency={cur} />, {String(b.termMonths / 12)}-year
-                    at {formatBp(b.couponBp)}
-                  </p>
-                  <p className="text-xs text-muted">
-                    Pays <Money minor={b.monthlyInterestMinor} currency={cur} /> a month · repaid{' '}
-                    {month(view, b.maturityTick)} · worth{' '}
-                    <Money minor={b.saleValueMinor} currency={cur} /> if sold now
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={disabled}
-                  onClick={() => {
-                    setSelling(b);
-                  }}
-                >
-                  Sell
-                </Button>
-              </li>
-            ))}
-          </ul>
+    <Card title="Investments">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {unlocked ? (
+          <>
+            <dl>
+              <dt className="text-sm text-muted">Portfolio value if sold today</dt>
+              <dd className="text-lg font-semibold">
+                <Money
+                  minor={portfolioSaleValue(view.enterprise.investments)}
+                  currency={view.finance.currency}
+                />
+              </dd>
+            </dl>
+            <Link to="investments" className={buttonVariants({ variant: 'secondary' })}>
+              Open investments
+            </Link>
+          </>
+        ) : (
+          <p className="text-sm text-muted">Investing unlocks at age 18.</p>
         )}
       </div>
-      <ConfirmDialog
-        open={selling !== null}
-        onOpenChange={(o) => {
-          if (!o) setSelling(null);
-        }}
-        title="Sell this bond early?"
-        confirmLabel="Sell"
-        onConfirm={() => (selling ? send({ type: 'sellBond', accountId: selling.id }) : undefined)}
-      >
-        You get {selling ? formatMoney(selling.saleValueMinor, cur) : ''} now instead of{' '}
-        {selling ? formatMoney(selling.faceMinor, cur) : ''} at the end, and the monthly interest
-        stops.
-      </ConfirmDialog>
     </Card>
   );
 }
@@ -903,6 +841,7 @@ export function FinanceTab() {
         description="Every amount here comes from a balanced ledger of real transactions in your life."
       />
       <OverviewCard view={view} />
+      <InvestmentsCard view={view} />
       <div className="grid gap-4 lg:grid-cols-2">
         <AccountsCard view={view} />
         <HomeCard view={view} />
@@ -913,10 +852,7 @@ export function FinanceTab() {
         <LoansCard view={view} />
         <InsuranceCard view={view} />
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <InvestmentsCard view={view} />
-        <AssetsLinksCard view={view} base={`/play/${session.saveId}`} />
-      </div>
+      <AssetsLinksCard view={view} base={`/play/${session.saveId}`} />
       <RetirementCard view={view} />
       <TransactionsCard view={view} />
       <EconomyCard view={view} />
