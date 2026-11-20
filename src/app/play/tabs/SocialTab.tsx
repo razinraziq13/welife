@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { ChevronRight, Heart, Network, UserPlus } from 'lucide-react';
 import type { GameView, PersonSummary } from '@engine/view';
+import { DatingPreferencesSchema, fitsDatingPreferences } from '@engine/social/datingPreferences';
+import { ADULT_AGE } from '@engine/social/family';
+import { WEALTH_TIERS } from '@engine/state/schema';
 import { PageHeader } from '@app/components/PageHeader';
 import { StatBar } from '@app/components/StatBar';
 import { Avatar } from '@app/components/avatar/Avatar';
@@ -61,15 +64,40 @@ export function PersonRow({ person, base }: { person: PersonSummary; base: strin
   );
 }
 
+const emptyFilters = { minAge: '', maxAge: '', minWealth: '', minLooks: '', status: '' };
+const filterClass = 'min-h-10 w-full rounded-lg border border-border bg-surface px-2 text-fg';
+
 function DatingApp({ view, base }: { view: GameView; base: string }) {
   const send = useGameStore((s) => s.send);
   const busy = useGameStore((s) => s.busy || s.advancing);
+  const [filters, setFilters] = useState(emptyFilters);
   const dating = view.social.dating;
-  if (!dating || view.lifeStatus !== 'alive') return null;
-  const profile = dating.profiles[0];
+  if (view.lifeStatus !== 'alive') return null;
+  if (!dating)
+    return (
+      <Card title="Dating App">
+        <p className="text-sm text-muted">
+          {view.character.age.years < ADULT_AGE
+            ? 'Available from age 18.'
+            : 'Available when you’re single.'}
+        </p>
+      </Card>
+    );
+  const parsed = DatingPreferencesSchema.safeParse({
+    minAge: filters.minAge ? Number(filters.minAge) : undefined,
+    maxAge: filters.maxAge ? Number(filters.maxAge) : undefined,
+    minWealth: filters.minWealth || undefined,
+    minLooks: filters.minLooks ? Number(filters.minLooks) : undefined,
+    status: filters.status || undefined,
+  });
+  const profile = parsed.success
+    ? dating.profiles.find((profile) => fitsDatingPreferences(profile.age, profile, parsed.data))
+    : undefined;
+  const filtered = Object.values(filters).some(Boolean);
   const waiting = view.pendingEvent ? 'Make the waiting decision first.' : null;
   const searchReason =
     waiting ??
+    (!parsed.success ? 'Enter a valid age range between 18 and 130.' : null) ??
     (view.time.totalHours - view.time.usedHours < 6
       ? 'Looking for love takes 6 hours of free time.'
       : null);
@@ -79,6 +107,93 @@ function DatingApp({ view, base }: { view: GameView; base: string }) {
       title="Dating App"
       description="Discover singles, like or pass, and get to know your matches."
     >
+      <details className="mb-3 rounded-lg border border-border p-3">
+        <summary className="cursor-pointer font-medium text-fg">
+          Search filters{filtered ? ' · Active' : ''}
+        </summary>
+        <div className="mt-2 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+          {(
+            [
+              ['minAge', 'Minimum age'],
+              ['maxAge', 'Maximum age'],
+            ] as const
+          ).map(([key, label]) => (
+            <label key={key} className="flex flex-col gap-1">
+              {label}
+              <input
+                className={filterClass}
+                type="number"
+                min={ADULT_AGE}
+                max={130}
+                placeholder="Any"
+                value={filters[key]}
+                onChange={(e) => {
+                  setFilters({ ...filters, [key]: e.target.value });
+                }}
+              />
+            </label>
+          ))}
+          {(
+            [
+              [
+                'minWealth',
+                'Household wealth',
+                WEALTH_TIERS.slice(1).map((tier) => ({
+                  value: tier,
+                  label: `${t(`wealth.${tier}`)} or above`,
+                })),
+              ],
+              [
+                'minLooks',
+                'Looks rating',
+                ['60', '75', '90'].map((value) => ({ value, label: `${value}+` })),
+              ],
+              [
+                'status',
+                'Status',
+                [
+                  { value: 'celebrity', label: 'Celebrity' },
+                  { value: 'royalty', label: 'Royalty' },
+                ],
+              ],
+            ] as const
+          ).map(([key, label, options]) => (
+            <label key={key} className="flex flex-col gap-1">
+              {label}
+              <select
+                className={filterClass}
+                value={filters[key]}
+                onChange={(e) => {
+                  setFilters({ ...filters, [key]: e.target.value });
+                }}
+              >
+                <option value="">Any</option>
+                {options.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-muted">
+          Search introduces singles within ten years of your age. Filtered searches look for people
+          already living in your country.
+        </p>
+        {filtered && (
+          <Button
+            className="mt-2"
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setFilters(emptyFilters);
+            }}
+          >
+            Clear filters
+          </Button>
+        )}
+      </details>
       {profile ? (
         <div className="rounded-xl border border-border p-3">
           <div className="flex items-center gap-3">
@@ -94,11 +209,18 @@ function DatingApp({ view, base }: { view: GameView; base: string }) {
               <h3 className="font-semibold text-fg">
                 {profile.name}, {profile.age}
               </h3>
+              <p className="text-sm text-muted">{profile.location}</p>
               <p className="text-sm text-muted">
                 {profile.interests.map((interest) => t(`interest.${interest}`)).join(' · ')}
               </p>
             </div>
           </div>
+          <p className="mt-2 text-sm text-fg">
+            Looks {profile.looks}/100 ·{' '}
+            {profile.wealth ? t(`wealth.${profile.wealth}`) : 'Household wealth unknown'}
+            {profile.celebrity ? ' · Celebrity' : ''}
+            {profile.royalty ? ' · Royalty' : ''}
+          </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <ActionButton
               reason={waiting}
@@ -130,14 +252,21 @@ function DatingApp({ view, base }: { view: GameView; base: string }) {
           </div>
         </div>
       ) : (
-        <p className="text-sm text-muted">No new profiles. Look for love to discover someone.</p>
+        <p className="text-sm text-muted">
+          {filtered
+            ? 'No new profiles shown with these filters.'
+            : 'No new profiles. Look for love to discover someone.'}
+        </p>
       )}
       <ActionButton
         className="mt-3"
         variant="secondary"
         reason={searchReason}
         busy={busy}
-        onAct={() => void send({ type: 'lookForLove' })}
+        onAct={() => {
+          if (parsed.success)
+            void send({ type: 'lookForLove', ...(filtered ? { preferences: parsed.data } : {}) });
+        }}
       >
         Look for love (6 h)
       </ActionButton>

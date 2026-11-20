@@ -1,4 +1,4 @@
-import { clamp } from '../core/data';
+import { clamp, sortedValues } from '../core/data';
 import { applyPercent } from '../core/money';
 import { addBiography, addNotification, ageYears, nextId, withRng } from '../core/world';
 import { diminishingPercent, ensureActivityMonth } from '../activities/activities';
@@ -29,6 +29,7 @@ import {
   type ContextualId,
 } from './contextual';
 import { createPotentialPartner, meetPeople } from './npcs';
+import { matchesDatingPreferences, type DatingPreferences } from './datingPreferences';
 import { FAMILY_TYPES, adjustPair, findRelationship, kinship, linkPair } from './relationships';
 
 /**
@@ -658,10 +659,24 @@ export function meetNewPeople(world: World): { personId: string | null } {
  * likely than going out to introduce someone, and the person is single, interested and a good
  * match: closer to start with and better chemistry. They still decide for themselves later.
  */
-export function lookForLove(world: World): { personId: string | null } {
+export function lookForLove(
+  world: World,
+  preferences?: DatingPreferences,
+): { personId: string | null; noProfiles?: boolean } {
   const player = world.characters[world.activeCharacterId] as Character;
   if (ageYears(world, player) < ADULT_AGE) throw new InteractionError('tooYoung');
   if (player.partnership) throw new InteractionError('alreadyPartnered');
+  const pool =
+    preferences && Object.values(preferences).some((value) => value !== undefined)
+      ? sortedValues(world.characters).filter(
+          (person) =>
+            person.countryCode === player.countryCode &&
+            isRomanticProspectBase(world, player, person) &&
+            !findRelationship(world, player.id, person.id) &&
+            matchesDatingPreferences(world, person, preferences),
+        )
+      : null;
+  if (pool?.length === 0) return { personId: null, noProfiles: true };
   if (!spendHours(world, 6)) throw new InteractionError('noTime');
   const times = world.activity.counts['look-for-love'] ?? 0;
   world.activity.counts['look-for-love'] = times + 1;
@@ -672,7 +687,9 @@ export function lookForLove(world: World): { personId: string | null } {
     (rng) => rng.int(100) < Math.floor((85 * diminishingPercent(times)) / 100),
   );
   if (!found) return { personId: null };
-  const person = createPotentialPartner(world, player);
+  const person = pool
+    ? withRng(world, 'social', (rng) => rng.pick(pool))
+    : createPotentialPartner(world, player);
   linkPair(world, player, person, 'acquaintance', 'acquaintance', {
     closeness: withRng(world, 'social', (rng) => rng.range(38, 52)),
   });

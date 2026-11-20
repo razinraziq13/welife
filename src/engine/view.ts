@@ -65,6 +65,7 @@ import {
   type WorkActionId,
 } from './career/workActions';
 import { ADULT_AGE, DATE_CLOSENESS, familyHomeFor } from './social/family';
+import { datingProfileTraits } from './social/datingPreferences';
 import {
   INTERACTIONS,
   INTERACTION_BLOCK_MESSAGES,
@@ -435,7 +436,11 @@ export interface SocialView {
     canLookForLove: boolean;
     needed: number;
     candidates: DatingCandidate[];
-    profiles: (DatingCandidate & { interests: Character['interests'] })[];
+    profiles: (DatingCandidate &
+      ReturnType<typeof datingProfileTraits> & {
+        interests: Character['interests'];
+        location: string;
+      })[];
     matches: (DatingCandidate & { askOutReason: string | null })[];
   } | null;
 }
@@ -1008,7 +1013,13 @@ function datingView(world: World, c: Character): SocialView['dating'] {
     const status = datingAppStatus(world, c, candidate.id);
     const other = world.characters[candidate.id];
     if (!other) continue;
-    if (status === 'profile') profiles.push({ ...candidate, interests: other.interests });
+    if (status === 'profile')
+      profiles.push({
+        ...candidate,
+        ...datingProfileTraits(world, other),
+        interests: other.interests,
+        location: getLocation(other.locationId).location.name,
+      });
     if (status === 'match') {
       const block = interactionBlock(world, c, other, 'askOut');
       matches.push({
