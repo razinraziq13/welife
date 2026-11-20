@@ -60,3 +60,18 @@ describe('Career paths: start freelance as musician, actor or director', () => {
     expect(projectGame(state).work.career.music?.isMusician).toBe(true);
   }, 60_000);
 });
+
+describe('job board (path jobs only in Career, Paths)', () => {
+  it('never lists actor, musician or film director roles, and offers a fuller board', () => {
+    let state = advanceMonths(newState({ seed: 'board-paths', scenario: 'wealthy' }), 22 * 12);
+    let largest = 0;
+    for (let m = 0; m < 12; m++) {
+      state = advanceMonths(state, 1);
+      const postings = Object.values(state.world.jobs.postings);
+      largest = Math.max(largest, postings.length);
+      for (const p of postings)
+        expect(['actor', 'musician', 'film-director']).not.toContain(p.terms.occupationId);
+    }
+    expect(largest).toBeGreaterThanOrEqual(20);
+  }, 120_000);
+});

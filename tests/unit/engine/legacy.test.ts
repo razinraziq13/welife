@@ -217,7 +217,8 @@ describe('succession on death (decision D7)', () => {
     player.birth = { year: world.clock.year - 110, month: world.clock.month };
     player.stats.health = 0;
     state = { world, pending: null };
-    for (let i = 0; i < 24 && state.world.lifeStatus === 'alive'; i++)
+    // About 11% a month at this age and health: 120 months makes survival vanishingly unlikely.
+    for (let i = 0; i < 120 && state.world.lifeStatus === 'alive'; i++)
       state = advanceMonths(state, 1);
     expect(state.world.lifeStatus).toBe('succession');
     const deceased = state.world.characters[state.world.legacy.succession?.deceasedId ?? ''];

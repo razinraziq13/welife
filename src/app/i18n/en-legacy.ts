@@ -67,7 +67,6 @@ export const enLegacy: Record<string, string> = {
   'tx.inheritance': 'Inheritance from {name}',
   'tx.inheritanceTax': 'Inheritance tax',
   'tx.estateDebt': 'Debts paid by the estate',
-  'tx.debtWrittenOff': 'Debts written off',
   'tx.debtPassed': 'Mortgage passed on',
   'tx.debtInherited': 'Mortgage inherited from {name}',
   'tx.creatorIncome': 'Creator income ({platform})',

@@ -89,6 +89,8 @@ export async function adultSaveJson(
       const job = p?.employmentId ? state.world.employment[p.employmentId] : undefined;
       if (!p || !job) throw new Error('fixture: no job for a rival offer');
       job.performance = 850;
+      // Rivals never headhunt casual staff or interns (by design); the fixture needs a real job.
+      job.terms = { ...job.terms, contract: 'permanent' };
       p.career.reputation = 1000;
       state = month(state);
     }

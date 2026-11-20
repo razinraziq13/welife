@@ -36,7 +36,7 @@ import {
  * performance, manager relations, reviews, promotions and layoffs. PROPOSED TUNING.
  */
 
-const MAX_POSTINGS = 30;
+const MAX_POSTINGS = 50;
 const MAX_ACTIVE_APPLICATIONS = 5;
 const EMPLOYER_PREFIX = [
   'Apex',
@@ -186,7 +186,12 @@ export function refreshJobMarket(world: World): void {
   const rules = getRules(player.countryCode);
   for (const id of sortedKeys(world.jobs.postings)) {
     const p = world.jobs.postings[id];
-    if (p && (p.expiresTick < world.tick || p.terms.locationId !== player.locationId))
+    if (
+      p &&
+      (p.expiresTick < world.tick ||
+        p.terms.locationId !== player.locationId ||
+        isCreativePath(p.terms.occupationId))
+    )
       Reflect.deleteProperty(world.jobs.postings, id);
   }
   if (age < rules.work.minWorkAge) return;
@@ -194,11 +199,12 @@ export function refreshJobMarket(world: World): void {
   const economy = world.economy[player.countryCode];
   const cycle = economy?.cycle ?? 0;
   const unemployment = economy?.unemploymentBp ?? 500;
-  const count = withRng(world, 'career', (rng) => rng.range(3, 6)) - (cycle < -40 ? 1 : 0);
+  const count = withRng(world, 'career', (rng) => rng.range(6, 10)) - (cycle < -40 ? 2 : 0);
   const minor = age < 18;
   const quals = player.education.qualifications;
   const candidates = OCCUPATIONS.filter(
-    (o) => !o.hidden && o.minExperienceMonths === 0 && (!minor || o.teen),
+    // Creative paths (actor, musician, director) start from Career, Paths, never the job board.
+    (o) => !o.hidden && o.minExperienceMonths === 0 && (!minor || o.teen) && !isCreativePath(o.id),
   );
   for (let i = 0; i < count; i++) {
     const occupation = withRng(world, 'career', (rng) =>
@@ -1064,6 +1070,7 @@ export function assignNpcJob(
 
 /** Creative paths the player can start freelance from the Career tab (no posting needed). */
 export const CREATIVE_PATHS = ['actor', 'musician', 'film-director'] as const;
+const isCreativePath = (id: string) => (CREATIVE_PATHS as readonly string[]).includes(id);
 export type CreativePath = (typeof CREATIVE_PATHS)[number];
 
 /** Entry-level freelance terms for a creative path where the player lives (no randomness). */

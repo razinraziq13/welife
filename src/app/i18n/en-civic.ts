@@ -119,7 +119,6 @@ export const enCivic: Record<string, string> = {
   'tx.moving': 'Moving to {location}',
   'tx.currencyExchange': 'Currency exchange ({from} to {to})',
   'tx.moveMoney': 'Money moved to the new country ({from} to {to})',
-  'tx.transfer': 'Transfer between accounts',
   'tx.legal': 'Legal payment',
   'tx.legalFees': 'Lawyer’s fees',
   'tx.legalAward': 'Court award',
@@ -143,8 +142,6 @@ export const enCivic: Record<string, string> = {
   'category.campaign': 'Campaign costs',
   'category.royalAllowance': 'Royal allowance',
   'category.churchTax': 'Church tax',
-  'category.repairs': 'Repairs',
-  'category.travel': 'Travel',
   'category.other': 'Other',
 
   // Names

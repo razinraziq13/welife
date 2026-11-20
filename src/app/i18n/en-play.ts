@@ -108,7 +108,6 @@ export const enPlay: Record<string, string> = {
   'work.single.hit': 'Your single caught on! It will earn about {amountText} a month in royalties.',
   'work.single.flop': 'Your single did not catch on. The next one might.',
   'tx.studio': 'Studio time',
-  'tx.royalties': 'Music royalties',
   'ntf.singleRun': 'Your single has run its course. Another release on your record.',
   'workActionHint.shootShortFilm':
     'Costs a small budget; a good film earns a credit and maybe a prize.',

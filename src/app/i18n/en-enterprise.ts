@@ -140,7 +140,6 @@ export const enEnterprise: Record<string, string> = {
   'category.propertyFees': 'Property fees',
   'category.propertyUpkeep': 'Property upkeep',
   'category.renovation': 'Renovation',
-  'category.rent': 'Rent',
   'category.sales': 'Sales',
 
   // Labels

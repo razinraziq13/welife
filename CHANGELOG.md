@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Job board:** actor, musician and film director roles are only started from Career, Paths (no longer advertised in Job App), and the board is fuller: 6 to 10 new jobs a month, up to 50 listed. Transactions now read "Royalties" for both book and music royalties (one label used to overwrite the other).
+
 - **Doctors: registration and a patient queue.** Practising as a doctor now needs a medical degree and registration: work as a resident doctor for your country's supervised months (routine patients only), then pass the registration exam. Nursing and other health roles see why they cannot take a doctor's cases. Registered doctors get a patient queue in Career, Patients: review information cards, talk with the patient and consult a colleague, then arrange follow-up care or refer. Cases are fictional and non-graphic, with no diagnoses, medicines or procedures.
 
 - **Journalists: credential and story desk.** The journalist role now needs a relevant (media) diploma or degree; unrelated or unfinished study does not count. Journalists get a story desk in Career, Stories: take a story, verify claims, interview sources and draft, then publish a short report or an in-depth feature. Publishing with unverified or disputed claims brings a correction and costs integrity; verified reporting builds it.

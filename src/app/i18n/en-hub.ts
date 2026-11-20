@@ -122,7 +122,7 @@ export const enHub: Record<string, string> = {
   'bio.travelled': 'Travelled to {countryName}.',
   'bio.licence': 'Passed the driving test.',
   'tx.lifestyle': '{activityName}',
-  'tx.royalties': 'Book royalties',
+  'tx.royalties': 'Royalties',
   'tx.appIncome': 'App income',
   'activity.salon': 'Barber or salon',
   'activityHint.salon': 'Change your hairstyle, or colour it from age 14.',
