@@ -392,7 +392,7 @@ function FurtherStudyCard({ view }: { view: GameView }) {
             Institution
           </label>
           <select id="higher-ed-institution-kind" value={institutionKind}
-            onChange={(e) => setInstitutionKind(e.target.value === 'private' ? 'private' : 'public')}
+            onChange={(e) => { setInstitutionKind(e.target.value === 'private' ? 'private' : 'public'); }}
             className="h-11 rounded-xl border border-border bg-surface px-3 text-fg">
             <option value="public">Public (lower tuition)</option>
             <option value="private">Private (higher tuition)</option>
