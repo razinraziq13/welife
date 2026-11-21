@@ -272,7 +272,7 @@ function updateStudies(world: World, c: Character): void {
   const startMonth = getRules(c.countryCode).education.schoolYearStartMonth;
   const offset = (world.clock.month - startMonth + 12) % 12;
   if (offset === 5 || offset === 11) {
-    if (current.stage === 'tertiary') assessSemester(world, c, current);
+    if (current.stage === 'tertiary') assessSemester(world, current);
     c.education.reports.push({ tick: world.tick, grade: current.grade });
     if (c.education.reports.length > 48)
       c.education.reports.splice(0, c.education.reports.length - 48);
@@ -292,7 +292,7 @@ function updateStudies(world: World, c: Character): void {
 
 /** A semester awards 24 credits only if its modules pass; failed semesters can be retried.
  * Use grade and coursework combined, rather than time alone, for academic progression. */
-function assessSemester(world: World, c: Character, current: Enrollment): void {
+function assessSemester(world: World, current: Enrollment): void {
   const a = academicOf(current);
   if (!current.programId || current.level === 'school') return;
   if (a.lastAssessmentTick === world.tick) return;
