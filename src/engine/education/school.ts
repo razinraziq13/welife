@@ -320,7 +320,7 @@ export const ACADEMIC_ACTIONS: readonly AcademicAction[] = [
 ];
 export function academicActionBlock(world: World, c: Character, action: AcademicAction): string | null {
   const current = c.education.current;
-  if (!current || current.stage !== 'tertiary') return 'You must be enrolled in higher education.';
+  if (current?.stage !== 'tertiary') return 'You must be enrolled in higher education.';
   const a = current.academic;
   if (a?.lastActionTick === world.tick) return 'Already completed an academic activity this month.';
   if (action === 'research' && current.level !== 'master') return 'Research is for master’s students.';
