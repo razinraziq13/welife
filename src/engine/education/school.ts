@@ -1,6 +1,7 @@
 import { clamp, sortedKeys } from '../core/data';
 import { addBiography, addNotification, ageYears, nextId, withRng } from '../core/world';
 import { changeSkill, changeStat } from '../characters/stats';
+import { spendHours, timeBudget } from '../calendar/time';
 import { catchUpSkills } from '../characters/factory';
 import { getLocation } from '../world/countries';
 import { getRules } from '../world/rules';
@@ -20,6 +21,7 @@ import {
   getClub,
   getProgram,
   programYears,
+  semesterModules,
   scaledGain,
   type ProgramLevel,
 } from './catalog';
@@ -153,9 +155,28 @@ function enroll(
     years,
     grade: clamp(c.stats.intelligence - 50, 300, 900),
     scholarshipPercent: options.scholarshipPercent ?? 0,
+    ...(stage === 'tertiary' ? { academic: newAcademic() } : {}),
   };
   c.education.current = enrollment;
   return enrollment;
+}
+
+/** All tertiary programmes share a bounded, save-compatible academic state. */
+function newAcademic(): NonNullable<Enrollment['academic']> {
+  return { semester: 1, credits: 0, coursework: 300, project: 0, research: 0,
+    internshipMonths: 0, lastActionTick: null, lastAssessmentTick: 0, modules: [] };
+}
+
+/** Existing saves that lack academic details resume with earned time credited. */
+function academicOf(current: Enrollment): NonNullable<Enrollment['academic']> {
+  if (!current.academic) {
+    const completed = current.yearsCompleted * 48;
+    current.academic = { ...newAcademic(), semester: current.yearsCompleted * 2 + 1,
+      credits: completed, coursework: current.grade,
+      project: current.yearsCompleted > 0 ? current.grade : 0,
+      research: current.yearsCompleted > 0 ? current.grade : 0 };
+  }
+  return current.academic;
 }
 
 function finish(
@@ -241,10 +262,17 @@ function updateStudies(world: World, c: Character): void {
   }
   changeStat(world, c, 'stress', EFFORT_STRESS[c.education.effort], 'school');
   changeStat(world, c, 'intelligence', Math.floor((2 * percent) / 100), 'school');
+  if (current.stage === 'tertiary') {
+    const academic = academicOf(current);
+    academic.coursework = clamp(academic.coursework + Math.floor((current.grade - academic.coursework) / 7), 0, 1000);
+    academic.project = clamp(academic.project + (current.level === 'diploma' ? 7 : 13), 0, 1000);
+    if (current.level === 'master') academic.research = clamp(academic.research + 15, 0, 1000);
+  }
 
   const startMonth = getRules(c.countryCode).education.schoolYearStartMonth;
   const offset = (world.clock.month - startMonth + 12) % 12;
   if (offset === 5 || offset === 11) {
+    if (current.stage === 'tertiary') assessSemester(world, c, current);
     c.education.reports.push({ tick: world.tick, grade: current.grade });
     if (c.education.reports.length > 48)
       c.education.reports.splice(0, c.education.reports.length - 48);
@@ -260,6 +288,61 @@ function updateStudies(world: World, c: Character): void {
         institution: current.institution,
       });
   }
+}
+
+/** A semester awards 24 credits only if its modules pass; failed semesters can be retried.
+ * Use grade and coursework combined, rather than time alone, for academic progression. */
+function assessSemester(world: World, c: Character, current: Enrollment): void {
+  const a = academicOf(current);
+  if (!current.programId || current.level === 'school') return;
+  if (a.lastAssessmentTick === world.tick) return;
+  a.lastAssessmentTick = world.tick;
+  const tasks = semesterModules(current.programId, current.level, a.semester);
+  const result = clamp(Math.floor((current.grade * 7 + a.coursework * 3) / 10)
+    + withRng(world, 'school', (rng) => rng.range(-50, 50)), 0, 1000);
+  const passed = result >= 350;
+  for (const m of tasks) {
+    a.modules.push({ semester: a.semester, title: m.name, grade: result, credits: passed ? m.credits : 0, passed });
+  }
+  a.modules = a.modules.slice(-48);
+  if (passed) {
+    a.credits += 24;
+    a.semester += 1;
+  } else {
+    a.coursework = clamp(a.coursework + 50, 0, 1000);
+    addNotification(world, 'school', 'ntf.repeatYear', {}, 'career');
+  }
+}
+
+export type AcademicAction = 'coursework' | 'groupProject' | 'meetLecturer' | 'research' | 'internship';
+export const ACADEMIC_ACTIONS: readonly AcademicAction[] = [
+  'coursework', 'groupProject', 'meetLecturer', 'research', 'internship',
+];
+export function academicActionBlock(world: World, c: Character, action: AcademicAction): string | null {
+  const current = c.education.current;
+  if (!current || current.stage !== 'tertiary') return 'You must be enrolled in higher education.';
+  const a = current.academic;
+  if (a?.lastActionTick === world.tick) return 'Already completed an academic activity this month.';
+  if (action === 'research' && current.level !== 'master') return 'Research is for master’s students.';
+  if (action === 'internship' && current.level === 'master') return 'Internships are offered during diploma and degree study.';
+  if (timeBudget(world).used + 4 > timeBudget(world).total) return 'Not enough free time this month.';
+  if (c.stats.energy < 50) return 'Not enough energy for this activity.';
+  return null;
+}
+export function academicAction(world: World, c: Character, action: AcademicAction): void {
+  const reason = academicActionBlock(world, c, action);
+  if (reason) throw new EducationError('notEligible', reason);
+  const current = c.education.current;
+  if (!current) throw new EducationError('notStudying', CLUB_MESSAGES.notStudying);
+  const a = academicOf(current);
+  spendHours(world, 4);
+  changeStat(world, c, 'energy', -50, 'school:academic');
+  a.lastActionTick = world.tick;
+  if (action === 'coursework') { a.coursework = clamp(a.coursework + 100, 0, 1000); current.grade = clamp(current.grade + 30, 0, 1000); }
+  if (action === 'groupProject') { a.project = clamp(a.project + 120, 0, 1000); changeSkill(world, c, 'socializing', 6, 'school:project'); }
+  if (action === 'meetLecturer') { a.coursework = clamp(a.coursework + 50, 0, 1000); changeSkill(world, c, 'reading', 6, 'school:lecturer'); }
+  if (action === 'research') { a.research = clamp(a.research + 120, 0, 1000); a.project = clamp(a.project + 60, 0, 1000); }
+  if (action === 'internship') { a.internshipMonths = Math.min(36, a.internshipMonths + 1); a.project = clamp(a.project + 30, 0, 1000); const skill = getProgram(current.programId ?? 'business').skills[0]; if (skill) changeSkill(world, c, skill, 12, 'school:internship'); }
 }
 
 function clubCompetitions(world: World, c: Character): void {
@@ -383,27 +466,21 @@ function startSchoolYear(world: World, c: Character, isPlayer: boolean): void {
       if (age >= rules.primaryStartAge) finish(world, c, 'completed', null);
     } else {
       const passMark = current.stage === 'tertiary' ? 350 : 300;
-      const passed =
+      const academicReady = current.stage !== 'tertiary' ||
+        (academicOf(current).credits >= (current.yearsCompleted + 1) * 48 &&
+          (current.yearsCompleted + 1 < current.years ||
+            (current.level === 'diploma' || academicOf(current).project >= 100) &&
+            (current.level !== 'master' || academicOf(current).research >= 150)));
+      const passed = academicReady && (
         current.stage === 'primary' ||
         current.grade >= passMark ||
-        c.flags['school.repeated'] === true;
+        c.flags['school.repeated'] === true);
       if (passed) {
         current.yearsCompleted += 1;
         c.flags['school.repeated'] = false;
       } else if (current.stage === 'tertiary') {
-        if (isPlayer) {
-          addNotification(
-            world,
-            'school',
-            'ntf.droppedOut',
-            { programId: current.programId ?? '' },
-            'career',
-          );
-          addBiography(world, c.id, 'school', 'bio.leftStudies', {
-            programId: current.programId ?? '',
-          });
-        }
-        finish(world, c, 'left', null);
+        // Academic failure delays progress instead of deleting earned credits.
+        if (isPlayer) addNotification(world, 'school', 'ntf.repeatYear', {}, 'career');
         return;
       } else {
         c.flags['school.repeated'] = true;
@@ -546,9 +623,19 @@ function npcSchoolYear(world: World, c: Character): void {
         ]),
       );
       c.flags[`studying.${field}`] = true;
-      // Graduates after a typical first degree.
-      c.education.qualifications.push(`bachelor:${field}`);
+      // NPCs also follow the same course-specific educational progression.
+      c.education.qualifications.push(`diploma:${field}`);
     }
+  }
+  if (age === start + 3) {
+    const diploma = c.education.qualifications.find((q) => q.startsWith('diploma:'));
+    if (diploma && withRng(world, 'school', (rng) => rng.int(100) < 75))
+      c.education.qualifications.push(`bachelor:${diploma.slice(8)}`);
+  }
+  if (age === start + 5) {
+    const bachelor = c.education.qualifications.find((q) => q.startsWith('bachelor:'));
+    if (bachelor && withRng(world, 'school', (rng) => rng.int(100) < 45))
+      c.education.qualifications.push(`master:${bachelor.slice(9)}`);
   }
 }
 
@@ -580,6 +667,8 @@ export type EducationRejection =
   | 'alreadyMember'
   | 'notMember'
   | 'unknownProgram'
+  | 'missingPrerequisite'
+  | 'alreadyQualified'
   | 'levelUnavailable'
   | 'notEligible'
   | 'tooMany'
@@ -639,6 +728,8 @@ const CLUB_MESSAGES: Record<EducationRejection, string> = {
   alreadyMember: 'You already belong to this club.',
   notMember: 'You are not a member of that club.',
   unknownProgram: 'Unknown programme.',
+  missingPrerequisite: 'Complete the previous qualification in this exact course first.',
+  alreadyQualified: 'You already hold this qualification.',
   levelUnavailable: 'That level is not offered for this programme.',
   notEligible: 'You do not meet the entry requirements yet.',
   tooMany: 'You can have at most four applications waiting at once.',
@@ -661,9 +752,10 @@ export function applicationEligibility(
   const current = c.education.current;
   const finalSchoolYear =
     current?.stage === 'upperSecondary' && current.yearsCompleted >= current.years - 1;
-  if (level === 'master') {
-    if (!q.some((x) => x.startsWith('bachelor:'))) return 'notEligible';
-  } else if (!q.includes('upperSecondary') && !finalSchoolYear) return 'notEligible';
+  if (q.includes(`${level}:${programId}`)) return 'alreadyQualified';
+  if (level === 'master' && !q.includes(`bachelor:${programId}`)) return 'missingPrerequisite';
+  if (level === 'bachelor' && !q.includes(`diploma:${programId}`)) return 'missingPrerequisite';
+  if (level === 'diploma' && !q.includes('upperSecondary') && !finalSchoolYear) return 'notEligible';
   if (current?.stage === 'tertiary') return 'notEligible';
   const open = c.education.applications.filter(
     (a) => a.status === 'pending' || a.status === 'accepted',
@@ -716,6 +808,13 @@ export function respondToStudyOffer(
     app.status = 'declined';
     return;
   }
+  // Revalidate at enrollment to prevent expired prerequisites or old offers bypassing the engine.
+  const required = app.level === 'master' ? `bachelor:${app.programId}` :
+    app.level === 'bachelor' ? `diploma:${app.programId}` : 'upperSecondary';
+  if (!c.education.qualifications.includes(required) &&
+      !(app.level === 'diploma' && c.education.current?.stage === 'upperSecondary' &&
+        c.education.current.yearsCompleted >= c.education.current.years - 1))
+    throw new EducationError('missingPrerequisite', CLUB_MESSAGES.missingPrerequisite);
   if (c.education.current && c.education.current.stage !== 'tertiary')
     finish(world, c, 'left', null);
   if (c.education.current?.stage === 'tertiary')
@@ -742,7 +841,8 @@ export function respondToStudyOffer(
     { programId: app.programId, level: app.level },
     'career',
   );
-  meetPeople(world, c, 4, 'classmate', [18, 22]);
+  const age = ageYears(world, c);
+  meetPeople(world, c, 4, 'classmate', [Math.max(16, age - 3), age + 5]);
 }
 
 export function leavingAge(countryCode: string): number {
