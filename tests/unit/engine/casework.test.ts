@@ -241,3 +241,34 @@ describe('the view never changes the game', () => {
     expect(after).toBe(before);
   }, 120_000);
 });
+
+describe('the view never changes the game (sport, music, socials)', () => {
+  it('stays pure for an athlete and a musician with a band, manager and tour', () => {
+    let state = adult('view-pure-2', []);
+    state = run(state, { type: 'chooseSport', sport: 'football' }).state;
+    const p = playerOf(state);
+    p.skills.music = 700;
+    p.career.music = {
+      songs: [],
+      releases: [],
+      fans: 5_000,
+      recognition: 0,
+      critics: 0,
+      prep: 20,
+      label: null,
+      labelOffer: null,
+      venues: [],
+      chart: [],
+      autopilot: false,
+      band: { name: 'X', memberIds: [], memberNames: [] },
+      manager: null,
+      tour: { monthsLeft: 2, shows: 0, netMinor: 0n },
+    };
+    const snap = () =>
+      JSON.stringify(state.world, (_k, v: unknown) => (typeof v === 'bigint' ? String(v) : v));
+    const before = snap();
+    projectGame(state);
+    projectGame(state);
+    expect(snap()).toBe(before);
+  }, 120_000);
+});
