@@ -264,6 +264,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
   command('applyStudy', {
     programId: z.string().min(1).max(40),
     level: z.enum(['diploma', 'bachelor', 'master']),
+    kind: z.enum(['public', 'private']).optional(),
   }),
   command('respondStudy', { applicationId: EntityId, accept: z.boolean() }),
   command('leaveSchool', {}),
@@ -695,7 +696,7 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
       leaveClub(player, cmd.clubId);
       return done('out.leftClub', { clubId: cmd.clubId });
     case 'applyStudy':
-      applyForStudy(world, player, cmd.programId, cmd.level);
+      applyForStudy(world, player, cmd.programId, cmd.level, cmd.kind ?? 'public');
       return done('out.appliedStudy', { programId: cmd.programId, level: cmd.level });
     case 'respondStudy':
       respondToStudyOffer(world, player, cmd.applicationId, cmd.accept);
