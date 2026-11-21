@@ -51,6 +51,7 @@ export function MusicSection({ music }: { music: Music }) {
       {music.isMusician && <Songwriting music={music} />}
       {music.isMusician && <Releases music={music} />}
       {music.isMusician && <Live music={music} />}
+      {music.isMusician && <Crew music={music} />}
       {music.chart.length > 0 && <Chart music={music} />}
     </>
   );
@@ -557,6 +558,132 @@ function Chart({ music }: { music: Music }) {
           </li>
         ))}
       </ol>
+    </Card>
+  );
+}
+
+/** Band, manager and tours (E102). */
+function Crew({ music }: { music: Music }) {
+  const { send, disabled } = useAct();
+  const [name, setName] = useState('');
+  const id = useId();
+  const cur = music.currency;
+  return (
+    <Card
+      title="Band, manager and tours"
+      description="A band draws bigger crowds and better shows but takes 30% of ticket takings; a manager takes 15% of music income and brings label interest and bigger venues sooner."
+    >
+      {music.band ? (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-fg">
+            {music.band.name}: you, {music.band.memberNames.join(' and ')}
+          </span>
+          <ActionButton
+            size="sm"
+            variant="ghost"
+            busy={disabled}
+            reason={null}
+            onAct={() => {
+              void send({ type: 'leaveBand' });
+            }}
+          >
+            Leave the band
+          </ActionButton>
+        </div>
+      ) : (
+        <form
+          className="flex flex-wrap items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (name.trim()) void send({ type: 'formBand', name: name.trim() });
+          }}
+        >
+          <div className="flex flex-col gap-1">
+            <label htmlFor={`${id}-band`} className="text-xs text-muted">
+              Band name
+            </label>
+            <input
+              id={`${id}-band`}
+              value={name}
+              maxLength={40}
+              onChange={(e) => {
+                setName(e.target.value);
+              }}
+              className={SELECT}
+            />
+          </div>
+          <ActionButton
+            type="submit"
+            size="sm"
+            busy={disabled}
+            reason={music.bandReason ?? (name.trim() ? null : 'Give the band a name first.')}
+            onAct={() => undefined}
+          >
+            Form a band
+          </ActionButton>
+        </form>
+      )}
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+        {music.manager ? (
+          <>
+            <span className="text-fg">
+              Manager: {music.manager.name} ({music.manager.commissionPct}%)
+            </span>
+            <ActionButton
+              size="sm"
+              variant="ghost"
+              busy={disabled}
+              reason={null}
+              onAct={() => {
+                void send({ type: 'fireManager' });
+              }}
+            >
+              Let them go
+            </ActionButton>
+          </>
+        ) : (
+          <>
+            <ActionButton
+              size="sm"
+              variant="secondary"
+              busy={disabled}
+              reason={music.managerReason}
+              onAct={() => {
+                void send({ type: 'hireManager' });
+              }}
+            >
+              Hire a manager
+            </ActionButton>
+            {music.managerReason && (
+              <span className="text-xs text-muted">{music.managerReason}</span>
+            )}
+          </>
+        )}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+        {music.tour ? (
+          <span className="text-fg">
+            On tour: {music.tour.monthsLeft} month{music.tour.monthsLeft === 1 ? '' : 's'} left,{' '}
+            {music.tour.shows} shows so far, net{' '}
+            <Money minor={music.tour.netMinor} currency={cur} />
+          </span>
+        ) : (
+          <>
+            <ActionButton
+              size="sm"
+              variant="secondary"
+              busy={disabled}
+              reason={music.tourReason}
+              onAct={() => {
+                void send({ type: 'startTour' });
+              }}
+            >
+              Go on a three-month tour
+            </ActionButton>
+            {music.tourReason && <span className="text-xs text-muted">{music.tourReason}</span>}
+          </>
+        )}
+      </div>
     </Card>
   );
 }

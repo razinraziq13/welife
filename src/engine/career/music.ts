@@ -147,6 +147,13 @@ export const MUSIC_MESSAGES = {
   fewFans: 'This venue only books acts with a bigger following.',
   noVenue: 'That booking is no longer available.',
   rehearsed: 'You have already rehearsed this month.',
+  hasBand: 'You are already in a band.',
+  noBand: 'You are not in a band.',
+  hasManager: 'You already have a manager.',
+  noManager: 'You do not have a manager.',
+  fewFansManager: 'Managers take on acts with at least 500 fans.',
+  onTour: 'You are already on tour.',
+  fewFansTour: 'A tour needs at least 2,000 fans to sell tickets.',
 } as const;
 export type MusicBlock = keyof typeof MUSIC_MESSAGES;
 
@@ -205,7 +212,19 @@ function earn(
   params: Record<string, string> = {},
 ) {
   const into = c.finance?.checkingId ?? c.finance?.savingsId;
-  if (into && amount > 0n) receiveIncome(world, c.id, into, 'music', amount, kind, params);
+  if (!into || amount <= 0n) return;
+  receiveIncome(world, c.id, into, 'music', amount, kind, params);
+  // A manager takes their commission on everything the music earns.
+  const manager = c.career.music?.manager;
+  if (manager)
+    spend(
+      world,
+      c,
+      'agentFees',
+      applyPercent(amount, manager.commissionPct),
+      'tx.managerCommission',
+      { name: manager.name },
+    );
 }
 
 /** One genre is in fashion each year (seeded from the world, no stored state). */
@@ -515,17 +534,106 @@ export function rehearseLive(world: World, c: Character): number {
 const setlist = (m: MusicState) =>
   m.songs.filter((s) => s.status === 'recorded' || s.status === 'released').length;
 
+/** Band members take this share of ticket takings (they play too). */
+const BAND_SHARE = 30;
+
+export function bandBlock(world: World, c: Character): MusicBlock | null {
+  if (!isMusician(world, c)) return 'notMusician';
+  return read(c).band ? 'hasBand' : null;
+}
+
+/** Form a band with two musicians you meet: bigger, better shows, shared takings. */
+export function formBand(world: World, c: Character, name: string): void {
+  const block = bandBlock(world, c);
+  if (block) throw new MusicError(block);
+  const age = ageYears(world, c);
+  const members = meetPeople(world, c, 2, 'friend', [Math.max(18, age - 8), age + 8]);
+  for (const npc of members) changeSkill(world, npc, 'music', 300, 'music:band');
+  musicOf(c).band = {
+    name: name.trim(),
+    memberIds: members.map((n) => n.id),
+    memberNames: members.map((n) => `${n.identity.firstName} ${n.identity.lastName}`.trim()),
+  };
+  addBiography(world, c.id, 'work', 'bio.formedBand', { band: name.trim() });
+}
+
+export function leaveBand(c: Character): void {
+  if (!c.career.music?.band) throw new MusicError('noBand');
+  c.career.music.band = null;
+}
+
+export function managerBlock(world: World, c: Character): MusicBlock | null {
+  if (!isMusician(world, c)) return 'notMusician';
+  const m = read(c);
+  if (m.manager) return 'hasManager';
+  return m.fans < 500 ? 'fewFansManager' : null;
+}
+
+/** A manager (15% of music income) brings label interest and bigger venues sooner. */
+export function hireManager(world: World, c: Character): void {
+  const block = managerBlock(world, c);
+  if (block) throw new MusicError(block);
+  const [npc] = meetPeople(world, c, 1, 'colleague', [28, 60]);
+  if (!npc) return;
+  musicOf(c).manager = {
+    id: npc.id,
+    name: `${npc.identity.firstName} ${npc.identity.lastName}`.trim(),
+    commissionPct: 15,
+  };
+}
+
+export function fireManager(c: Character): void {
+  if (!c.career.music?.manager) throw new MusicError('noManager');
+  c.career.music.manager = null;
+}
+
+export function tourBlock(world: World, c: Character): MusicBlock | null {
+  if (!isMusician(world, c)) return 'notMusician';
+  const m = read(c);
+  if (m.tour) return 'onTour';
+  if (m.fans < 2_000) return 'fewFansTour';
+  return setlist(m) < 3 ? 'smallSetlist' : null;
+}
+
+/** A three-month tour: up to three shows a month at your best venues, played for you. */
+export function startTour(world: World, c: Character): void {
+  const block = tourBlock(world, c);
+  if (block) throw new MusicError(block);
+  musicOf(c).tour = { monthsLeft: 3, shows: 0, netMinor: 0n };
+}
+
+function tourMonth(world: World, c: Character, m: MusicState): void {
+  const tour = m.tour;
+  if (!tour) return;
+  for (let i = 0; i < 3; i++) {
+    const venue = [...m.venues].reverse().find((v) => !showBlock(world, c, v.id, true, true));
+    if (!venue) break;
+    const r = playShow(world, c, venue.id, true, true);
+    tour.shows += 1;
+    tour.netMinor += r.net;
+  }
+  changeStat(world, c, 'energy', -30, 'music:tour');
+  changeStat(world, c, 'stress', 15, 'music:tour');
+  tour.monthsLeft -= 1;
+  if (tour.monthsLeft <= 0) {
+    addNotification(world, 'work', 'ntf.tourDone', { shows: tour.shows }, 'career');
+    m.tour = null;
+  }
+}
+
 export function showBlock(
   world: World,
   c: Character,
   venueId: string,
   auto = false,
+  onTour = false,
 ): MusicBlock | null {
   if (!isMusician(world, c)) return 'notMusician';
   const m = read(c);
   const v = m.venues.find((x) => x.id === venueId);
   if (!v) return 'noVenue';
-  if (count(world, 'show') > 0) return 'showThisMonth';
+  // One show a month, except on tour (several, booked for you).
+  if (!onTour && count(world, 'show') > 0) return 'showThisMonth';
   if (m.fans < v.minFans) return 'fewFans';
   if (setlist(m) < v.minSongs) return 'smallSetlist';
   if (!canPay(world, c, v.costMinor)) return 'cannotAfford';
@@ -533,8 +641,14 @@ export function showBlock(
 }
 
 /** Plays a booked show: costs up front, tickets after; fans and reputation follow how it went. */
-export function playShow(world: World, c: Character, venueId: string, auto = false) {
-  const block = showBlock(world, c, venueId, auto);
+export function playShow(
+  world: World,
+  c: Character,
+  venueId: string,
+  auto = false,
+  onTour = false,
+) {
+  const block = showBlock(world, c, venueId, auto, onTour);
   if (block) throw new MusicError(block);
   const m = musicOf(c);
   const v = m.venues.find((x) => x.id === venueId);
@@ -548,15 +662,25 @@ export function playShow(world: World, c: Character, venueId: string, auto = fal
   const { satisfaction, crowd } = withRng(world, 'career', (rng) => ({
     satisfaction: clamp(
       Math.floor(m.prep * 0.4 + c.skills.music / 30 + c.skills.socializing / 50) +
+        (m.band ? 10 : 0) +
         rng.range(-15, 15),
       0,
       100,
     ),
     crowd: rng.range(25, 60),
   }));
-  const attendance = Math.min(v.capacity, Math.floor((v.capacity * crowd) / 100 + m.fans / 20));
+  // A band draws a bigger crowd (and shares the takings).
+  const bandBoost = m.band ? 130 : 100;
+  const attendance = Math.min(
+    v.capacity,
+    Math.floor((((v.capacity * crowd) / 100 + m.fans / 20) * bandBoost) / 100),
+  );
   const takings = v.ticketMinor * BigInt(attendance);
   earn(world, c, takings, 'tx.ticketSales', { venue: v.venue });
+  if (m.band)
+    spend(world, c, 'bandShares', applyPercent(takings, BAND_SHARE), 'tx.bandShare', {
+      band: m.band.name,
+    });
   m.fans = Math.min(100_000_000, m.fans + Math.floor((attendance * satisfaction) / 150));
   m.prep = Math.max(20, m.prep - 30);
   c.career.reputation = clamp(c.career.reputation + Math.floor((satisfaction - 40) / 4), 0, 1000);
@@ -613,7 +737,8 @@ function refreshVenues(world: World, c: Character, m: MusicState): void {
   const rng = new Rng(world.rng.career);
   const med = median(world, c);
   const kinds = (['cafe', 'club', 'festival', 'theatre', 'arena'] as const).filter(
-    (k) => m.fans >= VENUES[k].minFans / 2,
+    // A manager books bigger rooms sooner.
+    (k) => m.fans >= VENUES[k].minFans / (m.manager ? 4 : 2),
   );
   m.venues = kinds.slice(-3).map((kind) => {
     const v = VENUES[kind];
@@ -707,7 +832,7 @@ export function processMusic(world: World, c: Character): void {
   if (
     !m.label &&
     !m.labelOffer &&
-    (m.fans >= 2_000 || charted) &&
+    (m.fans >= (m.manager ? 1_000 : 2_000) || charted) &&
     withRng(world, 'career', (rng) => rng.int(100) < 30)
   ) {
     const rng = new Rng(world.rng.career);
@@ -723,7 +848,8 @@ export function processMusic(world: World, c: Character): void {
     addNotification(world, 'work', 'ntf.labelOffer', { label: m.labelOffer.name }, 'career');
   }
   refreshVenues(world, c, m);
-  if (m.autopilot) autopilot(world, c, m);
+  if (m.tour) tourMonth(world, c, m);
+  else if (m.autopilot) autopilot(world, c, m);
 }
 
 export function projectMusic(world: World, c: Character) {
@@ -737,6 +863,12 @@ export function projectMusic(world: World, c: Character) {
     critics: m.critics,
     prep: m.prep,
     autopilot: m.autopilot,
+    band: m.band ?? null,
+    manager: m.manager ?? null,
+    tour: m.tour ?? null,
+    bandReason: reason(bandBlock(world, c)),
+    managerReason: reason(managerBlock(world, c)),
+    tourReason: reason(tourBlock(world, c)),
     trend: musicTrend(world),
     writesLeft: Math.max(0, WRITES_PER_MONTH - count(world, 'write')),
     newSongReason: reason(newSongBlock(world, c)),

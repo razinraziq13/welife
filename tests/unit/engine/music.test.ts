@@ -181,3 +181,28 @@ describe('music: catalogue and pace', () => {
     expect(released.length).toBe(1);
   }, 180_000);
 });
+
+describe('music depth: band, manager, tour (E102)', () => {
+  it('a band shares takings, a manager takes commission, a tour plays shows for you', () => {
+    let state = writeAndRecord(musician('music-crew'), 'Silver Streets');
+    state = rest(advanceMonths(state, 1));
+    for (const t of ['Paper Rain', 'Quiet Echoes'])
+      state = rest(advanceMonths(writeAndRecord(state, t), 1));
+    // Too few fans for a manager or a tour yet: each explains why.
+    expect(run(state, { type: 'hireManager' }).outcome.status).toBe('rejected');
+    expect(run(state, { type: 'startTour' }).outcome.status).toBe('rejected');
+    state = checked(state, { type: 'formBand', name: 'The Lanterns' }).state;
+    expect(music(state)?.band?.memberNames).toHaveLength(2);
+    const m = playerOf(state).career.music;
+    if (!m) throw new Error('no music');
+    m.fans = 5_000;
+    state = checked(state, { type: 'hireManager' }).state;
+    state = checked(state, { type: 'startTour' }).state;
+    for (let i = 0; i < 3; i++) state = advanceMonths(state, 1);
+    const journal = Object.values(state.world.ledger.journal).flat();
+    expect(journal.some((t) => t.kind === 'tx.bandShare')).toBe(true);
+    expect(journal.some((t) => t.kind === 'tx.managerCommission')).toBe(true);
+    expect(music(state)?.tour).toBeNull();
+    expect(checkLedger(state.world)).toEqual([]);
+  }, 240_000);
+});

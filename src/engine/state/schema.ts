@@ -515,6 +515,31 @@ export const MusicSchema = z
       .max(10),
     /** Simulated mode: routine writing, recording, releasing and shows run themselves. */
     autopilot: z.boolean(),
+    /** Your band (decision E102): members are NPC musicians. Optional for older saves. */
+    band: z
+      .object({
+        name: z.string().min(1).max(40),
+        memberIds: z.array(Id).max(4),
+        memberNames: z.array(z.string().max(80)).max(4),
+      })
+      .strict()
+      .nullable()
+      .optional(),
+    manager: z
+      .object({ id: Id, name: z.string().max(80), commissionPct: Percent })
+      .strict()
+      .nullable()
+      .optional(),
+    /** A tour in progress: months left and its running net result. */
+    tour: z
+      .object({
+        monthsLeft: z.number().int().min(0).max(6),
+        shows: z.number().int().min(0),
+        netMinor: Minor,
+      })
+      .strict()
+      .nullable()
+      .optional(),
   })
   .strict();
 export type MusicState = z.infer<typeof MusicSchema>;

@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Music depth.** Form a band with two musicians (bigger crowds and better shows; the band takes 30% of ticket takings), hire a manager once you have 500 fans (15% of music income, label interest and bigger venues sooner), and go on a three-month tour once you have 2,000 fans (up to three shows a month booked for you, at a cost to energy and stress).
+
 - **Sport depth.** Playing tired can injure you (out one to four months; rest speeds recovery). In-form starters can get a bid from a stronger club: accept for a two-year contract paying 25% more, or stay. Once a year the fittest, in-form athletes are called up to the national team for an international tournament.
 
 - **Social media on the Life tab.** Your accounts now show as a feed on Life ("Your socials"): post in a style and see each post's caption, likes, comments and a fan's reply. Strong posts on trending topics can go viral and bring five times the followers. Accounts and brand deals are still managed on the Social media page.

@@ -64,6 +64,11 @@ import {
   playShow,
   recordSong,
   rehearseLive,
+  formBand,
+  leaveBand,
+  hireManager,
+  fireManager,
+  startTour,
   releaseMusic,
   startSong,
   writeSession,
@@ -407,6 +412,11 @@ export const CommandSchema = z.discriminatedUnion('type', [
     promo: z.enum(PROMO_LEVELS),
   }),
   command('rehearseLive', {}),
+  command('formBand', { name: z.string().trim().min(1).max(40) }),
+  command('leaveBand', {}),
+  command('hireManager', {}),
+  command('fireManager', {}),
+  command('startTour', {}),
   command('playShow', { venueId: EntityId }),
   command('answerLabel', { response: z.enum(['accept', 'negotiate', 'decline']) }),
   command('setMusicAutopilot', { value: z.boolean() }),
@@ -917,6 +927,21 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
       return done('out.music.released', {
         title: releaseMusic(world, player, cmd.title, cmd.kind, cmd.viaLabel, cmd.promo).title,
       });
+    case 'formBand':
+      formBand(world, player, cmd.name);
+      return done('out.music.bandFormed', { band: cmd.name });
+    case 'leaveBand':
+      leaveBand(player);
+      return done('out.music.bandLeft');
+    case 'hireManager':
+      hireManager(world, player);
+      return done('out.music.managerHired');
+    case 'fireManager':
+      fireManager(player);
+      return done('out.music.managerFired');
+    case 'startTour':
+      startTour(world, player);
+      return done('out.music.tourStarted');
     case 'rehearseLive':
       return done('out.music.rehearsed', { prep: rehearseLive(world, player) });
     case 'playShow': {
