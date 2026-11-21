@@ -36,6 +36,7 @@ export const enLegacy: Record<string, string> = {
   'ntf.backlash': 'A post on {platform} caused a backlash.',
   'ntf.followerMilestone': 'You reached {followers} followers on {platform}.',
   'ntf.sponsorOffer': '{brand} wants to sponsor your {platform} account.',
+  'ntf.viral': 'Your {platform} post went viral!',
 
   // Biography
   'bio.tookOver': 'Took over the family story from {name} (generation {generation}).',

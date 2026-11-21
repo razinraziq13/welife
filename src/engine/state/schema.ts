@@ -1896,6 +1896,24 @@ export const MediaProfileSchema = z
       .strict()
       .nullable(),
     closedTick: Tick.nullable(),
+    /** Your recent posts, newest last (decision E100); optional for older saves. */
+    feed: z
+      .array(
+        z
+          .object({
+            tick: Tick,
+            style: z.enum(MEDIA_STYLES),
+            caption: z.string().max(140),
+            likes: z.number().int().min(0),
+            comments: z.number().int().min(0),
+            gain: z.number().int(),
+            viral: z.boolean(),
+            topComment: z.string().max(140),
+          })
+          .strict(),
+      )
+      .max(20)
+      .optional(),
   })
   .strict();
 export type MediaProfile = z.infer<typeof MediaProfileSchema>;

@@ -374,6 +374,17 @@ test.describe('legacy, media, achievements and the event creator (M7-M8)', () =>
     await page.getByRole('button', { name: 'Informative', exact: true }).first().click();
     await expect(page.getByText(/Posted\.|backfired/)).toBeVisible();
     await expectAccessible(page);
+    // The Life tab shows the account as a feed and can post too (E100).
+    await page.goto(`/play/${saveId}/life`);
+    await expect(page.getByRole('heading', { level: 2, name: 'Your socials' })).toBeVisible();
+    const posts = page.getByRole('list', { name: /^Posts on / }).getByRole('listitem');
+    await expect(posts).toHaveCount(1);
+    await page
+      .getByRole('group', { name: 'Post style' })
+      .getByRole('button', { name: 'Funny' })
+      .click();
+    await expect(posts).toHaveCount(2);
+    await expectAccessible(page);
 
     await page.goto(`/play/${saveId}/legacy`);
     await expect(page.getByRole('heading', { level: 1, name: 'Legacy' })).toBeVisible();

@@ -8,7 +8,7 @@ import { lineOfSuccession, successionRule } from './legacy/succession';
 import { lifeSummary, type LifeSummary, type LifeTitle } from './legacy/summary';
 import { currencyFor } from './economy/finance';
 import { netWorthIn } from './economy/fx';
-import { MEDIA_STYLES } from './state/schema';
+import { MEDIA_STYLES, type MediaProfile } from './state/schema';
 import { NICHES, PLATFORMS, profilesOf } from './media/media';
 import { getInstitutions } from './world/institutions';
 import { getCountry } from './world/countries';
@@ -88,7 +88,7 @@ export interface MediaView {
   reason: string | null;
   platforms: { id: string; name: string; format: string; hours: number; monetiseAt: number }[];
   niches: { id: string; name: string; trendBp: number }[];
-  styles: readonly string[];
+  styles: typeof MEDIA_STYLES;
   profiles: {
     id: string;
     platformId: string;
@@ -103,6 +103,8 @@ export interface MediaView {
     earningsMinor: bigint;
     sponsor: { brand: string; monthlyMinor: bigint; untilTick: number } | null;
     offer: { brand: string; monthlyMinor: bigint; months: number; expiresTick: number } | null;
+    /** Recent posts, newest first (E100). */
+    feed: NonNullable<MediaProfile['feed']>;
   }[];
 }
 
@@ -328,6 +330,7 @@ export function projectMedia(world: World, player: Character): MediaView {
       lastPostTick: p.lastPostTick,
       earningsMinor: p.earningsMinor,
       sponsor: p.sponsor,
+      feed: [...(p.feed ?? [])].reverse(),
       offer: p.offer && p.offer.expiresTick >= world.tick ? p.offer : null,
     })),
   };

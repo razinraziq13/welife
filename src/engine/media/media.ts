@@ -93,6 +93,52 @@ const BRANDS = [
 
 export const MAX_PROFILES = 3;
 
+/** What a post says, by style (topic name filled in). Fictional, light-hearted. */
+const CAPTIONS: Record<MediaStyle, readonly string[]> = {
+  casual: [
+    'A slow Sunday and some {topic} 🌿',
+    'Just sharing a little {topic} today',
+    'Quick {topic} update from me',
+  ],
+  informative: [
+    'Five things I wish I knew about {topic}',
+    'A beginner’s guide to {topic}',
+    '{topic}: the myths, checked',
+  ],
+  funny: [
+    'When {topic} goes exactly as planned 😂',
+    'Rating my worst {topic} moments',
+    'POV: you tried {topic} for one week',
+  ],
+  personal: [
+    'Why {topic} matters so much to me',
+    'An honest year of {topic}',
+    'Behind the scenes of my {topic} life',
+  ],
+  controversial: [
+    'Unpopular opinion: {topic} is overrated',
+    'Everyone is wrong about {topic}',
+    'I said what I said about {topic}',
+  ],
+};
+const FAN_COMMENTS: Record<MediaStyle, readonly string[]> = {
+  casual: ['Love this vibe!', 'So calming to watch', 'More of this please'],
+  informative: [
+    'Saving this for later',
+    'This was so helpful, thank you',
+    'Finally someone explains it properly',
+  ],
+  funny: ['I cannot stop laughing 😂', 'This is literally me', 'Sending this to everyone'],
+  personal: ['Thank you for being so open ❤️', 'This made my day', 'Needed to hear this today'],
+  controversial: [
+    'Hard disagree, but respect',
+    'Finally someone said it',
+    'This comment section is wild',
+  ],
+};
+const BACKLASH_COMMENTS = ['This aged badly', 'Unfollowing, sorry', 'Not your best take'];
+const FEED_SIZE = 20;
+
 export type MediaRejection =
   | 'tooYoung'
   | 'unknownPlatform'
@@ -235,7 +281,40 @@ export function post(
   } else {
     profile.trust = clamp(profile.trust + rule.trust, 0, 1000);
   }
+  // Sometimes a post takes off: a strong post on a trending topic goes viral.
+  const viral =
+    !backlash &&
+    withRng(
+      world,
+      'media',
+      (rng) => rng.int(1000) < 15 + Math.floor(quality / 25) + Math.floor((trend - 10_000) / 200),
+    );
+  if (viral) {
+    gain = gain * 5 + 50;
+    addNotification(world, 'media', 'ntf.viral', { platform: platform.name }, 'media', profile.id);
+  }
   profile.followers = Math.max(0, profile.followers + gain);
+  const topic = niche?.name.toLowerCase() ?? 'life';
+  const reach = Math.max(10, profile.followers + Math.max(0, gain));
+  const { caption, comment, likesPct } = withRng(world, 'media', (rng) => ({
+    caption: rng.pick(CAPTIONS[style]).replace('{topic}', topic),
+    comment: backlash ? rng.pick(BACKLASH_COMMENTS) : rng.pick(FAN_COMMENTS[style]),
+    likesPct: rng.range(3, 9) * (viral ? 4 : 1),
+  }));
+  const likes = Math.floor((reach * likesPct * profile.engagementBp) / 30_000);
+  profile.feed = [
+    ...(profile.feed ?? []),
+    {
+      tick: world.tick,
+      style,
+      caption,
+      likes,
+      comments: Math.floor(likes / 12),
+      gain,
+      viral,
+      topComment: comment,
+    },
+  ].slice(-FEED_SIZE);
   profile.engagementBp = clamp(
     Math.floor(
       (profile.engagementBp * 9 + (300 + rule.engagement * 10 + Math.floor(quality / 10))) / 10,
