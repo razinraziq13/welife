@@ -258,7 +258,9 @@ export const CommandSchema = z.discriminatedUnion('type', [
   }),
   // Education (Milestone 3)
   command('setStudyEffort', { value: z.enum(STUDY_EFFORTS) }),
-  command('academicAction', { action: z.enum(['coursework', 'groupProject', 'meetLecturer', 'research', 'internship']) }),
+  command('academicAction', {
+    action: z.enum(['coursework', 'groupProject', 'meetLecturer', 'research', 'internship']),
+  }),
   command('joinClub', { clubId: z.string().min(1).max(40) }),
   command('leaveClub', { clubId: z.string().min(1).max(40) }),
   command('applyStudy', {

@@ -106,19 +106,29 @@ function EducationCard({ view }: { view: GameView }) {
             <section className="rounded-xl border border-border p-3" aria-label="Academic progress">
               <h3 className="font-semibold text-fg">Coursework and academic progression</h3>
               <p className="mt-1 text-sm text-muted">
-                Semester {current.academic.semester} · {current.academic.credits} / {current.academic.requiredCredits} credits earned
+                Semester {current.academic.semester} · {current.academic.credits} /{' '}
+                {current.academic.requiredCredits} credits earned
               </p>
               <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                <div className="rounded-lg bg-surface-2 p-2">Coursework: {Math.round(current.academic.coursework / 10)}%</div>
-                <div className="rounded-lg bg-surface-2 p-2">Project: {Math.round(current.academic.project / 10)}%</div>
+                <div className="rounded-lg bg-surface-2 p-2">
+                  Coursework: {Math.round(current.academic.coursework / 10)}%
+                </div>
+                <div className="rounded-lg bg-surface-2 p-2">
+                  Project: {Math.round(current.academic.project / 10)}%
+                </div>
                 {current.level === 'master' && (
-                  <div className="rounded-lg bg-surface-2 p-2">Research: {Math.round(current.academic.research / 10)}%</div>
+                  <div className="rounded-lg bg-surface-2 p-2">
+                    Research: {Math.round(current.academic.research / 10)}%
+                  </div>
                 )}
-                <div className="rounded-lg bg-surface-2 p-2">Internship: {current.academic.internshipMonths} months</div>
+                <div className="rounded-lg bg-surface-2 p-2">
+                  Internship: {current.academic.internshipMonths} months
+                </div>
               </div>
               <p className="mt-3 text-xs text-muted">
-                Every semester awards 24 credits only when assessments pass. A failed semester can be repeated;
-                your completed credits remain. Bachelor's projects and master's research must meet graduation requirements.
+                Every semester awards 24 credits only when assessments pass. A failed semester can
+                be repeated; your completed credits remain. Bachelor's projects and master's
+                research must meet graduation requirements.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {current.academic.actions.map((a) => (
@@ -130,9 +140,15 @@ function EducationCard({ view }: { view: GameView }) {
                     reason={a.reason}
                     onAct={() => void send({ type: 'academicAction', action: a.id })}
                   >
-                    {{ coursework: 'Complete coursework', groupProject: 'Work on group project',
-                       meetLecturer: 'Consult lecturer', research: 'Conduct research',
-                       internship: 'Internship placement' }[a.id]}
+                    {
+                      {
+                        coursework: 'Complete coursework',
+                        groupProject: 'Work on group project',
+                        meetLecturer: 'Consult lecturer',
+                        research: 'Conduct research',
+                        internship: 'Internship placement',
+                      }[a.id]
+                    }
                   </ActionButton>
                 ))}
               </div>
@@ -141,7 +157,10 @@ function EducationCard({ view }: { view: GameView }) {
                   <h4 className="text-sm font-semibold text-fg">Recent module assessments</h4>
                   <ul className="mt-1 space-y-1 text-sm">
                     {current.academic.modules.slice(-4).map((m, i) => (
-                      <li key={`${m.semester}:${m.title}:${i}`} className="flex justify-between gap-2">
+                      <li
+                        key={`${m.semester}:${m.title}:${i}`}
+                        className="flex justify-between gap-2"
+                      >
                         <span>{m.title}</span>
                         <span className={m.passed ? 'text-fg' : 'text-muted'}>
                           {m.passed ? 'Passed' : 'Resit'} · {Math.round(m.grade / 10)}%
@@ -391,9 +410,14 @@ function FurtherStudyCard({ view }: { view: GameView }) {
           <label htmlFor="higher-ed-institution-kind" className="text-sm font-medium text-fg">
             Institution
           </label>
-          <select id="higher-ed-institution-kind" value={institutionKind}
-            onChange={(e) => { setInstitutionKind(e.target.value === 'private' ? 'private' : 'public'); }}
-            className="h-11 rounded-xl border border-border bg-surface px-3 text-fg">
+          <select
+            id="higher-ed-institution-kind"
+            value={institutionKind}
+            onChange={(e) => {
+              setInstitutionKind(e.target.value === 'private' ? 'private' : 'public');
+            }}
+            className="h-11 rounded-xl border border-border bg-surface px-3 text-fg"
+          >
             <option value="public">Public (lower tuition)</option>
             <option value="private">Private (higher tuition)</option>
           </select>
@@ -403,7 +427,12 @@ function FurtherStudyCard({ view }: { view: GameView }) {
           disabled={disabled || levelOption?.block !== null}
           onClick={() => {
             if (levelOption)
-              void send({ type: 'applyStudy', programId: selected.id, level: levelOption.level, kind: institutionKind });
+              void send({
+                type: 'applyStudy',
+                programId: selected.id,
+                level: levelOption.level,
+                kind: institutionKind,
+              });
           }}
         >
           Apply

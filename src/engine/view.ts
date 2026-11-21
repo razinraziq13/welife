@@ -204,8 +204,17 @@ export interface EducationView {
       project: number;
       research: number;
       internshipMonths: number;
-      modules: { semester: number; title: string; grade: number; credits: number; passed: boolean }[];
-      actions: { id: 'coursework' | 'groupProject' | 'meetLecturer' | 'research' | 'internship'; reason: string | null }[];
+      modules: {
+        semester: number;
+        title: string;
+        grade: number;
+        credits: number;
+        passed: boolean;
+      }[];
+      actions: {
+        id: 'coursework' | 'groupProject' | 'meetLecturer' | 'research' | 'internship';
+        reason: string | null;
+      }[];
     } | null;
   } | null;
   effort: Character['education']['effort'];
@@ -645,20 +654,26 @@ function educationView(world: World, c: Character): EducationView {
           years: current.years,
           grade: current.grade,
           scholarshipPercent: current.scholarshipPercent,
-          academic: current.stage === 'tertiary' ? (() => {
-            const a = current.academic;
-            return {
-              semester: a?.semester ?? current.yearsCompleted * 2 + 1,
-              credits: a?.credits ?? current.yearsCompleted * 48,
-              requiredCredits: current.years * 48,
-              coursework: a?.coursework ?? current.grade,
-              project: a?.project ?? 0,
-              research: a?.research ?? 0,
-              internshipMonths: a?.internshipMonths ?? 0,
-              modules: (a?.modules ?? []).slice(-8),
-              actions: ACADEMIC_ACTIONS.map((id) => ({ id, reason: academicActionBlock(world, c, id) })),
-            };
-          })() : null,
+          academic:
+            current.stage === 'tertiary'
+              ? (() => {
+                  const a = current.academic;
+                  return {
+                    semester: a?.semester ?? current.yearsCompleted * 2 + 1,
+                    credits: a?.credits ?? current.yearsCompleted * 48,
+                    requiredCredits: current.years * 48,
+                    coursework: a?.coursework ?? current.grade,
+                    project: a?.project ?? 0,
+                    research: a?.research ?? 0,
+                    internshipMonths: a?.internshipMonths ?? 0,
+                    modules: (a?.modules ?? []).slice(-8),
+                    actions: ACADEMIC_ACTIONS.map((id) => ({
+                      id,
+                      reason: academicActionBlock(world, c, id),
+                    })),
+                  };
+                })()
+              : null,
         }
       : null,
     effort: c.education.effort,

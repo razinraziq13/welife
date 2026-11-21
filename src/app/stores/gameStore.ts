@@ -193,7 +193,10 @@ export const useGameStore = create<GameState>()((set, get) => ({
         if (view?.lifeStatus !== 'alive' || view.pendingEvent) break;
         // Higher-education offers expire; don't skip a decision while advancing four months.
         if (studyOffers().length > 0 && i === 0) {
-          set({ message: 'A study offer needs an answer. See Career, Study.', messageKind: 'success' });
+          set({
+            message: 'A study offer needs an answer. See Career, Study.',
+            messageKind: 'success',
+          });
           break;
         }
         const outcome = await get().send({ type: 'advance', expectedTick: view.tick });
@@ -212,7 +215,10 @@ export const useGameStore = create<GameState>()((set, get) => ({
           break;
         }
         if (studyOffers().some((id) => !knownStudy.has(id))) {
-          set({ message: 'A study offer arrived. See Career, Study to answer it.', messageKind: 'success' });
+          set({
+            message: 'A study offer arrived. See Career, Study to answer it.',
+            messageKind: 'success',
+          });
           break;
         }
       }

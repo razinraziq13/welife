@@ -162,18 +162,31 @@ function enroll(
 
 /** All tertiary programmes share a bounded, save-compatible academic state. */
 function newAcademic(): NonNullable<Enrollment['academic']> {
-  return { semester: 1, credits: 0, coursework: 300, project: 0, research: 0,
-    internshipMonths: 0, lastActionTick: null, lastAssessmentTick: 0, modules: [] };
+  return {
+    semester: 1,
+    credits: 0,
+    coursework: 300,
+    project: 0,
+    research: 0,
+    internshipMonths: 0,
+    lastActionTick: null,
+    lastAssessmentTick: 0,
+    modules: [],
+  };
 }
 
 /** Existing saves that lack academic details resume with earned time credited. */
 export function academicOf(current: Enrollment): NonNullable<Enrollment['academic']> {
   if (!current.academic) {
     const completed = current.yearsCompleted * 48;
-    current.academic = { ...newAcademic(), semester: current.yearsCompleted * 2 + 1,
-      credits: completed, coursework: current.grade,
+    current.academic = {
+      ...newAcademic(),
+      semester: current.yearsCompleted * 2 + 1,
+      credits: completed,
+      coursework: current.grade,
       project: current.yearsCompleted > 0 ? current.grade : 0,
-      research: current.yearsCompleted > 0 ? current.grade : 0 };
+      research: current.yearsCompleted > 0 ? current.grade : 0,
+    };
   }
   return current.academic;
 }
@@ -263,7 +276,11 @@ function updateStudies(world: World, c: Character): void {
   changeStat(world, c, 'intelligence', Math.floor((2 * percent) / 100), 'school');
   if (current.stage === 'tertiary') {
     const academic = academicOf(current);
-    academic.coursework = clamp(academic.coursework + Math.floor((current.grade - academic.coursework) / 7), 0, 1000);
+    academic.coursework = clamp(
+      academic.coursework + Math.floor((current.grade - academic.coursework) / 7),
+      0,
+      1000,
+    );
     academic.project = clamp(academic.project + (current.level === 'diploma' ? 7 : 13), 0, 1000);
     if (current.level === 'master') academic.research = clamp(academic.research + 15, 0, 1000);
   }
@@ -297,11 +314,21 @@ function assessSemester(world: World, current: Enrollment): void {
   if (a.lastAssessmentTick === world.tick) return;
   a.lastAssessmentTick = world.tick;
   const tasks = semesterModules(current.programId, current.level, a.semester);
-  const result = clamp(Math.floor((current.grade * 7 + a.coursework * 3) / 10)
-    + withRng(world, 'school', (rng) => rng.range(-50, 50)), 0, 1000);
+  const result = clamp(
+    Math.floor((current.grade * 7 + a.coursework * 3) / 10) +
+      withRng(world, 'school', (rng) => rng.range(-50, 50)),
+    0,
+    1000,
+  );
   const passed = result >= 350;
   for (const m of tasks) {
-    a.modules.push({ semester: a.semester, title: m.name, grade: result, credits: passed ? m.credits : 0, passed });
+    a.modules.push({
+      semester: a.semester,
+      title: m.name,
+      grade: result,
+      credits: passed ? m.credits : 0,
+      passed,
+    });
   }
   a.modules = a.modules.slice(-48);
   if (passed) {
@@ -382,7 +409,8 @@ function decideApplications(world: World, c: Character): void {
     const threshold =
       program.selectivity +
       (app.level === 'master' ? 80 : app.level === 'diploma' ? -120 : 0) +
-      difficulty + (app.kind === 'private' ? -40 : 0);
+      difficulty +
+      (app.kind === 'private' ? -40 : 0);
     app.score = score;
     if (score >= threshold) {
       app.status = 'accepted';
@@ -434,15 +462,17 @@ function startSchoolYear(world: World, c: Character, isPlayer: boolean): void {
       if (age >= rules.primaryStartAge) finish(world, c, 'completed', null);
     } else {
       const passMark = current.stage === 'tertiary' ? 350 : 300;
-      const academicReady = current.stage !== 'tertiary' ||
+      const academicReady =
+        current.stage !== 'tertiary' ||
         (academicOf(current).credits >= (current.yearsCompleted + 1) * 48 &&
           (current.yearsCompleted + 1 < current.years ||
-            (current.level === 'diploma' || academicOf(current).project >= 100) &&
-            (current.level !== 'master' || academicOf(current).research >= 150)));
-      const passed = academicReady && (
-        current.stage === 'primary' ||
-        current.grade >= passMark ||
-        c.flags['school.repeated'] === true);
+            ((current.level === 'diploma' || academicOf(current).project >= 100) &&
+              (current.level !== 'master' || academicOf(current).research >= 150))));
+      const passed =
+        academicReady &&
+        (current.stage === 'primary' ||
+          current.grade >= passMark ||
+          c.flags['school.repeated'] === true);
       if (passed) {
         current.yearsCompleted += 1;
         c.flags['school.repeated'] = false;
@@ -723,7 +753,8 @@ export function applicationEligibility(
   if (q.includes(`${level}:${programId}`)) return 'alreadyQualified';
   if (level === 'master' && !q.includes(`bachelor:${programId}`)) return 'missingPrerequisite';
   if (level === 'bachelor' && !q.includes(`diploma:${programId}`)) return 'missingPrerequisite';
-  if (level === 'diploma' && !q.includes('upperSecondary') && !finalSchoolYear) return 'notEligible';
+  if (level === 'diploma' && !q.includes('upperSecondary') && !finalSchoolYear)
+    return 'notEligible';
   if (current?.stage === 'tertiary') return 'notEligible';
   const open = c.education.applications.filter(
     (a) => a.status === 'pending' || a.status === 'accepted',
@@ -779,11 +810,20 @@ export function respondToStudyOffer(
     return;
   }
   // Revalidate at enrollment to prevent expired prerequisites or old offers bypassing the engine.
-  const required = app.level === 'master' ? `bachelor:${app.programId}` :
-    app.level === 'bachelor' ? `diploma:${app.programId}` : 'upperSecondary';
-  if (!c.education.qualifications.includes(required) &&
-      !(app.level === 'diploma' && c.education.current?.stage === 'upperSecondary' &&
-        c.education.current.yearsCompleted >= c.education.current.years - 1))
+  const required =
+    app.level === 'master'
+      ? `bachelor:${app.programId}`
+      : app.level === 'bachelor'
+        ? `diploma:${app.programId}`
+        : 'upperSecondary';
+  if (
+    !c.education.qualifications.includes(required) &&
+    !(
+      app.level === 'diploma' &&
+      c.education.current?.stage === 'upperSecondary' &&
+      c.education.current.yearsCompleted >= c.education.current.years - 1
+    )
+  )
     throw new EducationError('missingPrerequisite', CLUB_MESSAGES.missingPrerequisite);
   if (c.education.current && c.education.current.stage !== 'tertiary')
     finish(world, c, 'left', null);

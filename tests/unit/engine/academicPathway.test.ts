@@ -25,8 +25,12 @@ describe('course-locked education progression', () => {
     const state = newState({ seed: 'academic-gates' });
     const c = playerOf(state);
     c.education.qualifications = ['upperSecondary'];
-    expect(run(state, { type: 'applyStudy', programId: 'medicine', level: 'bachelor' }).outcome.status).toBe('rejected');
-    expect(run(state, { type: 'applyStudy', programId: 'medicine', level: 'diploma' }).outcome.status).toBe('applied');
+    expect(
+      run(state, { type: 'applyStudy', programId: 'medicine', level: 'bachelor' }).outcome.status,
+    ).toBe('rejected');
+    expect(
+      run(state, { type: 'applyStudy', programId: 'medicine', level: 'diploma' }).outcome.status,
+    ).toBe('applied');
   });
 
   it('completes academic activities, limits them monthly and retains progress in the world', () => {
@@ -50,7 +54,11 @@ describe('course-locked education progression', () => {
     };
     state = run(state, { type: 'academicAction', action: 'coursework' }).state;
     expect(playerOf(state).education.current?.academic?.coursework).toBeGreaterThan(300);
-    expect(run(state, { type: 'academicAction', action: 'groupProject' }).outcome.status).toBe('rejected');
-    expect(run(state, { type: 'academicAction', action: 'research' }).outcome.status).toBe('rejected');
+    expect(run(state, { type: 'academicAction', action: 'groupProject' }).outcome.status).toBe(
+      'rejected',
+    );
+    expect(run(state, { type: 'academicAction', action: 'research' }).outcome.status).toBe(
+      'rejected',
+    );
   });
 });

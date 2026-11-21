@@ -467,24 +467,53 @@ export interface SemesterModule {
 const MODULE_TOPICS: Partial<Record<SkillKey, readonly string[]>> = {
   technology: ['Computing Foundations', 'Software Design', 'Digital Systems', 'Applied Computing'],
   logic: ['Analytical Reasoning', 'Problem Solving', 'Methods and Models', 'Advanced Analysis'],
-  science: ['Scientific Foundations', 'Laboratory Reasoning', 'Research Methods', 'Applied Science'],
-  reading: ['Academic Communication', 'Critical Reading', 'Evidence and Argument', 'Literature Review'],
-  business: ['Business Foundations', 'Operations', 'Finance and Strategy', 'Organizational Studies'],
+  science: [
+    'Scientific Foundations',
+    'Laboratory Reasoning',
+    'Research Methods',
+    'Applied Science',
+  ],
+  reading: [
+    'Academic Communication',
+    'Critical Reading',
+    'Evidence and Argument',
+    'Literature Review',
+  ],
+  business: [
+    'Business Foundations',
+    'Operations',
+    'Finance and Strategy',
+    'Organizational Studies',
+  ],
   art: ['Design Principles', 'Creative Practice', 'Portfolio Development', 'Studio Research'],
   music: ['Music Theory', 'Composition', 'Performance Studies', 'Music Research'],
   care: ['Professional Practice', 'Community Needs', 'Care Coordination', 'Ethical Practice'],
   socializing: ['Communication', 'Group Dynamics', 'Collaboration', 'Professional Relations'],
   fitness: ['Movement Science', 'Coaching', 'Performance Analysis', 'Sport Research'],
   craft: ['Practical Methods', 'Technical Workshop', 'Project Practice', 'Applied Techniques'],
-  leadership: ['Team Leadership', 'Organizational Practice', 'Project Coordination', 'Strategic Leadership'],
+  leadership: [
+    'Team Leadership',
+    'Organizational Practice',
+    'Project Coordination',
+    'Strategic Leadership',
+  ],
 };
-export function semesterModules(programId: string, level: ProgramLevel, semester: number): SemesterModule[] {
+export function semesterModules(
+  programId: string,
+  level: ProgramLevel,
+  semester: number,
+): SemesterModule[] {
   const program = getProgram(programId);
   const tier = level === 'diploma' ? 'Foundations' : level === 'bachelor' ? 'Applied' : 'Advanced';
   return [0, 1].map((slot) => {
     const key = program.skills[(semester * 2 + slot) % program.skills.length] ?? 'reading';
     const titles = MODULE_TOPICS[key] ?? ['Professional Studies'];
     const name = titles[(semester - 1 + slot) % titles.length] ?? 'Professional Studies';
-    return { id: `${programId}:${level}:${semester}:${slot}`, name: `${tier} ${name}`, skill: key, credits: 12 };
+    return {
+      id: `${programId}:${level}:${semester}:${slot}`,
+      name: `${tier} ${name}`,
+      skill: key,
+      credits: 12,
+    };
   });
 }
