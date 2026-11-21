@@ -86,7 +86,7 @@ export const enLife: Record<string, string> = {
   'eduBlock.notEligible': 'You do not meet the entry requirements yet.',
   'eduBlock.missingPrerequisite': 'Complete the diploma or degree in this same course first.',
   'eduBlock.alreadyQualified': 'You have already completed this course level.',
-  'out.academicAction': 'Academic activity completed: {action}.'
+  'out.academicAction': 'Academic activity completed: {action}.',
   'eduBlock.tooMany': 'At most four applications at once.',
   'eduBlock.alreadyApplied': 'Already applied.',
   'eduBlock.noOffer': 'No open offer.',
