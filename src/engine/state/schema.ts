@@ -584,6 +584,68 @@ export const CaseworkSchema = z
   .strict();
 export type Casework = z.infer<typeof CaseworkSchema>;
 
+export const SPORTS = ['football', 'basketball', 'tennis'] as const;
+export const MATCH_APPROACHES = ['safe', 'balanced', 'bold'] as const;
+export const SPORT_TRAINING = ['technical', 'tactical', 'recovery'] as const;
+
+const SportTeamSchema = z
+  .object({
+    name: z.string().min(1).max(60),
+    strength: Fixed,
+    played: z.number().int().min(0),
+    won: z.number().int().min(0),
+    drawn: z.number().int().min(0),
+    lost: z.number().int().min(0),
+    points: z.number().int().min(0),
+  })
+  .strict();
+
+export const SportSchema = z
+  .object({
+    sport: z.enum(SPORTS),
+    /** Your club (team sports), or null while trialling or for tennis. */
+    club: z.string().max(60).nullable(),
+    contractEndTick: Tick.nullable(),
+    role: z.enum(['reserve', 'rotation', 'starter']),
+    /** Recent form and match readiness, 0-100. */
+    form: Percent,
+    readiness: Percent,
+    approach: z.enum(MATCH_APPROACHES),
+    /** Simulated mode: training is chosen for you each month. */
+    autopilot: z.boolean(),
+    league: z.array(SportTeamSchema).max(10),
+    /** Month of the season, 0-based; a season is 8 months of fixtures. */
+    seasonMonth: z.number().int().min(0).max(12),
+    season: z
+      .object({
+        apps: z.number().int().min(0),
+        scored: z.number().int().min(0),
+        wins: z.number().int().min(0),
+      })
+      .strict(),
+    /** Tennis: ranking points and position among 100. */
+    rankingPoints: z.number().int().min(0),
+    lastResult: z.string().max(160).nullable(),
+    trialTick: Tick.nullable(),
+    record: z
+      .array(
+        z
+          .object({
+            year: z.number().int(),
+            sport: z.enum(SPORTS),
+            club: z.string().max(60),
+            finish: z.string().max(60),
+            apps: z.number().int().min(0),
+            scored: z.number().int().min(0),
+            trophy: z.boolean(),
+          })
+          .strict(),
+      )
+      .max(60),
+  })
+  .strict();
+export type SportState = z.infer<typeof SportSchema>;
+
 export const IdentitySchema = z
   .object({
     firstName: z.string().min(1).max(40),
@@ -816,6 +878,8 @@ export const CharacterSchema = z
           .optional(),
         /** The acting career (decision E89): casting board, production, filmography. */
         acting: ActingSchema.optional(),
+        /** The athlete career (decision E98): sport, club, season, ranking, record. */
+        sport: SportSchema.optional(),
         /** The music career (decision E90): songs, releases, label, live shows. */
         music: MusicSchema.optional(),
         /** Professional casework: legal cases, news stories, patient cases (decision E93). */

@@ -435,7 +435,7 @@ test.describe('rival job offers', () => {
   test.describe.configure({ timeout: 120_000 });
   let json = '';
   test.beforeAll(async () => {
-    json = await adultSaveJson('e2e-rival', { rivalOffer: true });
+    json = await adultSaveJson('e2e-rival-3', { rivalOffer: true });
   });
 
   test('a rival offer shows on Career and you can ask your employer to match it', async ({

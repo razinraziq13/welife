@@ -21,7 +21,12 @@ test.describe('acting career (E89)', () => {
     expect(scan.violations).toEqual([]);
     const feedback = page.getByTestId('feedback');
     const castings = page.getByRole('list', { name: 'Castings' });
+    const decision = page
+      .getByRole('dialog')
+      .filter({ has: page.getByRole('group', { name: 'Choices' }) });
     for (let attempt = 0; attempt < 8; attempt++) {
+      // A waiting life decision disables everything else: answer it first.
+      while (await decision.isVisible()) await advanceOnce(page);
       const accept = page.getByRole('button', { name: /^Accept / }).first();
       if (await accept.isVisible()) {
         if ((await accept.getAttribute('aria-disabled')) !== 'true') {

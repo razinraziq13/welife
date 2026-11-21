@@ -73,7 +73,7 @@ describe('rival job offers (headhunting)', () => {
   });
 
   it('a rival offers more money, and accepting moves you there', () => {
-    const state = untilApproached(starWorker('hh-accept'));
+    const state = untilApproached(starWorker('hh-accept-2'));
     const offer = rivalOffer(state);
     if (!offer?.offerSalaryMinor) throw new Error('no offer');
     const p = playerOf(state);

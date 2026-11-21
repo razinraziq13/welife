@@ -1070,7 +1070,9 @@ export function assignNpcJob(
 
 /** Creative paths the player can start freelance from the Career tab (no posting needed). */
 export const CREATIVE_PATHS = ['actor', 'musician', 'film-director'] as const;
-const isCreativePath = (id: string) => (CREATIVE_PATHS as readonly string[]).includes(id);
+/** Started from Career (Paths or Athlete), never from the job board. */
+const isCreativePath = (id: string) =>
+  (CREATIVE_PATHS as readonly string[]).includes(id) || id === 'professional-athlete';
 export type CreativePath = (typeof CREATIVE_PATHS)[number];
 
 /** Entry-level freelance terms for a creative path where the player lives (no randomness). */

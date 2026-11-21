@@ -18,9 +18,11 @@ import {
   Search,
   Signpost,
   Sparkles,
+  Trophy,
 } from 'lucide-react';
 import { MusicSection } from './MusicSection';
 import { CASE_WORDS, CaseworkSection } from './CaseworkSection';
+import { SportSection } from './SportSection';
 import { ActingSection } from './ActingSection';
 import { t } from '@app/i18n/en';
 import { clubName, formatShortMonth, qualificationName } from '@app/i18n/format';
@@ -936,6 +938,7 @@ const SECTIONS = [
   { value: 'acting', label: 'Acting', icon: Clapperboard },
   { value: 'music', label: 'Music', icon: Music },
   { value: 'cases', label: 'Cases', icon: Scale },
+  { value: 'athlete', label: 'Athlete', icon: Trophy },
   { value: 'study', label: 'Study', icon: GraduationCap },
   { value: 'skills', label: 'Skills', icon: Sparkles },
 ] as const;
@@ -953,6 +956,7 @@ export function CareerTab() {
   const screen = view.work.career.screen;
   const music = view.work.career.music;
   const casework = view.work.career.casework;
+  const sport = view.work.career.sport;
   const section: Section =
     picked ??
     (!working
@@ -965,14 +969,18 @@ export function CareerTab() {
             ? 'music'
             : casework && !casework.block
               ? 'cases'
-              : 'job');
+              : sport.state
+                ? 'athlete'
+                : 'job');
   // Acting, Music and Cases appear once you are in that line of work (and stay for your record).
   const items = working
     ? SECTIONS.filter(
         (x) =>
           (x.value !== 'acting' || screen) &&
           (x.value !== 'music' || music) &&
-          (x.value !== 'cases' || casework),
+          (x.value !== 'cases' || casework) &&
+          // Sport is open to anyone 16 or over (the engine explains if not).
+          (x.value !== 'athlete' || c.age.years >= 16),
       ).map((x) =>
         x.value === 'cases' && casework
           ? { ...x, label: CASE_WORDS[casework.profession].section }
@@ -1023,6 +1031,7 @@ export function CareerTab() {
       )}
       {working && section === 'acting' && screen && <ActingSection view={view} screen={screen} />}
       {working && section === 'music' && music && <MusicSection music={music} />}
+      {working && section === 'athlete' && <SportSection sport={sport} />}
       {working && section === 'cases' && casework && (
         <CaseworkSection view={view} work={casework} />
       )}

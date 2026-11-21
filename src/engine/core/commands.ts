@@ -36,12 +36,16 @@ import {
 } from '../career/acting';
 import {
   AUDITION_APPROACHES,
+  MATCH_APPROACHES,
+  SPORTS,
+  SPORT_TRAINING,
   MUSIC_GENRES,
   PROMO_LEVELS,
   RELEASE_TYPES,
   SONG_MOODS,
   STUDIOS,
 } from '../state/schema';
+import { SportError, chooseSport, train, trial } from '../career/sport';
 import {
   CaseworkError,
   declineCase,
@@ -403,6 +407,11 @@ export const CommandSchema = z.discriminatedUnion('type', [
   command('playShow', { venueId: EntityId }),
   command('answerLabel', { response: z.enum(['accept', 'negotiate', 'decline']) }),
   command('setMusicAutopilot', { value: z.boolean() }),
+  command('chooseSport', { sport: z.enum(SPORTS) }),
+  command('sportTrial', {}),
+  command('sportTrain', { kind: z.enum(SPORT_TRAINING) }),
+  command('setSportApproach', { approach: z.enum(MATCH_APPROACHES) }),
+  command('setSportAutopilot', { value: z.boolean() }),
   command('takeCase', { caseId: EntityId }),
   command('declineCase', { caseId: EntityId }),
   command('workOnCase', { caseId: EntityId, action: z.enum(['examine', 'clarify', 'prepare']) }),
@@ -913,6 +922,24 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
     }
     case 'answerLabel':
       return done(`out.music.${answerLabel(world, player, cmd.response)}`);
+    case 'chooseSport':
+      chooseSport(world, player, cmd.sport);
+      return done('out.sport.chosen', { sport: cmd.sport });
+    case 'sportTrial':
+      return done(trial(world, player) ? 'out.sport.signed' : 'out.sport.rejected', {
+        why: player.career.sport?.lastResult ?? '',
+      });
+    case 'sportTrain':
+      train(world, player, cmd.kind);
+      return done(`out.sport.${cmd.kind}`);
+    case 'setSportApproach':
+      if (!player.career.sport) throw new SportError('noSport');
+      player.career.sport.approach = cmd.approach;
+      return done('out.sport.approach', { approach: cmd.approach });
+    case 'setSportAutopilot':
+      if (!player.career.sport) throw new SportError('noSport');
+      player.career.sport.autopilot = cmd.value;
+      return done(cmd.value ? 'out.sport.autoOn' : 'out.sport.autoOff');
     case 'takeCase':
       return done('out.case.taken', { title: takeCase(world, player, cmd.caseId).title });
     case 'declineCase':
@@ -1108,6 +1135,7 @@ const DOMAIN_ERRORS = [
   ActingError,
   MusicError,
   CaseworkError,
+  SportError,
   InvestmentError,
   MigrationError,
   HealthError,
