@@ -40,9 +40,51 @@ export interface BusinessType {
   startStaff: number;
   /** Valuation as a multiple of yearly profit when sold. */
   profitMultiple: number;
+  /** A licence the owner must hold to open it (law firm, clinic; decision E103). */
+  licence?: string;
 }
 
 export const BUSINESS_TYPES: readonly BusinessType[] = [
+  {
+    id: 'law-firm',
+    name: 'Law firm',
+    industryId: 'legal',
+    goods: false,
+    unit: 'billable hours',
+    refPriceBp: 1800,
+    unitCostPercent: 5,
+    capacityPerStaff: 20,
+    marketDemand: 22,
+    setupMonths: 3,
+    wagePercent: 260,
+    rentPercent: 140,
+    elasticity: 90,
+    spoilagePercent: 0,
+    skills: ['reading', 'logic'],
+    startStaff: 2,
+    profitMultiple: 5,
+    licence: 'licence.law',
+  },
+  {
+    id: 'clinic',
+    name: 'Medical clinic',
+    industryId: 'healthcare',
+    goods: false,
+    unit: 'appointments',
+    refPriceBp: 600,
+    unitCostPercent: 15,
+    capacityPerStaff: 90,
+    marketDemand: 140,
+    setupMonths: 4,
+    wagePercent: 240,
+    rentPercent: 160,
+    elasticity: 70,
+    spoilagePercent: 0,
+    skills: ['science', 'care'],
+    startStaff: 3,
+    profitMultiple: 5,
+    licence: 'licence.medicine',
+  },
   {
     id: 'cafe',
     name: 'Café',

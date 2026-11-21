@@ -74,7 +74,8 @@ export type BusinessRejection =
   | 'notInterested'
   | 'loanRefused'
   | 'unknownLoan'
-  | 'researched';
+  | 'researched'
+  | 'unlicensed';
 
 export const BUSINESS_MESSAGES: Record<BusinessRejection, string> = {
   tooYoung: 'You must be 18 or older to run a company.',
@@ -99,6 +100,8 @@ export const BUSINESS_MESSAGES: Record<BusinessRejection, string> = {
   loanRefused: 'The bank will not lend that much to this company.',
   unknownLoan: 'Unknown loan.',
   researched: 'You already commissioned research this month.',
+  unlicensed:
+    'Only a licensed practitioner may open this: admitted lawyers open law firms, registered doctors open clinics.',
 };
 
 export class BusinessError extends Error {
@@ -437,6 +440,8 @@ export function startBusiness(
   if (ageYears(world, player) < 18) throw new BusinessError('tooYoung');
   const type = findBusinessType(input.typeId);
   if (!type) throw new BusinessError('unknownType');
+  // A licence cannot be bought: the owner must hold it themselves.
+  if (type.licence && player.flags[type.licence] !== true) throw new BusinessError('unlicensed');
   let where;
   try {
     where = getLocation(input.locationId);
@@ -1463,6 +1468,12 @@ export function processBusinesses(world: World): void {
 
 /** Firms that take on client projects, and the kinds of brief they get. */
 const PROJECT_BRIEFS: Record<string, readonly string[]> = {
+  'law-firm': [
+    'Contract dispute',
+    'Employment claim',
+    'Property purchase',
+    'Business merger review',
+  ],
   consultancy: [
     'Market entry review',
     'Cost reduction study',

@@ -112,3 +112,36 @@ describe('market research (E92)', () => {
     expect(checkLedger(done.world)).toEqual([]);
   }, 120_000);
 });
+
+describe('own law firm or clinic (E103)', () => {
+  it('only a licensed practitioner may open one; a law firm takes client briefs', () => {
+    let state = advanceMonths(
+      newState({ seed: 'own-firm', countryCode: 'MY', scenario: 'wealthy' }),
+      24 * 12,
+    );
+    const locationId = playerOf(state).locationId;
+    const capital = minimumCapital(state.world, getBusinessType('law-firm'), locationId) * 3n;
+    state = giveMoney(state, capital * 2n);
+    const open = (typeId: string) =>
+      run(state, {
+        type: 'startBusiness',
+        typeId,
+        locationId,
+        name: 'Tan & Partners',
+        capitalMinor: capital.toString(),
+      });
+    expect(open('law-firm').outcome.status).toBe('rejected');
+    expect(open('clinic').outcome.status).toBe('rejected');
+    playerOf(state).flags['licence.law'] = true;
+    state = checked(state, {
+      type: 'startBusiness',
+      typeId: 'law-firm',
+      locationId,
+      name: 'Tan & Partners',
+      capitalMinor: capital.toString(),
+    }).state;
+    state = advanceMonths(state, 1);
+    expect(firm(state).contracts?.offers.length).toBeGreaterThan(0);
+    expect(checkLedger(state.world)).toEqual([]);
+  }, 120_000);
+});

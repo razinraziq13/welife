@@ -82,6 +82,7 @@ function StartCard({ view }: { view: GameView }) {
                 {b.types.map((x) => (
                   <option key={x.id} value={x.id}>
                     {x.name}
+                    {x.licenceReason ? ' (licensed practitioners only)' : ''}
                   </option>
                 ))}
               </select>

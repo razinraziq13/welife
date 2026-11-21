@@ -15,6 +15,7 @@ import {
   researchCost,
   staffOnContracts,
   takesContracts,
+  BUSINESS_MESSAGES,
 } from './business/business';
 import { BUSINESS_TYPES, getBusinessType } from './business/catalog';
 import { displayName } from './characters/names';
@@ -137,6 +138,8 @@ export interface EnterpriseView {
       goods: boolean;
       minCapitalMinor: bigint;
       setupMinor: bigint;
+      /** Why you cannot open this kind (a licence it needs), else null. */
+      licenceReason: string | null;
     }[];
     locations: { id: string; name: string; countryCode: string; countryName: string }[];
     companies: CompanyView[];
@@ -332,6 +335,8 @@ export function projectEnterprise(world: World, player: Character): EnterpriseVi
         name: t.name,
         unit: t.unit,
         goods: t.goods,
+        licenceReason:
+          t.licence && player.flags[t.licence] !== true ? BUSINESS_MESSAGES.unlicensed : null,
         minCapitalMinor: convert(
           world,
           minimumCapital(world, t, player.locationId),
