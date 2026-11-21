@@ -52,13 +52,14 @@ import {
 import { assetsOf, liabilitiesOf, monthTotals } from './economy/ledger';
 import { convertCurrency, currencyCountry, netWorthIn } from './economy/fx';
 import { CLUBS, PROGRAMS, findProgram, type ProgramLevel } from './education/catalog';
-import { ACADEMIC_ACTIONS, academicActionBlock,
+import {
   applicationEligibility,
   clubEligibility,
   leavingAge,
   stageName,
   type EducationRejection,
 } from './education/school';
+import { ACADEMIC_ACTIONS, academicActionBlock } from './education/academicActions';
 import { choiceAvailability, textParams } from './events/runtime';
 import { projectHub, type HubView } from './activities/hub';
 import {
