@@ -1,8 +1,16 @@
 name: CI
 
 on:
+  # Pushes build the main lines; every other branch is checked through its pull request
+  # (pushing to a branch with an open PR used to run every job twice).
   push:
+    branches: [main, 'milestone-*']
   pull_request:
+
+# A newer push to the same branch or PR cancels the older run instead of leaving it queued.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
