@@ -46,8 +46,8 @@ const AUDITIONS_PER_MONTH = 2;
 const PROMINENCE_FEE = { background: 30, supporting: 150, lead: 600 } as const;
 const PROMINENCE_TV = { background: 25, supporting: 80, lead: 250 } as const;
 const PROMINENCE_REP = { background: 10, supporting: 25, lead: 60 } as const;
-/** Film fee milestones: on signing, when filming wraps, on release (percent). */
-const FILM_MILESTONES = { signing: 25, wrap: 50, release: 25 } as const;
+/** A TV season is 12 episodes, filmed and paid over its months (3 = 4 episodes a month). */
+export const TV_EPISODES = 12;
 const POST_MONTHS = 2;
 const RENEWAL_MONTHS = 2;
 /** Which audition approach suits which genre. */
@@ -236,10 +236,10 @@ function refreshBoard(world: World, c: Character): void {
           ? 'supporting'
           : rng.pick(['background', 'background', 'supporting', 'lead'] as const);
     const studioPay = budget === 'studio' ? 250 : 100;
-    const pay =
-      format === 'film'
-        ? applyPercent(applyPercent(median, PROMINENCE_FEE[prominence]), studioPay)
-        : applyPercent(applyPercent(median, PROMINENCE_TV[prominence]), studioPay);
+    // Bigger names command more: up to +200% for recognition and +100% for reputation.
+    const star = 100 + Math.floor(a.recognition / 5) + Math.floor(c.career.reputation / 10);
+    const base = format === 'film' ? PROMINENCE_FEE[prominence] : PROMINENCE_TV[prominence];
+    const pay = applyPercent(applyPercent(applyPercent(median, base), studioPay), star);
     const first = rng.pick(rng.int(2) === 0 ? country.names.female : country.names.male);
     const invited =
       friendly && a.board.every((l) => l.directorId !== friendly.bId) ? friendly.bId : null;
@@ -444,8 +444,6 @@ export function answerCastingOffer(
     startTick: world.tick,
   };
   a.board = a.board.filter((x) => x !== l);
-  if (l.format === 'film')
-    pay(world, c, applyPercent(l.payMinor, FILM_MILESTONES.signing), 'tx.actingSigning');
   addBiography(world, c.id, 'work', 'bio.cast', { title: l.title, character: l.character });
   return 'accepted';
 }
@@ -697,11 +695,6 @@ function releaseOrEnd(world: World, c: Character, p: Production): void {
     return;
   }
   const { critics, audience, awardRoll } = verdict(world, c, p);
-  // The last milestone is what is left, so rounding never pays more or less than the fee.
-  const paidSoFar =
-    applyPercent(p.payMinor, FILM_MILESTONES.signing) +
-    applyPercent(p.payMinor, FILM_MILESTONES.wrap);
-  pay(world, c, p.payMinor - paidSoFar, 'tx.actingRelease');
   // Box-office bonus (this game's rule): a studio hit pays the cast 20% more.
   if (p.budget === 'studio' && audience >= 70)
     pay(world, c, applyPercent(p.payMinor, 20), 'tx.actingBonus');
@@ -746,7 +739,8 @@ export function processActing(world: World, c: Character): void {
       return;
     case 'filming':
       if (p.format === 'film') {
-        pay(world, c, applyPercent(p.payMinor, FILM_MILESTONES.wrap), 'tx.actingWrap');
+        // A film pays its whole fee in one lump sum when filming wraps (walk out first: nothing).
+        pay(world, c, p.payMinor, 'tx.actingWrap');
         p.stage = 'post';
         p.monthsLeft = POST_MONTHS;
         return;

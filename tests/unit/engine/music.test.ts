@@ -53,12 +53,14 @@ describe('music career (E90)', () => {
       coWrite: false,
     }).state;
     const id = music(state)?.songs[0]?.id ?? '';
-    // Not finished: cannot record; one session per song per month.
+    // Not finished: cannot record; three writing sessions a month at most.
     expect(run(state, { type: 'recordSong', songId: id, studio: 'home' }).outcome.status).toBe(
       'rejected',
     );
-    state = checked(state, { type: 'writeSong', songId: id }).state;
-    expect(run(state, { type: 'writeSong', songId: id }).outcome.status).toBe('rejected');
+    for (let i = 0; i < 3 && (music(state)?.songs[0]?.progress ?? 100) < 100; i++)
+      state = checked(rest(state), { type: 'writeSong', songId: id }).state;
+    if ((music(state)?.songs[0]?.progress ?? 100) < 100)
+      expect(run(rest(state), { type: 'writeSong', songId: id }).outcome.status).toBe('rejected');
     state = writeAndRecord(rest(advanceMonths(state, 1)), 'Late Signals', true);
     state = rest(advanceMonths(state, 1));
     expect(music(state)?.songs.find((s) => s.title === 'Late Signals')?.status).toBe('recorded');
@@ -148,5 +150,34 @@ describe('music career (E90)', () => {
     }
     expect(music(state)?.releases.length).toBeGreaterThan(0);
     expect(checkLedger(state.world)).toEqual([]);
+  }, 180_000);
+});
+
+describe('music: catalogue and pace', () => {
+  it('released songs stay in the list, and a song can get several sessions a month', () => {
+    let state = musician('music-catalogue');
+    state = checked(state, {
+      type: 'startSong',
+      title: 'Quiet Tides',
+      genre: 'folk',
+      mood: 'dreamy',
+      coWrite: false,
+    }).state;
+    const id = music(state)?.songs[0]?.id ?? '';
+    state = checked(state, { type: 'writeSong', songId: id }).state;
+    state = rest(state);
+    state = checked(state, { type: 'writeSong', songId: id }).state;
+    expect(music(state)?.songs[0]?.progress).toBeGreaterThanOrEqual(70);
+    state = writeAndRecord(rest(state), 'Late Rain');
+    state = rest(advanceMonths(state, 1));
+    state = checked(state, {
+      type: 'releaseMusic',
+      title: '',
+      kind: 'single',
+      viaLabel: false,
+      promo: 'none',
+    }).state;
+    const released = music(state)?.songs.filter((s) => s.status === 'released') ?? [];
+    expect(released.length).toBe(1);
   }, 180_000);
 });

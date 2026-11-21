@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Music and acting rebalanced.** Released songs stay in your song list (marked released) instead of vanishing; you can write three sessions a month, on the same song if you like, and songs come together faster; royalties pay about three times more and new fans arrive faster, so a label and bigger venues are within reach. Acting pay now grows with your recognition and reputation (up to four times as much for a famous, respected actor); a film pays its whole fee as one lump sum when filming wraps; a TV season is 12 episodes, paid month by month.
+
 - **Children raised off-screen learn too.** Children born during play kept every skill at 0 until you played them, because only the character you play learnt from school. They now catch up once a school year (up to 26) to a level that fits their age, and anyone you take over (a child or an heir) catches up at that moment, so older saves are fixed when you switch.
 
 - **Overdue bills are paid from savings too.** Overdue bills used to be paid only from the current account, so money arriving in savings (birthday money, interest) sat idle while the 1% monthly late fee grew. They are now paid from the current account, then savings, and Money explains what overdue bills are.

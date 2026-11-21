@@ -9,6 +9,7 @@ import { formatShortMonth } from '@app/i18n/format';
 import { useGameStore } from '@app/stores/gameStore';
 import { AUDITION_APPROACHES, type AuditionApproach } from '@engine/state/schema';
 import type { GameView } from '@engine/view';
+import { TV_EPISODES } from '@engine/career/acting';
 import { ActionButton } from '../ActionButton';
 import { tickToMonth } from '../widgets';
 
@@ -143,7 +144,7 @@ function ProductionCard({ screen }: { screen: Screen }) {
   return (
     <Card
       title={`Now: ${p.title}`}
-      description={`${p.format === 'tv' ? `TV, season ${String(p.season)}` : 'Film'} · ${p.genre} · ${p.studio}, directed by ${p.director}`}
+      description={`${p.format === 'tv' ? `TV, season ${String(p.season)} (${String(TV_EPISODES)} episodes, paid monthly)` : 'Film'} · ${p.genre} · ${p.studio}, directed by ${p.director}`}
     >
       <p className="text-sm text-fg">
         You play {p.character} ({p.prominence} role) opposite {p.castName || 'your co-star'}.
@@ -283,8 +284,10 @@ function CastingBoard({ view, screen }: { view: GameView; screen: Screen }) {
                     by {l.director} · {quality(l.script)} script · {l.months} month
                     {l.months === 1 ? '' : 's'} of filming ·{' '}
                     <Money minor={l.payMinor} currency={cur} />
-                    {l.format === 'tv' ? ' a month' : ''} · closes{' '}
-                    {formatShortMonth(tickToMonth(view, l.deadlineTick))}
+                    {l.format === 'tv'
+                      ? ` a month (${String(TV_EPISODES)} episodes a season, ${String(TV_EPISODES / l.months)} a month)`
+                      : ' as one payment when filming wraps'}{' '}
+                    · closes {formatShortMonth(tickToMonth(view, l.deadlineTick))}
                   </p>
                   {l.feedback && <p className="text-sm text-fg">{t(`out.acting.${l.feedback}`)}</p>}
                 </div>

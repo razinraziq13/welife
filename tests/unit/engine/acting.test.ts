@@ -267,3 +267,72 @@ describe('industry outlook (E89)', () => {
     expect(seen.size).toBeGreaterThan(1);
   });
 });
+
+describe('acting pay (fame and payment timing)', () => {
+  it('the same casting pays more to a better-known, better-regarded actor', () => {
+    const unknown = actor('acting-star');
+    const star = { world: structuredClone(unknown.world), pending: null };
+    const p = playerOf(star);
+    p.career.acting = {
+      recognition: 1000,
+      critics: 0,
+      board: [],
+      production: null,
+      agent: null,
+      filmography: [],
+    };
+    playerOf(unknown).career.acting = {
+      recognition: 0,
+      critics: 0,
+      board: [],
+      production: null,
+      agent: null,
+      filmography: [],
+    };
+    const a = projectGame(advanceMonths(unknown, 1)).work.career.screen?.board[0];
+    const b = projectGame(advanceMonths(star, 1)).work.career.screen?.board[0];
+    if (!a || !b) throw new Error('no listing');
+    expect(b.title).toBe(a.title);
+    // Both have full reputation (+100); recognition 1000 adds +200: 400% against 200%.
+    expect(b.payMinor * 100n).toBeGreaterThanOrEqual(a.payMinor * 195n);
+  }, 120_000);
+
+  it('a film pays nothing on signing and its whole fee when filming wraps', () => {
+    let state = advanceMonths(actor('acting-lump'), 1);
+    const p = playerOf(state);
+    p.career.acting = {
+      recognition: 0,
+      critics: 0,
+      board: [],
+      production: null,
+      agent: null,
+      filmography: [],
+    };
+    p.career.acting.production = {
+      title: 'Paper Tides',
+      format: 'film',
+      genre: 'drama',
+      studio: 'Lumen Pictures',
+      director: 'A B',
+      character: 'X, a chef',
+      prominence: 'background',
+      script: 50,
+      budget: 'indie',
+      stage: 'filming',
+      monthsLeft: 1,
+      months: 1,
+      payMinor: 1_000_000n,
+      earnedMinor: 0n,
+      prep: 50,
+      promo: 0,
+      season: 1,
+      castId: '',
+      directorId: '',
+      startTick: state.world.tick,
+    };
+    state = advanceMonths(state, 1);
+    const prod = playerOf(state).career.acting?.production;
+    expect(prod?.stage).toBe('post');
+    expect(prod?.earnedMinor).toBe(1_000_000n);
+  }, 120_000);
+});

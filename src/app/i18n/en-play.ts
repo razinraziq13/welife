@@ -173,7 +173,7 @@ export const enPlay: Record<string, string> = {
   'out.acting.agentDeclined': 'The agent passed on representing you for now.',
   'out.acting.agentFired': 'You parted ways with your agent.',
   'tx.actingSigning': 'Acting fee on signing',
-  'tx.actingWrap': 'Acting fee when filming wrapped',
+  'tx.actingWrap': 'Film fee (lump sum when filming wrapped)',
   'tx.actingRelease': 'Acting fee on release',
   'tx.actingBonus': 'Box-office bonus',
   'tx.actingEpisodes': 'TV episode pay',

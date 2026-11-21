@@ -47,7 +47,7 @@ export const NEW_MUSIC: MusicState = {
   autopilot: false,
 };
 
-const WRITES_PER_MONTH = 2;
+const WRITES_PER_MONTH = 3;
 /** Studio cost (% of the median monthly wage) and the best production it allows. */
 export const STUDIO = {
   home: { costPct: 5, cap: 55 },
@@ -132,8 +132,7 @@ export const MUSIC_MESSAGES = {
   tooManySongs: 'Your notebook is full: release or abandon some songs first.',
   noSong: 'That song is not in your catalog.',
   notDraft: 'This song is no longer a draft.',
-  writeLimit: 'You have already had two writing sessions this month.',
-  writtenThisMonth: 'You already worked on this song this month.',
+  writeLimit: 'You have already had three writing sessions this month.',
   noTime: 'You have no free time left this month.',
   tooTired: 'You are too tired; rest first.',
   unfinished: 'Finish writing the song first.',
@@ -270,7 +269,6 @@ export function writeBlock(world: World, c: Character, song: Song | undefined): 
   if (song.status !== 'draft') return 'notDraft';
   if (song.progress >= 100) return 'notDraft';
   if (count(world, 'write') >= WRITES_PER_MONTH) return 'writeLimit';
-  if (count(world, `write:${song.id}`) > 0) return 'writtenThisMonth';
   return busyBlock(world, c, 4, 30);
 }
 
@@ -284,7 +282,6 @@ export function writeSession(world: World, c: Character, songId: string, auto = 
     changeStat(world, c, 'energy', -30, 'music:write');
   }
   mark(world, 'write');
-  mark(world, `write:${song.id}`);
   const co = song.coWriterId ? world.characters[song.coWriterId] : undefined;
   const sample = withRng(world, 'career', (rng) =>
     clamp(
@@ -295,7 +292,7 @@ export function writeSession(world: World, c: Character, songId: string, auto = 
       100,
     ),
   );
-  const gain = Math.max(8, 40 - Math.floor(song.progress / 3)) + (co ? 10 : 0);
+  const gain = Math.max(12, 45 - Math.floor(song.progress / 3)) + (co ? 10 : 0);
   const next = Math.min(100, song.progress + gain);
   song.quality = Math.round(
     (song.quality * song.progress + sample * (next - song.progress)) / next,
@@ -478,7 +475,7 @@ function royalties(world: World, c: Character, m: MusicState, r: MusicRelease): 
   const fanFactor = 100 + Math.min(400, Math.floor(m.fans / 2_000));
   const gross = minBig(
     (median(world, c) * BigInt(r.momentum * r.momentum * RELEASE[r.type].weight * fanFactor)) /
-      3_000_000n,
+      1_000_000n,
     median(world, c) * BigInt(ROYALTY_CAP_MONTHS),
   );
   if (gross <= 0n) return;
@@ -694,7 +691,7 @@ export function processMusic(world: World, c: Character): void {
     royalties(world, c, m, r);
     m.fans = Math.min(
       100_000_000,
-      m.fans + Math.floor((r.momentum * RELEASE[r.type].weight * (10 + m.fans / 500)) / 10),
+      m.fans + Math.floor((r.momentum * RELEASE[r.type].weight * (40 + m.fans / 500)) / 10),
     );
     const resurgence = withRng(world, 'career', (rng) => rng.int(100) < 3);
     r.momentum = clamp(r.momentum - RELEASE[r.type].decay + (resurgence ? 20 : 0), 0, 100);
@@ -743,18 +740,17 @@ export function projectMusic(world: World, c: Character) {
     trend: musicTrend(world),
     writesLeft: Math.max(0, WRITES_PER_MONTH - count(world, 'write')),
     newSongReason: reason(newSongBlock(world, c)),
-    songs: m.songs
-      .filter((s) => s.status !== 'released')
-      .map((s) => ({
-        ...s,
-        writeReason:
-          s.status === 'draft' && s.progress < 100 ? reason(writeBlock(world, c, s)) : null,
-        record: (['home', 'independent', 'professional'] as const).map((studio) => ({
-          studio,
-          costMinor: studioCost(world, c, studio),
-          reason: reason(recordBlock(world, c, s, studio)),
-        })),
+    // Released songs stay in the list (marked released) so your catalogue never vanishes.
+    songs: m.songs.map((s) => ({
+      ...s,
+      writeReason:
+        s.status === 'draft' && s.progress < 100 ? reason(writeBlock(world, c, s)) : null,
+      record: (['home', 'independent', 'professional'] as const).map((studio) => ({
+        studio,
+        costMinor: studioCost(world, c, studio),
+        reason: reason(recordBlock(world, c, s, studio)),
       })),
+    })),
     releaseOptions: (['single', 'ep', 'album'] as const).map((type) => ({
       type,
       songs: RELEASE[type].songs,

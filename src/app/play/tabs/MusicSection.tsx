@@ -334,6 +334,15 @@ function Songwriting({ music }: { music: Music }) {
                     Recorded · {quality(s.quality)} song, {quality(s.production)} production
                   </p>
                 )}
+                {s.status === 'released' && (
+                  <p className="text-muted">
+                    Released{' '}
+                    {music.releases.find((r) => r.songIds.includes(s.id))?.title
+                      ? `on ${music.releases.find((r) => r.songIds.includes(s.id))?.title ?? ''}`
+                      : ''}{' '}
+                    · {quality(s.quality)} song, {quality(s.production)} production
+                  </p>
+                )}
               </li>
             );
           })}
