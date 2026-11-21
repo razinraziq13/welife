@@ -178,6 +178,11 @@ export const useGameStore = create<GameState>()((set, get) => ({
         .filter((a) => a.status === 'offered')
         .map((a) => a.id);
     const known = new Set(offers());
+    const studyOffers = (): string[] =>
+      (get().session?.view.education.applications ?? [])
+        .filter((a) => a.status === 'accepted')
+        .map((a) => a.id);
+    const knownStudy = new Set(studyOffers());
     const start = get().session?.view;
     let played = 0;
     let moneyIn = 0n;
@@ -186,6 +191,14 @@ export const useGameStore = create<GameState>()((set, get) => ({
       for (let i = 0; i < months; i++) {
         const view = get().session?.view;
         if (view?.lifeStatus !== 'alive' || view.pendingEvent) break;
+        // Higher-education offers expire; don't skip a decision while advancing four months.
+        if (studyOffers().length > 0 && i === 0) {
+          set({
+            message: 'A study offer needs an answer. See Career, Study.',
+            messageKind: 'success',
+          });
+          break;
+        }
         const outcome = await get().send({ type: 'advance', expectedTick: view.tick });
         if (outcome?.status !== 'applied' || outcome.kind !== 'advanced') break;
         set({ lastActivity: null });
@@ -199,6 +212,13 @@ export const useGameStore = create<GameState>()((set, get) => ({
         }
         if (offers().some((id) => !known.has(id))) {
           set({ message: 'A job offer arrived. See Career to answer it.', messageKind: 'success' });
+          break;
+        }
+        if (studyOffers().some((id) => !knownStudy.has(id))) {
+          set({
+            message: 'A study offer arrived. See Career, Study to answer it.',
+            messageKind: 'success',
+          });
           break;
         }
       }

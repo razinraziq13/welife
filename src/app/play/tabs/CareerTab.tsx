@@ -102,6 +102,76 @@ function EducationCard({ view }: { view: GameView }) {
               />
             </>
           )}
+          {current.academic && (
+            <section className="rounded-xl border border-border p-3" aria-label="Academic progress">
+              <h3 className="font-semibold text-fg">Coursework and academic progression</h3>
+              <p className="mt-1 text-sm text-muted">
+                Semester {current.academic.semester} · {current.academic.credits} /{' '}
+                {current.academic.requiredCredits} credits earned
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                <div className="rounded-lg bg-surface-2 p-2">
+                  Coursework: {Math.round(current.academic.coursework / 10)}%
+                </div>
+                <div className="rounded-lg bg-surface-2 p-2">
+                  Project: {Math.round(current.academic.project / 10)}%
+                </div>
+                {current.level === 'master' && (
+                  <div className="rounded-lg bg-surface-2 p-2">
+                    Research: {Math.round(current.academic.research / 10)}%
+                  </div>
+                )}
+                <div className="rounded-lg bg-surface-2 p-2">
+                  Internship: {current.academic.internshipMonths} months
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-muted">
+                Every semester awards 24 credits only when assessments pass. A failed semester can
+                be repeated; your completed credits remain. Bachelor's projects and master's
+                research must meet graduation requirements.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {current.academic.actions.map((a) => (
+                  <ActionButton
+                    key={a.id}
+                    size="sm"
+                    variant="secondary"
+                    busy={disabled}
+                    reason={a.reason}
+                    onAct={() => void send({ type: 'academicAction', action: a.id })}
+                  >
+                    {
+                      {
+                        coursework: 'Complete coursework',
+                        groupProject: 'Work on group project',
+                        meetLecturer: 'Consult lecturer',
+                        research: 'Conduct research',
+                        internship: 'Internship placement',
+                      }[a.id]
+                    }
+                  </ActionButton>
+                ))}
+              </div>
+              {current.academic.modules.length > 0 && (
+                <div className="mt-3">
+                  <h4 className="text-sm font-semibold text-fg">Recent module assessments</h4>
+                  <ul className="mt-1 space-y-1 text-sm">
+                    {current.academic.modules.slice(-4).map((m, i) => (
+                      <li
+                        key={`${m.semester}:${m.title}:${i}`}
+                        className="flex justify-between gap-2"
+                      >
+                        <span>{m.title}</span>
+                        <span className={m.passed ? 'text-fg' : 'text-muted'}>
+                          {m.passed ? 'Passed' : 'Resit'} · {Math.round(m.grade / 10)}%
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </section>
+          )}
           {(edu.fees.school > 0n || edu.fees.tuition > 0n) && (
             <p className="text-sm text-muted">
               Fees this month:{' '}
@@ -284,7 +354,8 @@ function FurtherStudyCard({ view }: { view: GameView }) {
   const levelId = useId();
   const [program, setProgram] = useState(edu.programs[0]?.id ?? '');
   const selected = edu.programs.find((p) => p.id === program) ?? edu.programs[0];
-  const [level, setLevel] = useState<string>('bachelor');
+  const [level, setLevel] = useState<string>('diploma');
+  const [institutionKind, setInstitutionKind] = useState<'public' | 'private'>('public');
   if (edu.programs.length === 0 || !selected) return null;
   const levelOption = selected.levels.find((l) => l.level === level) ?? selected.levels[0];
   const open = edu.applications.filter((a) => a.status === 'pending' || a.status === 'accepted');
@@ -294,7 +365,7 @@ function FurtherStudyCard({ view }: { view: GameView }) {
   return (
     <Card
       title="Further study"
-      description="Apply to colleges and universities in your final school year or any time after. Decisions depend on your results, skills, awards and competition."
+      description="Complete a diploma, then a bachelor’s degree, then a master’s degree in the same course. Entry decisions also depend on grades, skills and competition."
     >
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
@@ -335,12 +406,33 @@ function FurtherStudyCard({ view }: { view: GameView }) {
             ))}
           </select>
         </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="higher-ed-institution-kind" className="text-sm font-medium text-fg">
+            Institution
+          </label>
+          <select
+            id="higher-ed-institution-kind"
+            value={institutionKind}
+            onChange={(e) => {
+              setInstitutionKind(e.target.value === 'private' ? 'private' : 'public');
+            }}
+            className="h-11 rounded-xl border border-border bg-surface px-3 text-fg"
+          >
+            <option value="public">Public (lower tuition)</option>
+            <option value="private">Private (higher tuition)</option>
+          </select>
+        </div>
         <Button
           variant="secondary"
           disabled={disabled || levelOption?.block !== null}
           onClick={() => {
             if (levelOption)
-              void send({ type: 'applyStudy', programId: selected.id, level: levelOption.level });
+              void send({
+                type: 'applyStudy',
+                programId: selected.id,
+                level: levelOption.level,
+                kind: institutionKind,
+              });
           }}
         >
           Apply

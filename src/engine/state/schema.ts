@@ -728,6 +728,33 @@ export const EnrollmentSchema = z
     /** Current grade average (fixed-point tenths). */
     grade: Fixed,
     scholarshipPercent: Percent,
+    /** Optional academic details preserve older saves without an explicit migration. */
+    academic: z
+      .object({
+        semester: z.number().int().min(1).max(25),
+        credits: z.number().int().min(0).max(600),
+        coursework: Fixed,
+        project: Fixed,
+        research: Fixed,
+        internshipMonths: z.number().int().min(0).max(36),
+        lastActionTick: Tick.nullable(),
+        lastAssessmentTick: Tick,
+        modules: z
+          .array(
+            z
+              .object({
+                semester: z.number().int().min(1).max(24),
+                title: z.string().max(90),
+                grade: Fixed,
+                credits: z.number().int().min(0).max(12),
+                passed: z.boolean(),
+              })
+              .strict(),
+          )
+          .max(48),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 export type Enrollment = z.infer<typeof EnrollmentSchema>;
@@ -753,6 +780,7 @@ export const StudyApplicationSchema = z
     decisionTick: Tick,
     status: z.enum(['pending', 'accepted', 'rejected', 'declined', 'enrolled', 'expired']),
     scholarshipPercent: Percent,
+    kind: z.enum(['public', 'private']).optional(),
     /** Admission score once decided (fixed-point tenths). */
     score: Fixed.nullable(),
   })
