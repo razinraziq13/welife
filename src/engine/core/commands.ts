@@ -582,6 +582,7 @@ const done = (key: string, params: Record<string, string | number> = {}): Comman
 
 /** Actions that need freedom of movement (unavailable in custody, spec §4 Law). */
 const BLOCKED_IN_CUSTODY = new Set<string>([
+  'academicAction',
   'takeCase',
   'workOnCase',
   'resolveCase',

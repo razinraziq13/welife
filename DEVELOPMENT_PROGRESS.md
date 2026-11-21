@@ -16,6 +16,40 @@ Requirement map: [docs/TRACEABILITY.md](docs/TRACEABILITY.md)
 | M8 Event editor and content      | Complete (commit eef78c2)                | `milestone-7-8` |
 | M9 Integration, balance, release | **Complete (0.9.0 RC), awaiting review** | `milestone-9`   |
 
+The milestone branches are fully merged into `main` (no commits of their own left); they are
+kept for history.
+
+---
+
+## After 0.9.0: expansions and technical debt
+
+Expansions ship from `main` in small, verified commits; each is a decision in
+[docs/DECISIONS.md](docs/DECISIONS.md) (E87 onwards) and an entry in [CHANGELOG.md](CHANGELOG.md):
+today's-money economy and currency reform (E87), acting (E89), music (E90, E102), business
+client contracts and market research (E91, E92), professional casework and licensing for
+lawyers, journalists and doctors (E93-E95), path-only careers (E96, E99), music and acting
+rebalance (E97), sport (E98, E101), the influencer feed (E100), own law firm or clinic (E103),
+and the immersive education pathway (PR #1).
+
+### Known technical debt (audit, 2026-11-22)
+
+- **Large modules:** `engine/business/business.ts` (~1,700 lines), `engine/view.ts` (~1,500),
+  `app/play/tabs/CareerTab.tsx` (~1,300) and `app/screens/EditorScreen.tsx` (~1,500) would be
+  easier to review split by area. `world/institutions.ts`, `career/occupations.ts` and the
+  event content files are large because they are data, which is fine.
+- **Repeated monthly-limit counters:** acting, music, sport, casework, work actions and social
+  interactions each keep a small "done this month" counter on `world.activity.counts` with
+  their own key prefix. A shared helper would remove the repetition, but the keys must stay
+  identical or old command replays change.
+- **Unused exports:** about 70 exported names are used only inside their own module (constants
+  and helpers). Harmless; dropping the `export` keyword is churn with no behaviour change.
+- **Retired work actions:** `playGig` and `releaseSingle` can no longer be taken (E90) but stay
+  in the command schema so saves and replays that contain them still validate.
+- **Engine-side English text:** newer systems (casework, sport, music, acting messages) keep
+  their player-facing reasons in the engine rather than the i18n files.
+- **Grandfathered licences:** a practising lawyer or doctor job held without a licence counts as
+  admitted (E93), to keep older saves and NPC heirs playable.
+
 ---
 
 ## Milestone 9: Integration, balance and release (0.9.0 release candidate)
