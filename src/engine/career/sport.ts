@@ -60,6 +60,8 @@ export const SPORT_MESSAGES = {
   hasClub: 'You already play for a club.',
   noClubs: 'Tennis has no clubs: enter tournaments as an individual.',
   trialSoon: 'Clubs hold trials every three months; try again later.',
+  noOffer: 'There is no transfer bid to answer.',
+  injured: 'You are injured: rest and recover first.',
   trained: 'You have already done this training this month.',
   noTime: 'You have no free time left this month.',
   tooTired: 'You are too tired; rest first.',
@@ -150,6 +152,7 @@ export function trialBlock(world: World, c: Character): SportBlock | null {
   if (!isTeam(s.sport)) return 'noClubs';
   if (s.club) return 'hasClub';
   if (s.trialTick !== null && world.tick - s.trialTick < 3) return 'trialSoon';
+  if ((s.injuredMonths ?? 0) > 0) return 'injured';
   return null;
 }
 
@@ -403,13 +406,97 @@ export function tennisRank(points: number): number {
 }
 
 /** Once a month for the player. */
+/** Playing tired raises the risk of injury; recovery training keeps readiness up. */
+function injuryRoll(world: World, s: SportState): void {
+  const chancePct = 2 + Math.floor(Math.max(0, 50 - s.readiness) / 3);
+  const months = withRng(world, 'career', (rng) =>
+    rng.int(100) < chancePct ? rng.range(1, 4) : 0,
+  );
+  if (months === 0) return;
+  s.injuredMonths = months;
+  addNotification(world, 'work', 'ntf.injured', { months }, 'career');
+}
+
+/** An in-form starter can attract a bid from a stronger club (it lapses after two months). */
+function transferMonth(world: World, c: Character, s: SportState): void {
+  if (s.transferOffer && world.tick > s.transferOffer.expiresTick) s.transferOffer = null;
+  const mine = s.league.find((t) => t.name === s.club);
+  const job = activeEmployment(world, c);
+  if (!mine || !job || s.transferOffer || s.role !== 'starter' || s.form < 60) return;
+  const suitor = withRng(world, 'career', (rng) =>
+    rng.int(100) < 12 ? rng.pick(s.league.filter((t) => t.strength > mine.strength)) : undefined,
+  );
+  if (!suitor) return;
+  const median = medianWage(world, c.countryCode);
+  const now = median > 0n ? Number((job.salaryMinor * 100n) / median) : 100;
+  s.transferOffer = {
+    club: suitor.name,
+    payPercent: Math.min(1000, Math.max(1, Math.floor((now * 125) / 100))),
+    expiresTick: world.tick + 2,
+  };
+  addNotification(world, 'work', 'ntf.transferBid', { club: suitor.name }, 'career');
+}
+
+/** Accept a bid (a new two-year contract, 25% more) or turn it down. */
+export function answerTransfer(world: World, c: Character, accept: boolean): string {
+  const s = c.career.sport;
+  const offer = s?.transferOffer;
+  if (!s || !offer) throw new SportError('noOffer');
+  s.transferOffer = null;
+  if (!accept) return 'declined';
+  signContract(world, c, offer.club, offer.payPercent);
+  s.club = offer.club;
+  s.contractEndTick = world.tick + CONTRACT_MONTHS;
+  s.lastResult = `You joined ${offer.club}.`;
+  addBiography(world, c.id, 'work', 'bio.transfer', { club: offer.club });
+  return 'joined';
+}
+
+/** Once a year the national selectors pick the fittest, most in-form players. */
+function nationalTeam(world: World, c: Character, s: SportState): void {
+  if (
+    world.clock.month !== 6 ||
+    c.skills.fitness < 750 ||
+    s.form < 65 ||
+    (s.injuredMonths ?? 0) > 0
+  )
+    return;
+  s.caps = (s.caps ?? 0) + 3;
+  const won = withRng(world, 'career', (rng) => rng.int(100) < 15);
+  s.record = [
+    ...s.record,
+    {
+      year: world.clock.year,
+      sport: s.sport,
+      club: 'National team',
+      finish: won ? 'International champions' : 'International tournament',
+      apps: 3,
+      scored: 0,
+      trophy: won,
+    },
+  ].slice(-60);
+  addNotification(world, 'work', won ? 'ntf.nationalWin' : 'ntf.nationalCallUp', {}, 'career');
+}
+
 export function processSport(world: World, c: Character): void {
   const s = c.career.sport;
   if (!s) return;
   if (s.autopilot) train(world, c, s.readiness < 50 ? 'recovery' : 'technical', true);
-  if (s.sport === 'tennis') tournamentMonth(world, c, s);
-  else if (s.club) {
+  if ((s.injuredMonths ?? 0) > 0) {
+    // Out injured: no matches; good readiness (rest) speeds the return.
+    s.injuredMonths = Math.max(0, (s.injuredMonths ?? 0) - (s.readiness >= 70 ? 2 : 1));
+    s.role = 'reserve';
+    s.lastResult =
+      s.injuredMonths > 0
+        ? `Recovering from injury: about ${String(s.injuredMonths)} more month${s.injuredMonths === 1 ? '' : 's'}.`
+        : 'Fit again and back in training.';
+  } else if (s.sport === 'tennis') {
+    tournamentMonth(world, c, s);
+    injuryRoll(world, s);
+  } else if (s.club) {
     teamMonth(world, c, s);
+    if (s.role !== 'reserve') injuryRoll(world, s);
+    transferMonth(world, c, s);
     s.seasonMonth += 1;
     if (s.seasonMonth >= SEASON_MONTHS) endSeason(world, c, s);
     if (s.contractEndTick !== null && world.tick >= s.contractEndTick) {
@@ -425,6 +512,7 @@ export function processSport(world: World, c: Character): void {
       }
     }
   }
+  nationalTeam(world, c, s);
   s.readiness = clamp(s.readiness + 10, 0, 100);
 }
 

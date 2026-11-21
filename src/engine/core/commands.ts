@@ -47,7 +47,7 @@ import {
   SONG_MOODS,
   STUDIOS,
 } from '../state/schema';
-import { SportError, chooseSport, train, trial } from '../career/sport';
+import { SportError, answerTransfer, chooseSport, train, trial } from '../career/sport';
 import {
   CaseworkError,
   declineCase,
@@ -412,6 +412,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
   command('setMusicAutopilot', { value: z.boolean() }),
   command('chooseSport', { sport: z.enum(SPORTS) }),
   command('sportTrial', {}),
+  command('answerTransfer', { accept: z.boolean() }),
   command('sportTrain', { kind: z.enum(SPORT_TRAINING) }),
   command('setSportApproach', { approach: z.enum(MATCH_APPROACHES) }),
   command('setSportAutopilot', { value: z.boolean() }),
@@ -931,6 +932,8 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
     case 'chooseSport':
       chooseSport(world, player, cmd.sport);
       return done('out.sport.chosen', { sport: cmd.sport });
+    case 'answerTransfer':
+      return done(`out.sport.transfer.${answerTransfer(world, player, cmd.accept)}`);
     case 'sportTrial':
       return done(trial(world, player) ? 'out.sport.signed' : 'out.sport.rejected', {
         why: player.career.sport?.lastResult ?? '',

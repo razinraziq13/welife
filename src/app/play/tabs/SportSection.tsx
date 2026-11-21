@@ -75,6 +75,44 @@ export function SportSection({ sport }: { sport: SportView }) {
           }
         >
           {s.lastResult && <p className="text-sm text-fg">{s.lastResult}</p>}
+          {(s.injuredMonths ?? 0) > 0 && (
+            <p className="text-sm font-semibold text-danger">
+              Injured: about {s.injuredMonths} month{s.injuredMonths === 1 ? '' : 's'} out. Rest
+              raises readiness and speeds recovery.
+            </p>
+          )}
+          {(s.caps ?? 0) > 0 && <p className="text-sm text-muted">National team: {s.caps} caps</p>}
+          {s.transferOffer && (
+            <div className="mt-2 rounded-xl border border-border p-3 text-sm">
+              <p className="font-semibold text-fg">{s.transferOffer.club} have bid for you</p>
+              <p className="text-muted">
+                A two-year contract paying 25% more. The bid lapses soon.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <ActionButton
+                  size="sm"
+                  busy={disabled}
+                  reason={null}
+                  onAct={() => {
+                    void send({ type: 'answerTransfer', accept: true });
+                  }}
+                >
+                  Join {s.transferOffer.club}
+                </ActionButton>
+                <ActionButton
+                  size="sm"
+                  variant="ghost"
+                  busy={disabled}
+                  reason={null}
+                  onAct={() => {
+                    void send({ type: 'answerTransfer', accept: false });
+                  }}
+                >
+                  Stay
+                </ActionButton>
+              </div>
+            </div>
+          )}
           {s.salaryMinor > 0n && (
             <p className="mt-1 text-sm text-muted">
               Pay: <Money minor={s.salaryMinor} currency={cur} /> a month

@@ -72,3 +72,60 @@ describe('athlete career (E98)', () => {
     }
   }, 120_000);
 });
+
+describe('sport depth: injuries, transfers, national team (E101)', () => {
+  it('playing tired brings injuries that keep you out, and rest gets you back', () => {
+    let state = checked(adult('sport-injury'), { type: 'chooseSport', sport: 'tennis' }).state;
+    let injured = false;
+    for (let m = 0; m < 24 && !injured; m++) {
+      const s = playerOf(state).career.sport;
+      if (s) s.readiness = 0;
+      state = advanceMonths(state, 1);
+      injured = (playerOf(state).career.sport?.injuredMonths ?? 0) > 0;
+    }
+    expect(injured).toBe(true);
+    // Rested (full readiness), the injury heals within a few months.
+    let healed = false;
+    for (let m = 0; m < 6 && !healed; m++) {
+      const s = playerOf(state).career.sport;
+      if (s) s.readiness = 100;
+      state = advanceMonths(state, 1);
+      healed = (playerOf(state).career.sport?.injuredMonths ?? 0) === 0;
+    }
+    expect(healed).toBe(true);
+  }, 120_000);
+
+  it('a transfer bid moves you to the bidding club on a better contract', () => {
+    let state = checked(adult('sport-transfer'), { type: 'chooseSport', sport: 'football' }).state;
+    const s = playerOf(state).career.sport;
+    if (!s) throw new Error('no sport');
+    s.transferOffer = {
+      club: 'Northport United',
+      payPercent: 300,
+      expiresTick: state.world.tick + 2,
+    };
+    state = checked(state, { type: 'answerTransfer', accept: true }).state;
+    expect(playerOf(state).career.sport?.club).toBe('Northport United');
+    const job = state.world.employment[playerOf(state).employmentId ?? ''];
+    expect(job?.terms.employer).toBe('Northport United');
+    expect(run(state, { type: 'answerTransfer', accept: true }).outcome.status).toBe('rejected');
+    expect(checkLedger(state.world)).toEqual([]);
+  }, 120_000);
+
+  it('the fittest, in-form players are called up to the national team once a year', () => {
+    let state = checked(adult('sport-national', 900), {
+      type: 'chooseSport',
+      sport: 'tennis',
+    }).state;
+    for (let m = 0; m < 13; m++) {
+      const s = playerOf(state).career.sport;
+      if (s) {
+        s.form = 90;
+        s.readiness = 100;
+        s.injuredMonths = 0;
+      }
+      state = advanceMonths(state, 1);
+    }
+    expect(playerOf(state).career.sport?.caps ?? 0).toBeGreaterThan(0);
+  }, 120_000);
+});

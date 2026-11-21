@@ -232,6 +232,13 @@ export const enPlay: Record<string, string> = {
     '{title} went out with unverified or disputed claims: a correction was published and trust in your reporting fell.',
   'out.professionPath':
     'You started your new role. See Career, Job (and your case board once you may take cases).',
+  'out.sport.transfer.joined': 'Transfer done: a new club and a better contract.',
+  'out.sport.transfer.declined': 'You turned the bid down and stay at your club.',
+  'ntf.injured': 'You are injured: out for about {months} months.',
+  'ntf.transferBid': '{club} have made a bid for you. Answer in Career, Paths.',
+  'ntf.nationalCallUp': 'You were called up to the national team.',
+  'ntf.nationalWin': 'Your national team won the international tournament!',
+  'bio.transfer': 'Transferred to {club}.',
   'out.sport.chosen': 'You are committing to {sport}.',
   'out.sport.signed': '{why}',
   'out.sport.rejected': '{why}',

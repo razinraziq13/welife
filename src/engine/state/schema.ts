@@ -627,6 +627,20 @@ export const SportSchema = z
     rankingPoints: z.number().int().min(0),
     lastResult: z.string().max(160).nullable(),
     trialTick: Tick.nullable(),
+    /** Months out injured (0 = fit). Optional for older saves (decision E101). */
+    injuredMonths: z.number().int().min(0).max(12).optional(),
+    /** A stronger club's bid for you, waiting for an answer. */
+    transferOffer: z
+      .object({
+        club: z.string().max(60),
+        payPercent: z.number().int().min(1).max(1000),
+        expiresTick: Tick,
+      })
+      .strict()
+      .nullable()
+      .optional(),
+    /** National team appearances (caps). */
+    caps: z.number().int().min(0).optional(),
     record: z
       .array(
         z

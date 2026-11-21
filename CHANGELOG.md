@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Sport depth.** Playing tired can injure you (out one to four months; rest speeds recovery). In-form starters can get a bid from a stronger club: accept for a two-year contract paying 25% more, or stay. Once a year the fittest, in-form athletes are called up to the national team for an international tournament.
+
 - **Social media on the Life tab.** Your accounts now show as a feed on Life ("Your socials"): post in a style and see each post's caption, likes, comments and a fan's reply. Strong posts on trending topics can go viral and bring five times the followers. Accounts and brand deals are still managed on the Social media page.
 
 - **Paths for professions and sport.** Law, journalism and medicine now start from Career, Paths (as a trainee lawyer or resident doctor until licensed; qualifications are still checked) and are no longer advertised in Job App; the athlete career moved into Paths too. Job App posts three senior and executive roles a month (was one). The Acting, Music and Cases tabs now show only while you work in that career (an actor's tab stays while a production is still running).
