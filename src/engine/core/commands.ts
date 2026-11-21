@@ -95,7 +95,6 @@ import {
   transferBetween,
 } from '../economy/finance';
 import {
-  academicAction,
   EducationError,
   applyForStudy,
   joinClub,
@@ -103,6 +102,7 @@ import {
   leaveEducation,
   respondToStudyOffer,
 } from '../education/school';
+import { academicAction } from '../education/academicActions';
 import { ChoiceError } from '../events/runtime';
 import {
   BusinessError,
