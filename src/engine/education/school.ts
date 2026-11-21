@@ -414,7 +414,7 @@ function decideApplications(world: World, c: Character): void {
     const threshold =
       program.selectivity +
       (app.level === 'master' ? 80 : app.level === 'diploma' ? -120 : 0) +
-      difficulty;
+      difficulty + (app.kind === 'private' ? -40 : 0);
     app.score = score;
     if (score >= threshold) {
       app.status = 'accepted';
@@ -770,6 +770,7 @@ export function applyForStudy(
   c: Character,
   programId: string,
   level: ProgramLevel,
+  kind: 'public' | 'private' = 'public',
 ): StudyApplication {
   const reason = applicationEligibility(c, programId, level);
   if (reason) throw new EducationError(reason, CLUB_MESSAGES[reason]);
@@ -787,6 +788,7 @@ export function applyForStudy(
     decisionTick,
     status: 'pending',
     scholarshipPercent: 0,
+    kind,
     score: null,
   };
   c.education.applications.push(app);
@@ -827,7 +829,7 @@ export function respondToStudyOffer(
   enroll(world, c, 'tertiary', {
     programId: app.programId,
     level: app.level,
-    kind: 'public',
+    kind: app.kind ?? 'public',
     scholarshipPercent: app.scholarshipPercent,
   });
   addBiography(world, c.id, 'school', 'bio.startedStudies', {
