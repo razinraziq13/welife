@@ -25,7 +25,7 @@ export function academicAction(world: World, c: Character, action: AcademicActio
   const reason = academicActionBlock(world, c, action);
   if (reason) throw new EducationError('notEligible', reason);
   const current = c.education.current;
-  if (!current) throw new EducationError('notStudying', CLUB_MESSAGES.notStudying);
+  if (!current) throw new EducationError('notStudying', 'You must be enrolled in higher education.');
   const a = academicOf(current);
   spendHours(world, 4);
   changeStat(world, c, 'energy', -50, 'school:academic');
