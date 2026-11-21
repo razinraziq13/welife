@@ -42,7 +42,7 @@ export const PROGRAMS: readonly ProgramDefinition[] = [
     name: 'Medicine',
     selectivity: 820,
     skills: ['science', 'care'],
-    levels: ['bachelor', 'master'],
+    levels: ['diploma', 'bachelor', 'master'],
     bachelorYears: 6,
   },
   {
@@ -74,7 +74,7 @@ export const PROGRAMS: readonly ProgramDefinition[] = [
     name: 'Economics and finance',
     selectivity: 600,
     skills: ['logic', 'business'],
-    levels: ['bachelor', 'master'],
+    levels: ['diploma', 'bachelor', 'master'],
     bachelorYears: null,
   },
   {
@@ -122,7 +122,7 @@ export const PROGRAMS: readonly ProgramDefinition[] = [
     name: 'Humanities',
     selectivity: 450,
     skills: ['reading'],
-    levels: ['bachelor', 'master'],
+    levels: ['diploma', 'bachelor', 'master'],
     bachelorYears: null,
   },
   {
@@ -130,7 +130,7 @@ export const PROGRAMS: readonly ProgramDefinition[] = [
     name: 'Hospitality and tourism',
     selectivity: 400,
     skills: ['socializing', 'business'],
-    levels: ['diploma', 'bachelor'],
+    levels: ['diploma', 'bachelor', 'master'],
     bachelorYears: null,
   },
   {
@@ -146,7 +146,7 @@ export const PROGRAMS: readonly ProgramDefinition[] = [
     name: 'Agriculture',
     selectivity: 420,
     skills: ['science', 'craft'],
-    levels: ['diploma', 'bachelor'],
+    levels: ['diploma', 'bachelor', 'master'],
     bachelorYears: null,
   },
   {
@@ -162,7 +162,7 @@ export const PROGRAMS: readonly ProgramDefinition[] = [
     name: 'Architecture',
     selectivity: 680,
     skills: ['art', 'logic'],
-    levels: ['bachelor', 'master'],
+    levels: ['diploma', 'bachelor', 'master'],
     bachelorYears: null,
   },
   {
@@ -170,7 +170,7 @@ export const PROGRAMS: readonly ProgramDefinition[] = [
     name: 'Psychology',
     selectivity: 600,
     skills: ['care', 'science'],
-    levels: ['bachelor', 'master'],
+    levels: ['diploma', 'bachelor', 'master'],
     bachelorYears: null,
   },
   {
@@ -454,4 +454,37 @@ export function getClub(id: string): ClubDefinition {
 /** Gains shrink as a skill approaches its maximum (harder to improve at the top). */
 export function scaledGain(gain: number, current: number): number {
   return Math.trunc((gain * (1000 - current)) / 1000);
+}
+
+/** Deterministic two-module semester catalogue. The parent programme ID never changes
+ * across diploma, bachelor's and master's qualifications. All modules are fictional. */
+export interface SemesterModule {
+  id: string;
+  name: string;
+  skill: SkillKey;
+  credits: number;
+}
+const MODULE_TOPICS: Partial<Record<SkillKey, readonly string[]>> = {
+  technology: ['Computing Foundations', 'Software Design', 'Digital Systems', 'Applied Computing'],
+  logic: ['Analytical Reasoning', 'Problem Solving', 'Methods and Models', 'Advanced Analysis'],
+  science: ['Scientific Foundations', 'Laboratory Reasoning', 'Research Methods', 'Applied Science'],
+  reading: ['Academic Communication', 'Critical Reading', 'Evidence and Argument', 'Literature Review'],
+  business: ['Business Foundations', 'Operations', 'Finance and Strategy', 'Organizational Studies'],
+  art: ['Design Principles', 'Creative Practice', 'Portfolio Development', 'Studio Research'],
+  music: ['Music Theory', 'Composition', 'Performance Studies', 'Music Research'],
+  care: ['Professional Practice', 'Community Needs', 'Care Coordination', 'Ethical Practice'],
+  socializing: ['Communication', 'Group Dynamics', 'Collaboration', 'Professional Relations'],
+  fitness: ['Movement Science', 'Coaching', 'Performance Analysis', 'Sport Research'],
+  craft: ['Practical Methods', 'Technical Workshop', 'Project Practice', 'Applied Techniques'],
+  leadership: ['Team Leadership', 'Organizational Practice', 'Project Coordination', 'Strategic Leadership'],
+};
+export function semesterModules(programId: string, level: ProgramLevel, semester: number): SemesterModule[] {
+  const program = getProgram(programId);
+  const tier = level === 'diploma' ? 'Foundations' : level === 'bachelor' ? 'Applied' : 'Advanced';
+  return [0, 1].map((slot) => {
+    const key = program.skills[(semester * 2 + slot) % program.skills.length] ?? 'reading';
+    const titles = MODULE_TOPICS[key] ?? ['Professional Studies'];
+    const name = titles[(semester - 1 + slot) % titles.length] ?? 'Professional Studies';
+    return { id: `${programId}:${level}:${semester}:${slot}`, name: `${tier} ${name}`, skill: key, credits: 12 };
+  });
 }
