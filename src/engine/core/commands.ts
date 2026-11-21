@@ -95,6 +95,7 @@ import {
   transferBetween,
 } from '../economy/finance';
 import {
+  academicAction,
   EducationError,
   applyForStudy,
   joinClub,
@@ -257,6 +258,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
   }),
   // Education (Milestone 3)
   command('setStudyEffort', { value: z.enum(STUDY_EFFORTS) }),
+  command('academicAction', { action: z.enum(['coursework', 'groupProject', 'meetLecturer', 'research', 'internship']) }),
   command('joinClub', { clubId: z.string().min(1).max(40) }),
   command('leaveClub', { clubId: z.string().min(1).max(40) }),
   command('applyStudy', {
@@ -676,6 +678,9 @@ function playerAction(world: World, cmd: Command): CommandOutcome {
         name: met.personId ? (world.characters[met.personId]?.identity.firstName ?? '') : '',
       });
     }
+    case 'academicAction':
+      academicAction(world, player, cmd.action);
+      return done('out.academicAction', { action: cmd.action });
     case 'setStudyEffort':
       if (!player.education.current)
         throw new EducationError('notStudying', 'You are not studying.');
