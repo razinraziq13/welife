@@ -336,6 +336,7 @@ function FurtherStudyCard({ view }: { view: GameView }) {
   const [program, setProgram] = useState(edu.programs[0]?.id ?? '');
   const selected = edu.programs.find((p) => p.id === program) ?? edu.programs[0];
   const [level, setLevel] = useState<string>('diploma');
+  const [institutionKind, setInstitutionKind] = useState<'public' | 'private'>('public');
   if (edu.programs.length === 0 || !selected) return null;
   const levelOption = selected.levels.find((l) => l.level === level) ?? selected.levels[0];
   const open = edu.applications.filter((a) => a.status === 'pending' || a.status === 'accepted');
@@ -386,12 +387,23 @@ function FurtherStudyCard({ view }: { view: GameView }) {
             ))}
           </select>
         </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="higher-ed-institution-kind" className="text-sm font-medium text-fg">
+            Institution
+          </label>
+          <select id="higher-ed-institution-kind" value={institutionKind}
+            onChange={(e) => setInstitutionKind(e.target.value === 'private' ? 'private' : 'public')}
+            className="h-11 rounded-xl border border-border bg-surface px-3 text-fg">
+            <option value="public">Public (lower tuition)</option>
+            <option value="private">Private (higher tuition)</option>
+          </select>
+        </div>
         <Button
           variant="secondary"
           disabled={disabled || levelOption?.block !== null}
           onClick={() => {
             if (levelOption)
-              void send({ type: 'applyStudy', programId: selected.id, level: levelOption.level });
+              void send({ type: 'applyStudy', programId: selected.id, level: levelOption.level, kind: institutionKind });
           }}
         >
           Apply
