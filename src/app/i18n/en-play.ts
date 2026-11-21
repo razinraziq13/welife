@@ -230,6 +230,8 @@ export const enPlay: Record<string, string> = {
   'bio.goldenNoteWon': 'Won a Golden Note award for {title}.',
   'ntf.storyCorrection':
     '{title} went out with unverified or disputed claims: a correction was published and trust in your reporting fell.',
+  'out.professionPath':
+    'You started your new role. See Career, Job (and your case board once you may take cases).',
   'out.sport.chosen': 'You are committing to {sport}.',
   'out.sport.signed': '{why}',
   'out.sport.rejected': '{why}',

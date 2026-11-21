@@ -18,7 +18,6 @@ import {
   Search,
   Signpost,
   Sparkles,
-  Trophy,
 } from 'lucide-react';
 import { MusicSection } from './MusicSection';
 import { CASE_WORDS, CaseworkSection } from './CaseworkSection';
@@ -938,7 +937,6 @@ const SECTIONS = [
   { value: 'acting', label: 'Acting', icon: Clapperboard },
   { value: 'music', label: 'Music', icon: Music },
   { value: 'cases', label: 'Cases', icon: Scale },
-  { value: 'athlete', label: 'Athlete', icon: Trophy },
   { value: 'study', label: 'Study', icon: GraduationCap },
   { value: 'skills', label: 'Skills', icon: Sparkles },
 ] as const;
@@ -970,17 +968,18 @@ export function CareerTab() {
             : casework && !casework.block
               ? 'cases'
               : sport.state
-                ? 'athlete'
+                ? 'paths'
                 : 'job');
   // Acting, Music and Cases appear once you are in that line of work (and stay for your record).
   const items = working
     ? SECTIONS.filter(
         (x) =>
-          (x.value !== 'acting' || screen) &&
-          (x.value !== 'music' || music) &&
-          (x.value !== 'cases' || casework) &&
-          // Sport is open to anyone 16 or over (the engine explains if not).
-          (x.value !== 'athlete' || c.age.years >= 16),
+          // A career's own tab shows while you work in it (an actor also while a production runs).
+          (x.value !== 'acting' ||
+            screen?.isActor === true ||
+            (screen?.production ?? null) !== null) &&
+          (x.value !== 'music' || music?.isMusician === true) &&
+          (x.value !== 'cases' || (casework?.role ?? null) !== null),
       ).map((x) =>
         x.value === 'cases' && casework
           ? { ...x, label: CASE_WORDS[casework.profession].section }
@@ -1031,11 +1030,15 @@ export function CareerTab() {
       )}
       {working && section === 'acting' && screen && <ActingSection view={view} screen={screen} />}
       {working && section === 'music' && music && <MusicSection music={music} />}
-      {working && section === 'athlete' && <SportSection sport={sport} />}
       {working && section === 'cases' && casework && (
         <CaseworkSection view={view} work={casework} />
       )}
-      {working && section === 'paths' && <PathsCard view={view} base={`/play/${session.saveId}`} />}
+      {working && section === 'paths' && (
+        <>
+          <PathsCard view={view} base={`/play/${session.saveId}`} />
+          {c.age.years >= 16 && <SportSection sport={sport} />}
+        </>
+      )}
       {section === 'skills' && (
         <>
           <div className="grid gap-4 lg:grid-cols-2">
@@ -1071,6 +1074,14 @@ export function CareerTab() {
   );
 }
 
+const PROFESSION_NAME = { law: 'Law', media: 'Journalism', medicine: 'Medicine' } as const;
+const PROFESSION_HINT = {
+  law: 'Needs a law degree. Train as a trainee lawyer, pass the licensing exam, then practise and take cases.',
+  media:
+    'Needs a media diploma or degree. Report stories: verify claims, interview sources and publish.',
+  medicine:
+    'Needs a medical degree. Train as a resident doctor, pass the registration exam, then see patients.',
+} as const;
 const PATH_HINT: Record<string, string> = {
   actor: 'Auditions win film and TV roles; screen credits lead to bigger parts.',
   musician: 'Perform and audition for paid work; practise music to improve.',
@@ -1130,6 +1141,28 @@ function PathsCard({ view, base }: { view: GameView; base: string }) {
               }}
             >
               Start freelancing
+            </ActionButton>
+          </li>
+        ))}
+        {view.work.professions.map((p) => (
+          <li
+            key={p.path}
+            className="flex flex-col gap-2 rounded-xl border border-border p-3 text-sm"
+          >
+            <p className="font-semibold text-fg">{PROFESSION_NAME[p.path]}</p>
+            <p className="text-muted">{PROFESSION_HINT[p.path]}</p>
+            {p.block && <p className="text-xs text-muted">{p.block}</p>}
+            <ActionButton
+              size="sm"
+              variant="secondary"
+              className="self-start"
+              busy={disabled}
+              reason={p.block}
+              onAct={() => {
+                void send({ type: 'startProfessionPath', path: p.path });
+              }}
+            >
+              Start as {p.title.toLowerCase()}
             </ActionButton>
           </li>
         ))}

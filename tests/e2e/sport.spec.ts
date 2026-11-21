@@ -15,7 +15,7 @@ test.describe('athlete career (E98)', () => {
       .getByRole('dialog')
       .filter({ has: page.getByRole('group', { name: 'Choices' }) });
     while (await decision.isVisible()) await advanceOnce(page);
-    await page.getByRole('button', { name: 'Athlete', exact: true }).click();
+    await page.getByRole('button', { name: 'Paths', exact: true }).click();
     await page.getByRole('button', { name: 'Choose Tennis' }).click();
     await expect(page.getByTestId('feedback')).toContainText('committing to tennis');
     await page.getByRole('button', { name: 'Rest and recovery (readiness)' }).click();

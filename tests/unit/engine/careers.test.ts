@@ -54,16 +54,19 @@ describe('career simulation (gameplay expansion, feature 6)', () => {
     for (let tick = 0; tick < 8; tick++) {
       world.tick = tick;
       refreshJobMarket(world);
-      const senior = Object.values(world.jobs.postings).find(
+      const senior = Object.values(world.jobs.postings).filter(
         (posting) =>
           posting.postedTick === tick &&
           getOccupation(posting.terms.occupationId).minExperienceMonths > 0,
       );
-      if (!senior) throw new Error('expected a senior opening');
-      expect(senior.terms.contract).toBe('permanent');
-      seniorJobs.push(senior.terms.occupationId);
+      // Three senior openings a month (E99), all permanent.
+      expect(senior.length).toBe(3);
+      for (const p of senior) {
+        expect(p.terms.contract).toBe('permanent');
+        seniorJobs.push(p.terms.occupationId);
+      }
     }
-    expect(new Set(seniorJobs).size).toBe(8);
+    expect(new Set(seniorJobs).size).toBeGreaterThanOrEqual(12);
     expect(seniorJobs).toContain('chief-executive');
     expect(seniorJobs).toContain('chief-technology-officer');
   });

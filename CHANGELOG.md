@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Paths for professions and sport.** Law, journalism and medicine now start from Career, Paths (as a trainee lawyer or resident doctor until licensed; qualifications are still checked) and are no longer advertised in Job App; the athlete career moved into Paths too. Job App posts three senior and executive roles a month (was one). The Acting, Music and Cases tabs now show only while you work in that career (an actor's tab stays while a production is still running).
+
 - **Athlete career.** From 16, choose football, basketball or tennis in Career, Athlete. Football and basketball: trial for one of eight fictional clubs (a contract is a paid job, two years, renewed if you earn a place), get picked by fitness, form and readiness (with the reason when you are left out), and play an eight-month season with a live league table; basketball adds a top-four playoff and has no draws. Tennis: no club, a tournament each month with prize money by round and a world ranking. Each month choose training (technical, tactical, recovery) and how you play key moments; seasons and titles go on your record. Professional athlete jobs are no longer on the job board.
 
 - **Music and acting rebalanced.** Released songs stay in your song list (marked released) instead of vanishing; you can write three sessions a month, on the same song if you like, and songs come together faster; royalties pay about three times more and new fans arrive faster, so a label and bigger venues are within reach. Acting pay now grows with your recognition and reputation (up to four times as much for a famous, respected actor); a film pays its whole fee as one lump sum when filming wraps; a TV season is 12 episodes, paid month by month.

@@ -37,6 +37,20 @@ import {
  */
 
 const MAX_POSTINGS = 50;
+/** Careers started from Career, Paths (creative, athlete, law, journalism, medicine), never the job board. */
+const PATH_ONLY = new Set([
+  'actor',
+  'musician',
+  'film-director',
+  'professional-athlete',
+  'trainee-lawyer',
+  'lawyer',
+  'corporate-lawyer',
+  'law-firm-partner',
+  'journalist',
+  'resident-doctor',
+  'doctor',
+]);
 const MAX_ACTIVE_APPLICATIONS = 5;
 const EMPLOYER_PREFIX = [
   'Apex',
@@ -155,19 +169,30 @@ function difficultyPercent(world: World): number {
       : 100;
 }
 
-const EXPERIENCED_HIRES = OCCUPATIONS.filter((o) => !o.hidden && o.minExperienceMonths > 0);
+const EXPERIENCED_HIRES = OCCUPATIONS.filter(
+  (o) => !o.hidden && o.minExperienceMonths > 0 && !PATH_ONLY.has(o.id),
+);
+/** Senior vacancies posted each month (executive and specialist roles). */
+const SENIOR_PER_MONTH = 3;
 
 /** Rotate full-time senior vacancies so high-end roles appear alongside ordinary jobs. */
-function postExperiencedRole(world: World, player: Character, unemployment: number): void {
+function postExperiencedRole(
+  world: World,
+  player: Character,
+  unemployment: number,
+  slot: number,
+): void {
   const offset = seedFromString(`${world.seed}:senior-jobs:${player.locationId}`)[0];
-  const occupation = EXPERIENCED_HIRES[(offset + world.tick) % EXPERIENCED_HIRES.length];
+  // Each month takes the next few roles in turn, so senior openings vary month to month.
+  const step = world.tick * SENIOR_PER_MONTH + slot;
+  const occupation = EXPERIENCED_HIRES[(offset + step) % EXPERIENCED_HIRES.length];
   if (!occupation) return;
   const prefix =
     EMPLOYER_PREFIX[
-      (offset + Math.floor(world.tick / EXPERIENCED_HIRES.length)) % EMPLOYER_PREFIX.length
+      (offset + Math.floor(step / EXPERIENCED_HIRES.length)) % EMPLOYER_PREFIX.length
     ];
   const employer = `${prefix ?? 'Meridian'} ${EMPLOYER_SUFFIX[occupation.industryId] ?? 'Group'}`;
-  const id = `job_senior_${world.tick.toString(36)}_${player.locationId}`;
+  const id = `job_senior_${world.tick.toString(36)}_${String(slot)}_${player.locationId}`;
   world.jobs.postings[id] ??= {
     id,
     terms: makeTerms(world, occupation, 0, 'permanent', player.locationId, employer),
@@ -190,7 +215,7 @@ export function refreshJobMarket(world: World): void {
       p &&
       (p.expiresTick < world.tick ||
         p.terms.locationId !== player.locationId ||
-        isCreativePath(p.terms.occupationId))
+        PATH_ONLY.has(p.terms.occupationId))
     )
       Reflect.deleteProperty(world.jobs.postings, id);
   }
@@ -204,7 +229,7 @@ export function refreshJobMarket(world: World): void {
   const quals = player.education.qualifications;
   const candidates = OCCUPATIONS.filter(
     // Creative paths (actor, musician, director) start from Career, Paths, never the job board.
-    (o) => !o.hidden && o.minExperienceMonths === 0 && (!minor || o.teen) && !isCreativePath(o.id),
+    (o) => !o.hidden && o.minExperienceMonths === 0 && (!minor || o.teen) && !PATH_ONLY.has(o.id),
   );
   for (let i = 0; i < count; i++) {
     const occupation = withRng(world, 'career', (rng) =>
@@ -251,7 +276,9 @@ export function refreshJobMarket(world: World): void {
     };
     world.jobs.postings[posting.id] = posting;
   }
-  if (!minor) postExperiencedRole(world, player, unemployment);
+  if (!minor)
+    for (let slot = 0; slot < SENIOR_PER_MONTH; slot++)
+      postExperiencedRole(world, player, unemployment, slot);
   const all = sortedValues(world.jobs.postings).sort(
     (a, b) => a.postedTick - b.postedTick || (a.id < b.id ? -1 : 1),
   );
@@ -1070,9 +1097,7 @@ export function assignNpcJob(
 
 /** Creative paths the player can start freelance from the Career tab (no posting needed). */
 export const CREATIVE_PATHS = ['actor', 'musician', 'film-director'] as const;
-/** Started from Career (Paths or Athlete), never from the job board. */
-const isCreativePath = (id: string) =>
-  (CREATIVE_PATHS as readonly string[]).includes(id) || id === 'professional-athlete';
+
 export type CreativePath = (typeof CREATIVE_PATHS)[number];
 
 /** Entry-level freelance terms for a creative path where the player lives (no randomness). */
@@ -1164,4 +1189,55 @@ export function requestRaise(world: World, c: Character): 'granted' | 'refused' 
 export function activeEmployment(world: World, c: Character): Employment | null {
   const e = c.employmentId ? world.employment[c.employmentId] : undefined;
   return e?.status === 'active' ? e : null;
+}
+
+/** Professions started from Career, Paths: the entry role before and after licensing. */
+export const PROFESSION_PATHS = ['law', 'media', 'medicine'] as const;
+export type ProfessionPath = (typeof PROFESSION_PATHS)[number];
+const PROFESSION_ROLES: Record<ProfessionPath, { trainee: string; practising: string }> = {
+  law: { trainee: 'trainee-lawyer', practising: 'lawyer' },
+  media: { trainee: 'journalist', practising: 'journalist' },
+  medicine: { trainee: 'resident-doctor', practising: 'doctor' },
+};
+
+/** Licensed people start practising; everyone else starts as the trainee. */
+export function professionRole(c: Character, path: ProfessionPath): string {
+  const roles = PROFESSION_ROLES[path];
+  const licence = getOccupation(roles.practising).licence;
+  return licence === null || c.flags[licence] === true ? roles.practising : roles.trainee;
+}
+
+function professionTerms(
+  world: World,
+  c: Character,
+  path: ProfessionPath,
+  employer?: string,
+): JobTerms {
+  return makeTerms(
+    world,
+    getOccupation(professionRole(c, path)),
+    0,
+    'permanent',
+    c.locationId,
+    employer,
+  );
+}
+
+export function professionPathBlock(
+  world: World,
+  c: Character,
+  path: ProfessionPath,
+): JobRejection | null {
+  if (activeEmployment(world, c)?.terms.occupationId === professionRole(c, path)) return 'noChange';
+  // A fixed employer: the view calls this, and drawing a random employer name would change the game.
+  return jobEligibility(world, c, professionTerms(world, c, path, 'eligibility check'));
+}
+
+/** Starts the profession's entry role (qualifications and licence checked), leaving any job. */
+export function startProfessionPath(world: World, c: Character, path: ProfessionPath): void {
+  const block = professionPathBlock(world, c, path);
+  if (block) throw new JobError(block);
+  if (c.employmentId) endEmployment(world, c, 'quit');
+  const terms = professionTerms(world, c, path);
+  startEmployment(world, c, terms, terms.salaryMinMinor);
 }

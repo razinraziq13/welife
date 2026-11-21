@@ -66,7 +66,7 @@ test('a game played in the browser matches the same months replayed in Node (C-0
   const dialog = page
     .getByRole('dialog')
     .filter({ has: page.getByRole('group', { name: 'Choices' }) });
-  if (await dialog.isVisible()) await advanceOnce(page);
+  while (await dialog.isVisible()) await advanceOnce(page);
 
   await page.goto('/');
   const downloadPromise = page.waitForEvent('download');

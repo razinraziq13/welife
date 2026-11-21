@@ -190,3 +190,54 @@ describe('doctor: medical degree, registration and patient cases (E95)', () => {
     expect(checkLedger(r.state.world)).toEqual([]);
   }, 120_000);
 });
+
+describe('professions start from Career, Paths (not the job board)', () => {
+  it('law starts as a trainee until admitted, then as a lawyer; no degree, no start', () => {
+    const none = adult('path-none', []);
+    expect(run(none, { type: 'startProfessionPath', path: 'law' }).outcome.status).toBe('rejected');
+    let state = adult('path-law', ['bachelor:law']);
+    state = run(state, { type: 'startProfessionPath', path: 'law' }).state;
+    const job = () => state.world.employment[playerOf(state).employmentId ?? ''];
+    expect(job()?.terms.occupationId).toBe('trainee-lawyer');
+    playerOf(state).flags['licence.law'] = true;
+    state = run(state, { type: 'startProfessionPath', path: 'law' }).state;
+    expect(job()?.terms.occupationId).toBe('lawyer');
+  }, 120_000);
+
+  it('the board never posts these roles, and posts several senior roles a month', () => {
+    let state = adult('path-board', ['bachelor:law']);
+    const banned = [
+      'trainee-lawyer',
+      'lawyer',
+      'corporate-lawyer',
+      'law-firm-partner',
+      'journalist',
+      'resident-doctor',
+      'doctor',
+    ];
+    for (let m = 0; m < 4; m++) {
+      state = advanceMonths(state, 1);
+      const postings = Object.values(state.world.jobs.postings);
+      for (const p of postings) expect(banned).not.toContain(p.terms.occupationId);
+      expect(
+        postings.filter((p) => p.id.startsWith('job_senior_') && p.postedTick === state.world.tick)
+          .length,
+      ).toBe(3);
+    }
+  }, 120_000);
+});
+
+describe('the view never changes the game', () => {
+  it('projecting the game leaves the world (including its random state) untouched', () => {
+    const state = adult('view-pure', ['bachelor:law', 'diploma:media', 'bachelor:medicine']);
+    const before = JSON.stringify(state.world, (_k, v: unknown) =>
+      typeof v === 'bigint' ? String(v) : v,
+    );
+    projectGame(state);
+    projectGame(state);
+    const after = JSON.stringify(state.world, (_k, v: unknown) =>
+      typeof v === 'bigint' ? String(v) : v,
+    );
+    expect(after).toBe(before);
+  }, 120_000);
+});

@@ -15,6 +15,9 @@ import {
   CREATIVE_PATHS,
   JOB_MESSAGES,
   creativePathBlock,
+  PROFESSION_PATHS,
+  professionPathBlock,
+  professionRole,
   type CreativePath,
   counterOfferChance,
   experienceMonths,
@@ -331,6 +334,8 @@ export interface WorkView {
     referrerName: string | null;
   }[];
   /** Creative paths to start from the Career tab: why not (null = can start now). */
+  /** Professions started from Paths: law, journalism, medicine (entry role shown). */
+  professions: { path: (typeof PROFESSION_PATHS)[number]; title: string; block: string | null }[];
   paths: {
     occupationId: CreativePath;
     title: string;
@@ -819,6 +824,14 @@ function workView(world: World, c: Character): WorkView {
           ? (world.characters[a.referrerId]?.identity.firstName ?? null)
           : null,
       })),
+    professions: PROFESSION_PATHS.map((path) => {
+      const block = professionPathBlock(world, c, path);
+      return {
+        path,
+        title: getOccupation(professionRole(c, path)).title,
+        block: block ? JOB_MESSAGES[block] : null,
+      };
+    }),
     paths: CREATIVE_PATHS.map((id) => {
       const block = creativePathBlock(world, c, id);
       return {

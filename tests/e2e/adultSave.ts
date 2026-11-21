@@ -77,6 +77,18 @@ export async function adultSaveJson(
       state = send(state, { type: 'applyJob', postingId: posting.id });
     state = month(state);
   }
+  // Fixture only: the job hunt is luck; tests need an employed adult, so hire them if it failed.
+  const hunter = player();
+  if (hunter && !hunter.employmentId) {
+    const terms = makeTerms(
+      state.world,
+      getOccupation('cashier'),
+      0,
+      'permanent',
+      hunter.locationId,
+    );
+    startEmployment(state.world, hunter, terms, terms.salaryMinMinor);
+  }
   for (let m = 0; m < 12; m++) state = month(state);
   if (options.rivalOffer) {
     // Make the worker someone rivals want, then play on until one approaches (real engine).
@@ -86,6 +98,11 @@ export async function adultSaveJson(
       );
     for (let m = 0; m < 60 && !approached(); m++) {
       const p = player();
+      // A layoff can end the job while waiting: rehire (fixture only).
+      if (p && !p.employmentId) {
+        const t = makeTerms(state.world, getOccupation('cashier'), 0, 'permanent', p.locationId);
+        startEmployment(state.world, p, t, t.salaryMinMinor);
+      }
       const job = p?.employmentId ? state.world.employment[p.employmentId] : undefined;
       if (!p || !job) throw new Error('fixture: no job for a rival offer');
       job.performance = 850;
