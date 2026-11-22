@@ -188,6 +188,23 @@ describe('ten generations (M7 exit)', () => {
 });
 
 describe('succession on death (decision D7)', () => {
+  it('a child taken over after primary school carries on into secondary school', () => {
+    let state = advanceMonths(newState({ seed: 'takeover-school', countryCode: 'MY' }), 25 * 12);
+    state = advanceMonths(startFamily(state, 1), 14 * 12);
+    const parent = playerOf(state);
+    const child = Object.values(state.world.familyLinks)
+      .filter((l) => l.parentId === parent.id)
+      .map((l) => state.world.characters[l.childId])
+      .find((c) => c?.death === null);
+    if (!child) throw new Error('no child');
+    state = checked(state, { type: 'continueAs', characterId: child.id }).state;
+    state = advanceMonths(state, 12);
+    // Before the fix they were never enrolled again after primary.
+    expect(playerOf(state).education.current?.stage).toMatch(/Secondary$/);
+    state = advanceMonths(state, 5 * 12);
+    expect(playerOf(state).education.qualifications).toContain('upperSecondary');
+  }, 120_000);
+
   it('a child raised off-screen has skills fitting their age, also when taken over', () => {
     let state = advanceMonths(newState({ seed: 'child-skills', countryCode: 'GB' }), 25 * 12);
     state = advanceMonths(startFamily(state, 1), 10 * 12);

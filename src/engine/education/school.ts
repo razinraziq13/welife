@@ -538,9 +538,21 @@ function startSchoolYear(world: World, c: Character, isPlayer: boolean): void {
   if (!c.education.current) {
     const done = (s: string) =>
       c.education.qualifications.includes(s) || c.education.history.some((h) => h.stage === s);
-    if (age >= rules.primaryStartAge && !done('primary') && age < 16) {
-      enroll(world, c, 'primary');
-      if (isPlayer) startStage(world, c, 'primary');
+    // The next school stage not yet done, entered in the year that fits their age. This also
+    // picks up a child taken over from an NPC, who has qualifications but no enrolment.
+    let start = rules.primaryStartAge;
+    let next: 'primary' | 'lowerSecondary' | 'upperSecondary' | null = null;
+    for (const stage of ['primary', 'lowerSecondary', 'upperSecondary'] as const) {
+      if (!done(stage)) {
+        next = stage;
+        break;
+      }
+      start += stageRule(c.countryCode, stage).years;
+    }
+    if (next && age >= rules.primaryStartAge && age < 19) {
+      const enrolled = enroll(world, c, next);
+      enrolled.yearsCompleted = clamp(age - start, 0, enrolled.years - 1);
+      if (isPlayer) startStage(world, c, next);
     } else if (age >= rules.preschoolAge && age < rules.primaryStartAge && !done('preschool')) {
       enroll(world, c, 'preschool');
       if (isPlayer)

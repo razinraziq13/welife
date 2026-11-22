@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Fixed: school stopped after primary for a child you take over.** Children raised as NPCs have qualifications but no enrolment, and only primary or preschool could be restarted, so they never reached secondary school. They now enter the next unfinished stage in the year that fits their age.
+
 - **Your own law firm or clinic.** Admitted lawyers can open a law firm (which wins client briefs like a consultancy) and registered doctors a medical clinic, from the Business page. The licence cannot be bought: only a licensed owner can open one.
 
 - **Music depth.** Form a band with two musicians (bigger crowds and better shows; the band takes 30% of ticket takings), hire a manager once you have 500 fans (15% of music income, label interest and bigger venues sooner), and go on a three-month tour once you have 2,000 fans (up to three shows a month booked for you, at a cost to energy and stress).
