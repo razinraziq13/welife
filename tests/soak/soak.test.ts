@@ -79,8 +79,9 @@ describe('long-run soak (spec §8)', () => {
       }
       const player = playerOf(state);
       const age = state.world.clock.year - player.birth.year;
+      // A living child is the heir; if every child has died, the soak starts another family.
       const hasChildren = Object.values(state.world.familyLinks).some(
-        (l) => l.parentId === player.id,
+        (l) => l.parentId === player.id && state.world.characters[l.childId]?.death === null,
       );
       if (age >= 18 && !hasChildren) state = family(state);
       state = advanceMonths(state, 12);
