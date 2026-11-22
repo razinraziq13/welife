@@ -104,32 +104,65 @@ function EducationCard({ view }: { view: GameView }) {
           )}
           {current.academic && (
             <section className="rounded-xl border border-border p-3" aria-label="Academic progress">
-              <h3 className="font-semibold text-fg">Coursework and academic progression</h3>
-              <p className="mt-1 text-sm text-muted">
-                Semester {current.academic.semester} · {current.academic.credits} /{' '}
-                {current.academic.requiredCredits} credits earned
-              </p>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                <div className="rounded-lg bg-surface-2 p-2">
-                  Coursework: {Math.round(current.academic.coursework / 10)}%
-                </div>
-                <div className="rounded-lg bg-surface-2 p-2">
-                  Project: {Math.round(current.academic.project / 10)}%
-                </div>
-                {current.level === 'master' && (
-                  <div className="rounded-lg bg-surface-2 p-2">
-                    Research: {Math.round(current.academic.research / 10)}%
-                  </div>
-                )}
-                <div className="rounded-lg bg-surface-2 p-2">
-                  Internship: {current.academic.internshipMonths} months
-                </div>
-              </div>
-              <p className="mt-3 text-xs text-muted">
-                Every semester awards 24 credits only when assessments pass. A failed semester can
-                be repeated; your completed credits remain. Bachelor's projects and master's
-                research must meet graduation requirements.
-              </p>
+              {(() => {
+                const a = current.academic;
+                // Mirrors assessSemester: 70% grade + 30% coursework must reach 35%.
+                const score = Math.round((current.grade * 7 + a.coursework * 3) / 100);
+                const status = score >= 45 ? 'On track' : score >= 35 ? 'Borderline' : 'At risk';
+                const needs = [
+                  {
+                    label: 'Credits',
+                    done: a.credits >= a.requiredCredits,
+                    value: `${String(a.credits)} / ${String(a.requiredCredits)}`,
+                  },
+                  ...(current.level !== 'diploma'
+                    ? [
+                        {
+                          label: 'Final project',
+                          done: a.project >= 100,
+                          value: `${String(Math.round(a.project / 10))}% (10% needed)`,
+                        },
+                      ]
+                    : []),
+                  ...(current.level === 'master'
+                    ? [
+                        {
+                          label: 'Research',
+                          done: a.research >= 150,
+                          value: `${String(Math.round(a.research / 10))}% (15% needed)`,
+                        },
+                      ]
+                    : []),
+                ];
+                return (
+                  <>
+                    <h3 className="font-semibold text-fg">
+                      Semester {a.semester} exams: {status}
+                    </h3>
+                    <p className="mt-1 text-sm text-muted">
+                      Exams come every six months and need a score of 35%. Your estimate is {score}%
+                      (grade plus coursework). Pass and you earn 24 credits; fail and you retake the
+                      semester without losing credits.
+                    </p>
+                    <h4 className="mt-3 text-sm font-semibold text-fg">To graduate</h4>
+                    <ul className="mt-1 space-y-1 text-sm">
+                      {needs.map((n) => (
+                        <li key={n.label} className="flex justify-between gap-2">
+                          <span>
+                            {n.done ? '✓ ' : '○ '}
+                            {n.label}
+                          </span>
+                          <span className="text-muted">{n.value}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-3 text-sm text-muted">
+                      Studying builds all of this on its own each month. Optional: one activity a
+                      month (4 hours) speeds it up.
+                    </p>
+                  </>
+                );
+              })()}
               <div className="mt-3 flex flex-wrap gap-2">
                 {current.academic.actions.map((a) => (
                   <ActionButton
@@ -142,11 +175,11 @@ function EducationCard({ view }: { view: GameView }) {
                   >
                     {
                       {
-                        coursework: 'Complete coursework',
-                        groupProject: 'Work on group project',
-                        meetLecturer: 'Consult lecturer',
-                        research: 'Conduct research',
-                        internship: 'Internship placement',
+                        coursework: 'Coursework (raises exam score)',
+                        groupProject: 'Group project (final project)',
+                        meetLecturer: 'See lecturer (exam score, reading)',
+                        research: 'Research (master’s requirement)',
+                        internship: 'Internship (job skills)',
                       }[a.id]
                     }
                   </ActionButton>
