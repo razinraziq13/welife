@@ -10,7 +10,8 @@ import {
   refreshJobMarket,
   startEmployment,
 } from '@engine/career/jobs';
-import { getOccupation } from '@engine/career/occupations';
+import { OCCUPATIONS, getOccupation } from '@engine/career/occupations';
+import { PROGRAMS } from '@engine/education/catalog';
 import {
   careerMonth,
   careerTrack,
@@ -69,6 +70,27 @@ describe('career simulation (gameplay expansion, feature 6)', () => {
     expect(new Set(seniorJobs).size).toBeGreaterThanOrEqual(12);
     expect(seniorJobs).toContain('chief-executive');
     expect(seniorJobs).toContain('chief-technology-officer');
+  });
+
+  it('every field of study has jobs, and a business graduate sees business roles', () => {
+    const fields = new Set(
+      OCCUPATIONS.filter((o) => !o.hidden && o.minExperienceMonths === 0).map((o) => o.field),
+    );
+    for (const p of PROGRAMS) expect(fields, p.id).toContain(p.id);
+    const state = newState({ seed: 'business-major' });
+    const { world } = state;
+    const player = playerOf(state);
+    player.birth.year -= 23;
+    player.education.qualifications.push('upperSecondary', 'bachelor:business');
+    let business = 0;
+    for (let tick = 0; tick < 6; tick++) {
+      world.tick = tick;
+      refreshJobMarket(world);
+      business += Object.values(world.jobs.postings).filter(
+        (p) => p.postedTick === tick && getOccupation(p.terms.occupationId).field === 'business',
+      ).length;
+    }
+    expect(business).toBeGreaterThanOrEqual(6);
   });
 
   it('requires ten years of relevant experience for CEO and keeps that experience after a promotion', () => {

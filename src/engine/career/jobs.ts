@@ -25,6 +25,7 @@ import {
   OCCUPATIONS,
   getOccupation,
   jobTitle,
+  educationProfile,
   meetsEducation,
   type OccupationDefinition,
 } from './occupations';
@@ -231,10 +232,18 @@ export function refreshJobMarket(world: World): void {
     // Creative paths (actor, musician, director) start from Career, Paths, never the job board.
     (o) => !o.hidden && o.minExperienceMonths === 0 && (!minor || o.teen) && !PATH_ONLY.has(o.id),
   );
+  // The field being studied counts too, so a business student sees business roles coming up.
+  const studying = player.education.current?.programId ?? null;
+  const majors = new Set([
+    ...educationProfile(quals).fields.keys(),
+    ...(studying ? [studying] : []),
+  ]);
+  const weights = candidates.map((o) => ({
+    value: o,
+    weight: (o.field !== null && majors.has(o.field) ? 4 : 1) * (meetsEducation(o, quals) ? 6 : 1),
+  }));
   for (let i = 0; i < count; i++) {
-    const occupation = withRng(world, 'career', (rng) =>
-      rng.weighted(candidates.map((o) => ({ value: o, weight: meetsEducation(o, quals) ? 6 : 1 }))),
-    );
+    const occupation = withRng(world, 'career', (rng) => rng.weighted(weights));
     const level = Math.min(
       occupation.maxLevel,
       withRng(world, 'career', (rng) =>
