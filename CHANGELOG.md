@@ -4,7 +4,7 @@
 
 ### Changed
 
-- **Fixed: school stopped after primary for a child you take over.** Children raised as NPCs have qualifications but no enrolment, and only primary or preschool could be restarted, so they never reached secondary school. They now enter the next unfinished stage in the year that fits their age.
+- **Fixed: school stopped after primary for a child you take over** (now enrolled the next month, and anyone who chose to leave school stays out). Children raised as NPCs have qualifications but no enrolment, and only primary or preschool could be restarted, so they never reached secondary school. They now enter the next unfinished stage in the year that fits their age.
 
 - **Your own law firm or clinic.** Admitted lawyers can open a law firm (which wins client briefs like a consultancy) and registered doctors a medical clinic, from the Business page. The licence cannot be bought: only a licensed owner can open one.
 

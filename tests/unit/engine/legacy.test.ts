@@ -198,11 +198,28 @@ describe('succession on death (decision D7)', () => {
       .find((c) => c?.death === null);
     if (!child) throw new Error('no child');
     state = checked(state, { type: 'continueAs', characterId: child.id }).state;
-    state = advanceMonths(state, 12);
+    // Enrolled the next month, not only when the next school year starts.
+    state = advanceMonths(state, 1);
     // Before the fix they were never enrolled again after primary.
     expect(playerOf(state).education.current?.stage).toMatch(/Secondary$/);
     state = advanceMonths(state, 5 * 12);
     expect(playerOf(state).education.qualifications).toContain('upperSecondary');
+  }, 120_000);
+
+  it('someone who chose to leave school is not pulled back in', () => {
+    const state = advanceMonths(newState({ seed: 'left-school', countryCode: 'MY' }), 16 * 12);
+    const p = playerOf(state);
+    const current = p.education.current;
+    if (!current) throw new Error('not at school');
+    p.education.history.push({
+      ...current,
+      endTick: state.world.tick,
+      status: 'left',
+      examScore: null,
+    });
+    p.education.current = null;
+    const later = advanceMonths(state, 14);
+    expect(playerOf(later).education.current).toBeNull();
   }, 120_000);
 
   it('a child raised off-screen has skills fitting their age, also when taken over', () => {

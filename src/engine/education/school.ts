@@ -535,11 +535,21 @@ function startSchoolYear(world: World, c: Character, isPlayer: boolean): void {
       }
     }
   }
+  enrollIfOutOfSchool(world, c, isPlayer);
+}
+
+/**
+ * Someone of school age with no school place (a child taken over from an NPC, who has
+ * qualifications but no enrolment) goes into their next unfinished stage, in the year that fits
+ * their age. Anyone who chose to leave school is not pulled back in.
+ */
+function enrollIfOutOfSchool(world: World, c: Character, isPlayer: boolean): void {
+  if (c.education.history.some((h) => h.status === 'left')) return;
+  const rules = getRules(c.countryCode).education;
+  const age = ageYears(world, c);
   if (!c.education.current) {
     const done = (s: string) =>
       c.education.qualifications.includes(s) || c.education.history.some((h) => h.stage === s);
-    // The next school stage not yet done, entered in the year that fits their age. This also
-    // picks up a child taken over from an NPC, who has qualifications but no enrolment.
     let start = rules.primaryStartAge;
     let next: 'primary' | 'lowerSecondary' | 'upperSecondary' | null = null;
     for (const stage of ['primary', 'lowerSecondary', 'upperSecondary'] as const) {
@@ -663,6 +673,8 @@ export function processEducation(world: World): void {
     }
   }
   if (player?.death === null) {
+    // Monthly, so a child you take over mid-year is enrolled now, not next school year.
+    enrollIfOutOfSchool(world, player, true);
     decideApplications(world, player);
     updateStudies(world, player);
     clubCompetitions(world, player);

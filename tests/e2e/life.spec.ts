@@ -5,6 +5,8 @@ import { advanceOnce, createLife, closeRecap } from './helpers';
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 test('creates a life, plays months, and keeps everything after a reload', async ({ page }) => {
+  // Several months plus a reload: slower CI browsers (WebKit) need more than the default 30 s.
+  test.setTimeout(60_000);
   await createLife(page, { country: 'Japan', firstName: 'Yui', seed: 'e2e-life' });
   await expect(page.getByText('Yui').first()).toBeVisible();
   await expect(page.getByText(/Tokyo|Osaka|Fukuoka|Akita/).first()).toBeVisible();
