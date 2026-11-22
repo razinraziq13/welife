@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, LockKeyhole } from 'lucide-react';
+import { ArrowRight, LockKeyhole } from 'lucide-react';
 import { Button } from '@app/components/ui/button';
 import { Dialog } from '@app/components/ui/dialog';
 import { fillText, formatMonth } from '@app/i18n/format';
@@ -49,35 +49,48 @@ export function EventDialog() {
           </Button>
         </div>
       )}
-      <Dialog open={open} onOpenChange={setOpen} title={fillText(text.title, pending.params)}>
-        <div className="flex items-center gap-3 rounded-2xl bg-linear-to-br from-primary-soft to-accent-soft p-3">
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-surface text-primary shadow-sm">
-            <Icon aria-hidden="true" className="size-6" />
-          </span>
-          <p className="text-sm">
-            <span className="block font-semibold text-fg">{category.label}</span>
-            <span className="block text-muted">{formatMonth(pending.clock)}</span>
-          </p>
-        </div>
-        <p className="mt-4 leading-relaxed text-fg">{fillText(text.body, pending.params)}</p>
-        <div className="mt-4 flex flex-col gap-2" role="group" aria-label="Choices">
-          {pending.choices.map((choice) => {
+      <Dialog
+        open={open}
+        onOpenChange={setOpen}
+        title={fillText(text.title, pending.params)}
+        cover="wl-event-cover"
+        kicker={
+          <>
+            <p className="flex items-center gap-2 text-xs font-bold tracking-[.13em] text-primary uppercase">
+              <Icon aria-hidden="true" className="size-4" />A moment in your story
+            </p>
+            <p className="mt-2 text-sm text-muted">
+              {category.label} · {formatMonth(pending.clock)}
+            </p>
+          </>
+        }
+      >
+        <p className="leading-relaxed text-fg">{fillText(text.body, pending.params)}</p>
+        <h3 className="mt-5 mb-3 font-bold text-fg">What will you do?</h3>
+        <div className="flex flex-col gap-3" role="group" aria-label="Choices">
+          {pending.choices.map((choice, index) => {
             const label = fillText(text.choices[choice.id] ?? choice.id, pending.params);
             return (
               <Button
                 key={choice.id}
                 variant="secondary"
                 className={cn(
-                  'group h-auto min-h-14 w-full justify-between gap-3 rounded-xl border border-border px-4 py-3 text-left whitespace-normal',
-                  choice.available && 'hover:border-primary hover:bg-primary-soft',
+                  'wl-event-choice group h-auto min-h-16 w-full justify-between gap-3 rounded-2xl border-2 px-3 py-3 text-left whitespace-normal',
+                  choice.available ? `wl-choice-${String(index % 3)}` : 'wl-choice-locked',
                 )}
                 disabled={busy || !choice.available}
                 onClick={() => {
                   void choose(pending.instanceId, choice.id);
                 }}
               >
+                <span
+                  aria-hidden="true"
+                  className="wl-event-choice-icon flex size-11 shrink-0 items-center justify-center rounded-xl text-lg font-extrabold"
+                >
+                  {index + 1}
+                </span>
                 <span className="flex-1">
-                  <span className="block font-medium">{label}</span>
+                  <span className="block font-bold">{label}</span>
                   {!choice.available && (
                     <span className="mt-0.5 block text-xs font-normal text-muted">
                       {requirementText(choice.unmet)}
@@ -85,9 +98,9 @@ export function EventDialog() {
                   )}
                 </span>
                 {choice.available ? (
-                  <ChevronRight
+                  <ArrowRight
                     aria-hidden="true"
-                    className="size-5 shrink-0 text-muted transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
+                    className="size-5 shrink-0 text-fg transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
                   />
                 ) : (
                   <LockKeyhole aria-hidden="true" className="size-4 shrink-0 text-muted" />
@@ -96,8 +109,8 @@ export function EventDialog() {
             );
           })}
         </div>
-        <p className="mt-3 text-xs text-muted">
-          You can close this and decide later; the month finishes once you choose.
+        <p className="mt-4 text-xs text-muted">
+          You can close this and decide later. The month finishes when you choose.
         </p>
       </Dialog>
     </>

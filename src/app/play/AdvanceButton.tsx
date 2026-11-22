@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { ChevronDown, FastForward, Loader2 } from 'lucide-react';
+import { ArrowRight, CalendarDays, ChevronDown, Loader2 } from 'lucide-react';
 import { Button } from '@app/components/ui/button';
 import { formatMonth } from '@app/i18n/format';
 import { addMonths } from '@engine/core/clock';
@@ -56,29 +56,27 @@ export function AdvanceButton({
     <div className={cn('flex flex-col items-stretch gap-1', className)}>
       <div className="flex items-stretch">
         <Button
-          className="min-w-0 flex-1 rounded-r-none"
+          className="wl-advance-button min-w-0 flex-1 rounded-l-2xl rounded-r-none font-extrabold text-white"
           size={size}
           disabled={busy || recapOpen || reason !== null}
-          aria-describedby={reason ? reasonId : undefined}
+          aria-describedby={reasonId}
           onClick={() => void advance()}
           data-testid="advance-month"
         >
           {busy ? (
             <Loader2 aria-hidden="true" className="size-5 animate-spin" />
           ) : (
-            <FastForward aria-hidden="true" className="size-5" />
+            <CalendarDays aria-hidden="true" className="size-5" />
           )}
-          Advance
-          <span className="text-sm font-semibold">+{ADVANCE_MONTHS} months</span>
-          <span className="sr-only">
-            to {formatMonth(addMonths(view.clock, ADVANCE_MONTHS))}; stops early for a decision or
-            job offer
+          <span className="flex-1 text-center">
+            Advance to {formatMonth(addMonths(view.clock, ADVANCE_MONTHS))}
           </span>
+          <ArrowRight aria-hidden="true" className="size-5" />
         </Button>
         <div ref={box} className="relative shrink-0">
           <Button
             size={size}
-            className="h-full rounded-l-none border-l border-primary-fg/30 px-3"
+            className="wl-advance-button h-full rounded-l-none rounded-r-2xl border-l border-white/30 px-3 text-white"
             aria-label="Time options"
             aria-expanded={open}
             aria-controls={menuId}
@@ -125,11 +123,9 @@ export function AdvanceButton({
           )}
         </div>
       </div>
-      {reason && (
-        <p id={reasonId} className="text-center text-xs text-muted">
-          {reason}
-        </p>
-      )}
+      <p id={reasonId} className="text-center text-xs text-muted">
+        {reason ?? `${String(ADVANCE_MONTHS)} months; stops early if a decision comes up.`}
+      </p>
     </div>
   );
 }

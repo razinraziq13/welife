@@ -14,6 +14,7 @@ import {
   MapPin,
   Smile,
   Sparkles,
+  UserRound,
   Users,
   Wallet,
   type LucideIcon,
@@ -21,7 +22,13 @@ import {
 import type { GameView } from '@engine/view';
 import { Avatar } from '@app/components/avatar/Avatar';
 import { t } from '@app/i18n/en';
-import { displayValue, formatAge, formatShortMonth, storyText } from '@app/i18n/format';
+import {
+  displayValue,
+  formatAge,
+  formatMonth,
+  formatShortMonth,
+  storyText,
+} from '@app/i18n/format';
 import { Money } from '@app/components/Money';
 import { fromMonthIndex, monthIndex } from '@engine/core/clock';
 import { cn } from '@app/lib/cn';
@@ -77,77 +84,143 @@ export function HeadlineStats({ view }: { view: GameView }) {
   );
 }
 
-/** The top of the Life tab: who you are, where you are and how you are doing. */
+const GLANCE = [
+  {
+    key: 'health',
+    label: 'Health',
+    icon: Heart,
+    tone: 'wl-tone-health',
+    icolor: 'text-danger',
+    bar: 'bg-success',
+  },
+  {
+    key: 'happiness',
+    label: 'Happiness',
+    icon: Smile,
+    tone: 'wl-tone-happiness',
+    icolor: 'text-accent-strong',
+    bar: 'bg-accent',
+  },
+  {
+    key: 'intelligence',
+    label: 'Mind',
+    icon: Brain,
+    tone: 'wl-tone-mind',
+    icolor: 'text-[#6a4fc9]',
+    bar: 'bg-[#8b74e6]',
+  },
+] as const;
+
+/** The top of the Life tab: an illustrated scene with who you are, then three wellbeing meters. */
 export function LifeHero({ view, base }: { view: GameView; base: string }) {
   const c = view.character;
   const generation = view.legacy.generation;
   const checking = view.finance.personal?.checking ?? null;
+  // Text sits on the light illustration, so it keeps dark ink in both themes.
+  const pill =
+    'inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/90 px-3 py-1 text-sm font-semibold text-[#173a40]';
   return (
-    <section
-      aria-labelledby="life-hero-name"
-      className="overflow-hidden rounded-3xl border border-border bg-surface shadow-sm"
-    >
-      <div className="flex items-center gap-3 bg-primary-soft px-4 py-3 sm:px-5">
-        <div className="min-w-0 flex-1">
-          {generation > 1 && (
-            <p className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-semibold text-fg">
-              <Crown aria-hidden="true" className="size-3.5 text-accent-strong" />
-              Generation {generation}
-            </p>
-          )}
-          <h2
-            id="life-hero-name"
-            className="text-xl leading-tight font-bold break-words text-fg sm:text-2xl"
-          >
-            {c.displayName}
-          </h2>
-          <p className="mt-0.5 flex items-start gap-1 text-sm text-muted">
-            <MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-            <span className="min-w-0">
-              {c.alive ? formatAge(c.age) : `Died at ${String(c.age.years)}`} · {c.location.name},{' '}
-              {view.country.name}
-            </span>
-          </p>
-          <p className="mt-0.5 flex items-start gap-1 text-sm font-medium text-fg">
-            <Sparkles aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
-            <span className="min-w-0">{occupationLine(view)}</span>
-          </p>
-        </div>
-        <div className="relative shrink-0">
-          <span
-            aria-hidden="true"
-            className="absolute inset-x-2 bottom-1 top-4 -rotate-12 rounded-[42%_52%_47%_41%] bg-primary/25"
-          />
+    <>
+      <section
+        aria-labelledby="life-hero-name"
+        className="relative overflow-hidden rounded-[1.75rem] border border-border shadow-md"
+      >
+        <div aria-hidden="true" className="wl-town-scene absolute inset-0" />
+        <div className="relative flex flex-wrap items-center gap-4 px-4 pt-6 pb-5 sm:px-6">
           <Avatar
             appearance={c.appearance}
             stage={c.stage}
             ageYears={c.age.years}
-            framed={false}
-            className="relative size-24 sm:size-28"
+            className="size-24 shrink-0 rounded-full border-[5px] border-white bg-primary-soft shadow-lg sm:size-36"
             label={`Portrait of ${c.displayName}`}
           />
+          <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
+            <p className={pill}>
+              {generation > 1 ? (
+                <>
+                  <Crown aria-hidden="true" className="size-4 text-accent-strong" />
+                  Generation {generation}
+                </>
+              ) : (
+                <>
+                  <Sparkles aria-hidden="true" className="size-4 text-primary" />
+                  Your story
+                </>
+              )}
+            </p>
+            <h2
+              id="life-hero-name"
+              className="rounded-xl bg-white/80 px-2 text-2xl leading-tight font-extrabold tracking-tight break-words text-[#102b36] sm:text-3xl"
+            >
+              {c.displayName}
+            </h2>
+            <p className={pill}>
+              {c.alive ? formatAge(c.age) : `Died at ${String(c.age.years)}`} ·{' '}
+              {formatMonth(view.clock)}
+            </p>
+            <p className={pill}>
+              <MapPin aria-hidden="true" className="size-4 shrink-0" />
+              <span className="min-w-0">
+                {c.location.name}, {view.country.name}
+              </span>
+            </p>
+            <p className={pill}>
+              <Briefcase aria-hidden="true" className="size-4 shrink-0" />
+              <span className="min-w-0">{occupationLine(view)}</span>
+            </p>
+          </div>
+          <div className="flex w-full justify-end">
+            <Link
+              to={`${base}/character`}
+              className="ms-auto inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 font-bold text-primary-fg shadow-md hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <UserRound aria-hidden="true" className="size-4" />
+              Profile
+              <ChevronRight aria-hidden="true" className="size-4" />
+            </Link>
+          </div>
         </div>
-      </div>
-      {checking !== null && (
-        <p className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5 text-sm sm:px-5">
-          <span className="flex items-center gap-2 text-muted">
-            <Wallet aria-hidden="true" className="size-4" />
-            Current account
-          </span>
-          <Money minor={checking} currency={view.finance.currency} className="font-semibold" />
-        </p>
-      )}
-      <div className="px-4 pt-4 pb-4 sm:px-5 sm:pb-5">
-        <HeadlineStats view={view} />
-        <Link
-          to={`${base}/character`}
-          className="mt-4 inline-flex min-h-11 items-center gap-1 rounded-xl bg-primary-soft px-4 font-semibold text-fg hover:bg-primary hover:text-primary-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          Profile and full stats
-          <ChevronRight aria-hidden="true" className="size-4" />
-        </Link>
-      </div>
-    </section>
+      </section>
+      <section
+        aria-label="Wellbeing"
+        className="rounded-[1.75rem] border border-border bg-surface p-3 shadow-sm sm:p-4"
+      >
+        <ul className="grid grid-cols-3 gap-2 sm:gap-3">
+          {GLANCE.map(({ key, label, icon: Icon, tone, icolor, bar }) => {
+            const value = displayValue(view.character.stats[key]);
+            return (
+              <li key={key} className={cn('min-w-0 rounded-2xl p-2 sm:p-3', tone)}>
+                <p className="flex items-center gap-1 text-xs font-bold text-fg sm:gap-1.5 sm:text-sm">
+                  <Icon aria-hidden="true" className={cn('size-5 shrink-0', icolor)} />
+                  <span className="truncate">{label}</span>
+                </p>
+                <div
+                  aria-hidden="true"
+                  className="mt-3 h-2.5 overflow-hidden rounded-full bg-black/10"
+                >
+                  <div
+                    className={cn('h-full rounded-full', bar)}
+                    style={{ width: `${String(Math.max(2, value))}%` }}
+                  />
+                </div>
+                <p className="mt-1.5 text-right text-lg font-extrabold tabular-nums text-fg">
+                  {value}%
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+        {checking !== null && (
+          <p className="mt-3 flex items-center justify-between gap-2 border-t border-border px-1 pt-3 text-sm">
+            <span className="flex items-center gap-2 text-muted">
+              <Wallet aria-hidden="true" className="size-4" />
+              Current account
+            </span>
+            <Money minor={checking} currency={view.finance.currency} className="font-semibold" />
+          </p>
+        )}
+      </section>
+    </>
   );
 }
 
@@ -162,24 +235,24 @@ interface ActionTile {
 
 function Tile({ tile }: { tile: ActionTile }) {
   const Icon = tile.icon;
+  const [bg, ink] = tile.tone.split(' ');
   const body: ReactNode = (
     <>
       <span
-        className={cn('flex size-11 shrink-0 items-center justify-center rounded-xl', tile.tone)}
+        className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-surface shadow-sm"
         aria-hidden="true"
       >
-        <Icon className="size-6" />
+        <Icon className={cn('size-7', ink)} />
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="block font-semibold text-fg">{tile.label}</span>
-        <span className="block text-sm text-muted">{tile.hint}</span>
-      </span>
-      <ChevronRight aria-hidden="true" className="size-5 shrink-0 text-primary" />
+      <span className="block font-bold text-fg">{tile.label}</span>
+      <span className="block text-xs text-muted">{tile.hint}</span>
     </>
   );
-  // Sticker row: coloured icon tile, title and hint, arrow (cartoon redesign).
-  const className =
-    'flex min-h-16 w-full items-center gap-3 px-3 py-2 text-left hover:bg-primary-soft focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring';
+  // Pastel tile: icon badge, title and hint (illustrated redesign).
+  const className = cn(
+    'flex h-full min-h-32 w-full flex-col items-center justify-center gap-2 rounded-3xl border border-border px-2 py-4 text-center shadow-sm transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none',
+    bg,
+  );
   return tile.to ? (
     <Link to={tile.to} className={className}>
       {body}
@@ -201,51 +274,52 @@ export function ActionGrid({ view, base }: { view: GameView; base: string }) {
       label: 'Activities',
       hint: 'Spend your free time',
       icon: Sparkles,
-      tone: 'bg-accent-soft text-accent-strong',
+      tone: 'wl-tone-gold text-accent-strong',
       to: base + '/activities',
     },
     {
       label: studying ? 'School' : 'Career',
       hint: studying ? 'Grades, clubs, study' : 'Jobs and career',
       icon: studying ? GraduationCap : Briefcase,
-      tone: 'bg-primary-soft text-primary',
+      tone: 'wl-tone-sky text-[#1b6f9c]',
       to: `${base}/career`,
     },
     {
       label: 'Social',
       hint: 'Family and friends',
       icon: Users,
-      tone: 'bg-surface-2 text-danger',
+      tone: 'wl-tone-rose text-danger',
       to: `${base}/social`,
     },
     {
       label: 'Money',
       hint: 'Accounts, investments and shopping',
       icon: Wallet,
-      tone: 'bg-accent-soft text-accent-strong',
+      tone: 'wl-tone-sand text-[#8a5a2b]',
       to: `${base}/finance`,
     },
     {
       label: 'Calendar',
       hint: 'Plans and dates',
       icon: CalendarDays,
-      tone: 'bg-primary-soft text-primary',
+      tone: 'wl-tone-lilac text-[#6a4fc9]',
       to: `${base}/calendar`,
     },
     {
       label: 'More',
       hint: 'Legacy, world, media',
       icon: LayoutGrid,
-      tone: 'bg-surface-2 text-fg',
+      tone: 'wl-tone-stone text-fg',
       to: `${base}/more`,
     },
   ];
   return (
     <section aria-labelledby="action-grid-title">
-      <h2 id="action-grid-title" className="mb-3 text-lg font-semibold text-fg">
+      <h2 id="action-grid-title" className="text-xl font-extrabold tracking-tight text-fg">
         What do you want to do?
       </h2>
-      <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+      <p className="mb-3 text-sm text-muted">Choose your next chapter</p>
+      <ul className="grid grid-cols-3 gap-2 sm:gap-3">
         {tiles.map((tile) => (
           <li key={tile.label}>
             <Tile tile={tile} />

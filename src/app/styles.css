@@ -208,3 +208,98 @@
     transform: none;
   }
 }
+
+/* ---------- Illustrated story look: hero, profile banner, event cards, tiles ---------- */
+/* Unlayered so these colours win over the button and card utility backgrounds. */
+.wl-town-scene {
+  background-image: url('./illustrations/story-town.svg');
+  background-position: center 55%;
+  background-size: cover;
+}
+.wl-event-cover {
+  background-image: url('./illustrations/story-moment.svg');
+  background-position: center 40%;
+  background-size: cover;
+}
+.wl-choice-0 {
+  border-color: #8bdb9f;
+  background: #e3f8e8;
+}
+.wl-choice-0 .wl-event-choice-icon {
+  background: #bcf0ca;
+  color: #1f6a37;
+}
+.wl-choice-1 {
+  border-color: #b9dffc;
+  background: #e8f3ff;
+}
+.wl-choice-1 .wl-event-choice-icon {
+  background: #cce5ff;
+  color: #235f8f;
+}
+.wl-choice-2 {
+  border-color: #eed5b7;
+  background: #fdf3e8;
+}
+.wl-choice-2 .wl-event-choice-icon {
+  background: #ffe2c4;
+  color: #8a5a00;
+}
+.wl-choice-locked {
+  border-color: var(--wl-border);
+  background: var(--wl-surface-2);
+}
+.wl-choice-locked .wl-event-choice-icon {
+  background: var(--wl-surface);
+  color: var(--wl-muted);
+}
+.wl-tone-health {
+  background: #fdecee;
+}
+.wl-tone-happiness {
+  background: #fff5d6;
+}
+.wl-tone-mind {
+  background: #efecff;
+}
+.wl-tone-sky {
+  background: #e0f3ff;
+}
+.wl-tone-sand {
+  background: #fff0df;
+}
+.wl-tone-rose {
+  background: #ffe5e8;
+}
+.wl-tone-gold {
+  background: #fff2d6;
+}
+.wl-tone-lilac {
+  background: #eeebff;
+}
+.wl-tone-stone {
+  background: #f0f1f4;
+}
+.wl-advance-button {
+  background: linear-gradient(110deg, #0e7a6c, #0a6a5e);
+}
+:root[data-theme='dark'] .wl-town-scene {
+  filter: brightness(0.75) saturate(0.85);
+}
+:root[data-theme='dark'] :is(.wl-choice-0, .wl-choice-1, .wl-choice-2) {
+  background: var(--wl-surface-2);
+}
+:root[data-theme='dark']
+  :is(
+    .wl-tone-health,
+    .wl-tone-happiness,
+    .wl-tone-mind,
+    .wl-tone-sky,
+    .wl-tone-sand,
+    .wl-tone-rose,
+    .wl-tone-gold,
+    .wl-tone-lilac,
+    .wl-tone-stone
+  ) {
+  background: var(--wl-surface-2);
+}

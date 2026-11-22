@@ -6,6 +6,7 @@ import {
   Flower2,
   GraduationCap,
   MapPin,
+  Sparkles,
   UserRound,
   Users,
   type LucideIcon,
@@ -56,31 +57,30 @@ export function CharacterScreen() {
     <div className="flex flex-col gap-4">
       <section
         aria-label="Portrait"
-        className="overflow-hidden rounded-3xl border border-border bg-surface shadow-sm"
+        className="overflow-hidden rounded-[1.75rem] border border-border bg-surface shadow-md"
       >
-        <div
-          aria-hidden="true"
-          className="h-20 bg-linear-to-br from-primary/30 via-primary-soft to-accent/35 sm:h-24"
-        />
-        <div className="-mt-14 flex flex-wrap items-end gap-4 px-4 pb-5 sm:px-6">
+        <div aria-hidden="true" className="wl-town-scene h-36 sm:h-44" />
+        <div className="flex flex-wrap items-start gap-4 px-4 pb-5 sm:px-6">
           <Avatar
             appearance={c.appearance}
             stage={c.stage}
             ageYears={c.age.years}
-            className="size-32 shrink-0 rounded-full border-4 border-surface bg-surface shadow-md sm:size-40"
+            className="-mt-16 size-32 shrink-0 rounded-[2rem] border-[6px] border-white bg-primary-soft shadow-lg sm:size-40"
             label={`Portrait of ${c.displayName}`}
           />
-          <div className="min-w-0 flex-1 pb-2">
+          <div className="min-w-0 flex-1 pt-3">
             <PageHeader title={c.displayName} documentTitle="Character" />
             <p className="mt-1 flex flex-wrap gap-2 text-xs font-semibold">
               <span className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-fg">
                 <Crown aria-hidden="true" className="size-3.5 text-accent-strong" />
                 Generation {view.legacy.generation}
               </span>
-              <span className="rounded-full bg-surface-2 px-2 py-0.5 text-fg">
+              <span className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-fg">
+                <Sparkles aria-hidden="true" className="size-3.5 text-accent-strong" />
                 {t(`stage.${c.stage}`)}
               </span>
             </p>
+            <p className="mt-1 text-sm text-muted">Your story so far</p>
           </div>
         </div>
       </section>
